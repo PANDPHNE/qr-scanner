@@ -53,6 +53,8 @@
     #reader {
       width: 100%;
       margin-top: 20px;
+      overflow: hidden;
+      border-radius: 10px;
     }
 
     .status {
@@ -139,6 +141,17 @@
       text-align: center;
     }
 
+    .camera-info {
+      margin-top: 10px;
+      padding: 10px;
+      background: #eef3ff;
+      border-radius: 8px;
+      color: #174ea6;
+      font-size: 12px;
+      text-align: center;
+      word-break: break-word;
+    }
+
   </style>
 
 </head>
@@ -167,6 +180,17 @@
   <!-- CAMERA -->
 
   <div id="reader"></div>
+
+
+  <!-- CAMERA INFORMATION -->
+
+  <div
+    id="cameraInfo"
+    class="camera-info">
+
+    Camera not started.
+
+  </div>
 
 
   <!-- STATUS -->
@@ -287,14 +311,6 @@ let itemConfirmed = false;
  *
  * KA + ONE OR MORE DIGITS
  *
- * KA7195       ✓
- * KA71955      ✓
- * KA719555     ✓
- *
- * KA            ✗
- * ABC7195      ✗
- * 7195         ✗
- *
  ************************************************************/
 
 const ITEM_CODE_PATTERN =
@@ -307,10 +323,10 @@ const ITEM_CODE_PATTERN =
  * ==========================================================
  */
 
-function startCamera() {
+async function startCamera() {
 
   /*
-   * Do not allow two cameras to start at the same time.
+   * Prevent multiple camera starts.
    */
 
   if (
@@ -324,8 +340,8 @@ function startCamera() {
 
 
   /*
-   * Do not start another scan until
-   * the current item has been reset.
+   * Don't scan another item until
+   * current item has been reset.
    */
 
   if (
@@ -345,183 +361,393 @@ function startCamera() {
   scannerBusy = true;
 
 
-  setStatus(
-    "Requesting camera permission...",
-    ""
-  );
-
-
   document
     .getElementById("startButton")
     .disabled = true;
 
 
-  /*
-   * Make sure the old reader area is empty.
-   */
-
-  document
-    .getElementById("reader")
-    .innerHTML = "";
+  setStatus(
+    "Preparing rear camera...",
+    ""
+  );
 
 
-  /*
-   * Create a fresh scanner.
-   */
+  try {
 
-  html5QrCode =
-    new Html5Qrcode(
-      "reader"
+    /*
+     * ======================================================
+     * CLEAN OLD SCANNER
+     * ======================================================
+     */
+
+    if (
+      html5QrCode
+    ) {
+
+      try {
+
+        await html5QrCode.stop();
+
+      }
+
+      catch (error) {
+
+        console.warn(
+          "Previous camera stop:",
+          error
+        );
+
+      }
+
+
+      try {
+
+        html5QrCode.clear();
+
+      }
+
+      catch (error) {
+
+        console.warn(
+          "Previous scanner clear:",
+          error
+        );
+
+      }
+
+
+      html5QrCode =
+        null;
+
+    }
+
+
+    document
+      .getElementById("reader")
+      .innerHTML = "";
+
+
+    /*
+     * ======================================================
+     * GET AVAILABLE CAMERAS
+     * ======================================================
+     */
+
+    const devices =
+      await Html5Qrcode.getCameras();
+
+
+    if (
+      !devices ||
+      devices.length === 0
+    ) {
+
+      throw new Error(
+        "No camera was found on this device."
+      );
+
+    }
+
+
+    console.log(
+      "AVAILABLE CAMERAS:",
+      devices
     );
 
 
-  /*
-   * IMPORTANT:
-   *
-   * We are intentionally keeping the
-   * camera configuration simple.
-   *
-   * This is closer to the version that
-   * was giving you clear scanning.
-   */
+    /*
+     * ======================================================
+     * SELECT REAR / MAIN CAMERA
+     * ======================================================
+     *
+     * We look at the camera labels.
+     *
+     * Priority:
+     *
+     * 1. Main camera
+     * 2. Back camera
+     * 3. Rear camera
+     * 4. Environment camera
+     * 5. Other rear-looking camera
+     *
+     */
 
-  const config = {
-
-    fps: 10,
-
-    qrbox: {
-      width: 250,
-      height: 250
-    },
-
-    formatsToSupport: [
-
-      Html5QrcodeSupportedFormats.CODE_128,
-
-      Html5QrcodeSupportedFormats.CODE_39,
-
-      Html5QrcodeSupportedFormats.CODE_93,
-
-      Html5QrcodeSupportedFormats.EAN_13,
-
-      Html5QrcodeSupportedFormats.EAN_8,
-
-      Html5QrcodeSupportedFormats.UPC_A,
-
-      Html5QrcodeSupportedFormats.UPC_E,
-
-      Html5QrcodeSupportedFormats.ITF,
-
-      Html5QrcodeSupportedFormats.CODABAR,
-
-      Html5QrcodeSupportedFormats.QR_CODE
-
-    ]
-
-  };
+    let selectedCamera =
+      null;
 
 
-  html5QrCode.start(
+    const priorityWords = [
 
-    {
-      facingMode: "environment"
-    },
+      "main",
 
-    config,
+      "back",
+
+      "rear",
+
+      "environment"
+
+    ];
 
 
-    function(
-      decodedText,
-      decodedResult
+    /*
+     * First try to find a camera whose label
+     * contains one of the preferred words.
+     */
+
+    for (
+      let p = 0;
+      p < priorityWords.length;
+      p++
     ) {
 
-      handleScan(
-        decodedText
-      );
-
-    },
+      const word =
+        priorityWords[p];
 
 
-    function(
-      errorMessage
-    ) {
+      const match =
+        devices.find(
+          function(device) {
 
-      /*
-       * Normal scan failures are ignored.
-       */
+            const label =
+              String(
+                device.label || ""
+              )
+              .toLowerCase();
+
+
+            return label.includes(
+              word
+            );
+
+          }
+        );
+
+
+      if (
+        match
+      ) {
+
+        selectedCamera =
+          match;
+
+        break;
+
+      }
 
     }
 
-  )
 
-  .then(
-    function() {
+    /*
+     * If the browser doesn't expose useful
+     * camera names, prefer the last camera.
+     *
+     * This is only a fallback.
+     */
 
-      scannerRunning = true;
+    if (
+      !selectedCamera
+    ) {
 
-      scannerBusy = false;
+      selectedCamera =
+        devices[
+          devices.length - 1
+        ];
+
+    }
 
 
-      setStatus(
-        "📷 CAMERA ACTIVE — POINT AT THE BARCODE",
-        ""
+    console.log(
+      "SELECTED CAMERA:",
+      selectedCamera
+    );
+
+
+    document
+      .getElementById("cameraInfo")
+      .textContent =
+      "Selected camera: " +
+      (
+        selectedCamera.label ||
+        "Rear camera"
       );
 
 
-      document
-        .getElementById("startButton")
-        .disabled = true;
+    /*
+     * ======================================================
+     * CREATE FRESH SCANNER
+     * ======================================================
+     */
+
+    html5QrCode =
+      new Html5Qrcode(
+        "reader"
+      );
 
 
-      document
-        .getElementById("stopButton")
-        .disabled = false;
+    /*
+     * ======================================================
+     * SCANNER CONFIGURATION
+     * ======================================================
+     *
+     * We deliberately keep FPS at 10.
+     *
+     * We are NOT using the previous aggressive
+     * 350 x 140 configuration.
+     *
+     */
 
-    }
-  )
+    const config = {
 
-  .catch(
-    function(error) {
+      fps: 10,
 
-      console.error(
-        "Camera start failed:",
+      qrbox: {
+        width: 250,
+        height: 250
+      },
+
+      formatsToSupport: [
+
+        Html5QrcodeSupportedFormats.CODE_128,
+
+        Html5QrcodeSupportedFormats.CODE_39,
+
+        Html5QrcodeSupportedFormats.CODE_93,
+
+        Html5QrcodeSupportedFormats.EAN_13,
+
+        Html5QrcodeSupportedFormats.EAN_8,
+
+        Html5QrcodeSupportedFormats.UPC_A,
+
+        Html5QrcodeSupportedFormats.UPC_E,
+
+        Html5QrcodeSupportedFormats.ITF,
+
+        Html5QrcodeSupportedFormats.CODABAR,
+
+        Html5QrcodeSupportedFormats.QR_CODE
+
+      ]
+
+    };
+
+
+    /*
+     * ======================================================
+     * START SELECTED CAMERA
+     * ======================================================
+     */
+
+    await html5QrCode.start(
+
+      selectedCamera.id,
+
+      config,
+
+
+      function(
+        decodedText,
+        decodedResult
+      ) {
+
+        handleScan(
+          decodedText
+        );
+
+      },
+
+
+      function(
+        errorMessage
+      ) {
+
+        /*
+         * Normal scanner failures
+         * are ignored.
+         */
+
+      }
+
+    );
+
+
+    scannerRunning =
+      true;
+
+
+    scannerBusy =
+      false;
+
+
+    setStatus(
+      "📷 MAIN / REAR CAMERA ACTIVE — ALIGN BARCODE INSIDE THE BOX",
+      ""
+    );
+
+
+    document
+      .getElementById("startButton")
+      .disabled = true;
+
+
+    document
+      .getElementById("stopButton")
+      .disabled = false;
+
+  }
+
+
+  catch (error) {
+
+    console.error(
+      "Camera start failed:",
+      error
+    );
+
+
+    scannerRunning =
+      false;
+
+
+    scannerBusy =
+      false;
+
+
+    html5QrCode =
+      null;
+
+
+    document
+      .getElementById("reader")
+      .innerHTML = "";
+
+
+    document
+      .getElementById("cameraInfo")
+      .textContent =
+      "Camera not started.";
+
+
+    document
+      .getElementById("startButton")
+      .disabled = false;
+
+
+    document
+      .getElementById("stopButton")
+      .disabled = true;
+
+
+    setStatus(
+      "❌ CAMERA ERROR: " +
+      (
+        error.message ||
         error
-      );
+      ),
+      "error"
+    );
 
-
-      scannerRunning = false;
-
-      scannerBusy = false;
-
-      html5QrCode = null;
-
-
-      document
-        .getElementById("reader")
-        .innerHTML = "";
-
-
-      document
-        .getElementById("startButton")
-        .disabled = false;
-
-
-      document
-        .getElementById("stopButton")
-        .disabled = true;
-
-
-      setStatus(
-        "❌ CAMERA ERROR: " +
-        (
-          error.message ||
-          error
-        ),
-        "error"
-      );
-
-    }
-  );
+  }
 
 }
 
@@ -535,10 +761,6 @@ function startCamera() {
 function handleScan(
   decodedText
 ) {
-
-  /*
-   * Ignore anything after confirmation.
-   */
 
   if (
     itemConfirmed
@@ -572,7 +794,7 @@ function handleScan(
 
   /*
    * ========================================================
-   * VALIDATE ITEM CODE
+   * VALIDATE KA + DIGITS
    * ========================================================
    */
 
@@ -600,14 +822,11 @@ function handleScan(
     );
 
 
-    /*
-     * Do not allow an invalid read
-     * to participate in confirmation.
-     */
+    lastReadValue =
+      "";
 
-    lastReadValue = "";
-
-    confirmationCount = 0;
+    confirmationCount =
+      0;
 
 
     return;
@@ -617,7 +836,7 @@ function handleScan(
 
   /*
    * ========================================================
-   * CONFIRM SAME CODE THREE TIMES
+   * THREE READ CONFIRMATION
    * ========================================================
    */
 
@@ -666,7 +885,7 @@ function handleScan(
 
   /*
    * ========================================================
-   * CONFIRMED
+   * CONFIRM
    * ========================================================
    */
 
@@ -689,20 +908,24 @@ function handleScan(
  * ==========================================================
  */
 
-function confirmItem(
+async function confirmItem(
   value
 ) {
 
   /*
-   * Immediately lock the item.
+   * Lock item immediately.
    */
 
-  itemConfirmed = true;
+  itemConfirmed =
+    true;
 
 
-  confirmationCount = 0;
+  confirmationCount =
+    0;
 
-  lastReadValue = "";
+
+  lastReadValue =
+    "";
 
 
   document
@@ -729,7 +952,7 @@ function confirmItem(
    * Stop camera safely.
    */
 
-  stopCamera();
+  await stopCamera();
 
 }
 
@@ -740,19 +963,22 @@ function confirmItem(
  * ==========================================================
  */
 
-function stopCamera() {
+async function stopCamera() {
 
   /*
-   * Nothing to stop.
+   * If no scanner exists,
+   * just clean the interface.
    */
 
   if (
     !html5QrCode
   ) {
 
-    scannerRunning = false;
+    scannerRunning =
+      false;
 
-    scannerBusy = false;
+    scannerBusy =
+      false;
 
 
     document
@@ -775,23 +1001,16 @@ function stopCamera() {
   }
 
 
-  /*
-   * Keep reference to the current scanner.
-   */
-
   const scanner =
     html5QrCode;
 
 
-  /*
-   * Immediately mark scanner as inactive
-   * so another start cannot happen during
-   * the shutdown process.
-   */
+  scannerRunning =
+    false;
 
-  scannerRunning = false;
 
-  scannerBusy = true;
+  scannerBusy =
+    true;
 
 
   document
@@ -799,100 +1018,62 @@ function stopCamera() {
     .disabled = true;
 
 
+  try {
+
+    /*
+     * Stop actual camera stream.
+     */
+
+    await scanner.stop();
+
+  }
+
+  catch (error) {
+
+    console.warn(
+      "Camera stop warning:",
+      error
+    );
+
+  }
+
+
+  try {
+
+    /*
+     * Clear video and scanner UI.
+     */
+
+    scanner.clear();
+
+  }
+
+  catch (error) {
+
+    console.warn(
+      "Scanner clear warning:",
+      error
+    );
+
+  }
+
+
   /*
-   * Stop camera stream.
+   * Remove scanner reference.
    */
 
-  scanner.stop()
+  if (
+    html5QrCode === scanner
+  ) {
 
-  .then(
-    function() {
+    html5QrCode =
+      null;
 
-      /*
-       * Clear the scanner UI.
-       */
-
-      try {
-
-        scanner.clear();
-
-      }
-
-      catch (error) {
-
-        console.warn(
-          "Scanner clear warning:",
-          error
-        );
-
-      }
-
-
-      finishCameraStop();
-
-    }
-  )
-
-  .catch(
-    function(error) {
-
-      console.warn(
-        "Camera stop warning:",
-        error
-      );
-
-
-      /*
-       * Even if stop() reports an error,
-       * attempt to clear the scanner.
-       */
-
-      try {
-
-        scanner.clear();
-
-      }
-
-      catch (clearError) {
-
-        console.warn(
-          "Clear warning:",
-          clearError
-        );
-
-      }
-
-
-      finishCameraStop();
-
-    }
-  );
-
-}
-
-
-/************************************************************
- * ==========================================================
- * FINISH CAMERA STOP
- * ==========================================================
- */
-
-function finishCameraStop() {
-
-  /*
-   * Remove old scanner reference.
-   */
-
-  html5QrCode = null;
-
-
-  scannerRunning = false;
-
-  scannerBusy = false;
+  }
 
 
   /*
-   * Completely empty the camera container.
+   * Empty camera container.
    */
 
   document
@@ -900,9 +1081,13 @@ function finishCameraStop() {
     .innerHTML = "";
 
 
-  /*
-   * Restore buttons.
-   */
+  scannerRunning =
+    false;
+
+
+  scannerBusy =
+    false;
+
 
   document
     .getElementById("startButton")
@@ -914,10 +1099,11 @@ function finishCameraStop() {
     .disabled = true;
 
 
-  /*
-   * If an item was confirmed, tell the user
-   * what to do next.
-   */
+  document
+    .getElementById("cameraInfo")
+    .textContent =
+    "Camera stopped.";
+
 
   if (
     itemConfirmed
@@ -948,32 +1134,36 @@ function finishCameraStop() {
  * ==========================================================
  */
 
-function resetScanner() {
+async function resetScanner() {
 
   /*
-   * If the camera is currently active,
-   * stop it first.
+   * Completely stop current camera.
    */
 
   if (
-    scannerRunning ||
-    html5QrCode
+    html5QrCode ||
+    scannerRunning
   ) {
 
-    stopCamera();
+    await stopCamera();
 
   }
 
 
   /*
-   * Reset item confirmation.
+   * Reset barcode state.
    */
 
-  itemConfirmed = false;
+  itemConfirmed =
+    false;
 
-  confirmationCount = 0;
 
-  lastReadValue = "";
+  confirmationCount =
+    0;
+
+
+  lastReadValue =
+    "";
 
 
   /*
@@ -993,8 +1183,7 @@ function resetScanner() {
 
 
   /*
-   * Make sure the camera container
-   * is empty.
+   * Clear camera area.
    */
 
   document
@@ -1002,8 +1191,14 @@ function resetScanner() {
     .innerHTML = "";
 
 
+  document
+    .getElementById("cameraInfo")
+    .textContent =
+    "Camera ready for next scan.";
+
+
   /*
-   * Make sure START is available.
+   * Restore buttons.
    */
 
   document
