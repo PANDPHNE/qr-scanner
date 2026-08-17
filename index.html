@@ -9,10 +9,15 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-  <title>Inventory Barcode Scanner</title>
+  <title>Inventory Scanner</title>
 
 
-  <!-- Official html5-qrcode library -->
+  <!--
+    Official html5-qrcode library.
+
+    This is the same library used by ScanApp.
+  -->
+
   <script
     src="https://unpkg.com/html5-qrcode"
     type="text/javascript">
@@ -35,14 +40,14 @@
       width: 100%;
       min-height: 100%;
 
-      background: #0b0b0d;
+      background: #090a0c;
+
+      color: white;
 
       font-family:
         Arial,
         Helvetica,
         sans-serif;
-
-      color: #ffffff;
 
     }
 
@@ -59,20 +64,20 @@
 
 
     /* =====================================================
-       MAIN APP
+       APP
        ===================================================== */
 
     .app {
 
       width: 100%;
 
-      max-width: 650px;
-
-      margin: 0 auto;
+      max-width: 700px;
 
       min-height: 100vh;
 
-      background: #0b0b0d;
+      margin: 0 auto;
+
+      background: #090a0c;
 
     }
 
@@ -99,9 +104,7 @@
 
       font-size: 23px;
 
-      font-weight: 700;
-
-      letter-spacing: .3px;
+      font-weight: 800;
 
     }
 
@@ -113,7 +116,7 @@
         0
         0;
 
-      color: #a8a8ad;
+      color: #8f939a;
 
       font-size: 13px;
 
@@ -121,10 +124,12 @@
 
 
     /* =====================================================
-       SCANNER AREA
+       CAMERA CARD
        ===================================================== */
 
-    .scanner-card {
+    .camera-card {
+
+      position: relative;
 
       margin:
         0
@@ -134,7 +139,7 @@
 
       border-radius: 18px;
 
-      background: #111114;
+      background: #000;
 
       border:
         1px solid
@@ -144,13 +149,22 @@
 
 
     /*
-     * html5-qrcode creates the camera interface
-     * inside this element.
+     * IMPORTANT:
+     *
+     * We DO NOT give #reader a fixed height.
+     *
+     * The official documentation recommends allowing
+     * the library to determine the video height from
+     * the camera aspect ratio.
      */
 
     #reader {
 
       width: 100%;
+
+      margin: 0;
+
+      padding: 0;
 
       background: #000;
 
@@ -158,192 +172,316 @@
 
 
     /*
-     * Make the camera preview fill the available width.
+     * Do NOT force video height.
+     *
+     * Only make it responsive.
      */
 
     #reader video {
 
-      width: 100% !important;
-
-      height: auto !important;
-
       display: block !important;
 
-      object-fit: cover !important;
-
-    }
-
-
-    /*
-     * Remove unnecessary margins that the library
-     * can create around the scanner.
-     */
-
-    #reader__scan_region {
-
       width: 100% !important;
 
-      min-height: 320px;
+      max-width: 100% !important;
+
+      height: auto !important;
 
       background: #000 !important;
 
     }
 
 
+    /* =====================================================
+       OUR VISUAL SCAN FRAME
+       ===================================================== */
+
+    .scan-overlay {
+
+      position: absolute;
+
+      left: 50%;
+
+      top: 50%;
+
+      width: 86%;
+
+      max-width: 560px;
+
+      aspect-ratio: 400 / 150;
+
+      transform:
+        translate(
+          -50%,
+          -50%
+        );
+
+      pointer-events: none;
+
+      z-index: 20;
+
+    }
+
+
     /*
-     * Hide the large default "camera scan" text.
-     * We keep the actual scanner controls.
+     * Dark transparent area around the barcode zone.
+     *
+     * This gives the ScanApp-like visual guidance
+     * without interfering with html5-qrcode's actual
+     * decoder.
      */
 
-    #reader__scan_region img {
+    .scan-frame {
 
-      max-width: 100%;
+      position: absolute;
+
+      inset: 0;
+
+      border:
+        4px solid
+        rgba(16,185,129,.72);
+
+      border-radius: 18px;
+
+      box-shadow:
+        0 0 0 9999px
+        rgba(0,0,0,.20);
+
+      transition:
+        border-color .15s ease,
+        box-shadow .15s ease;
+
+    }
+
+
+    /*
+     * Corner emphasis.
+     */
+
+    .scan-frame::before,
+    .scan-frame::after {
+
+      content: "";
+
+      position: absolute;
+
+      inset: -4px;
+
+      border-radius: 18px;
+
+      pointer-events: none;
+
+    }
+
+
+    /*
+     * Normal scanning state.
+     */
+
+    .scan-overlay.scanning
+    .scan-frame {
+
+      border-color:
+        rgba(255,255,255,.78);
+
+      box-shadow:
+        0 0 0 9999px
+        rgba(0,0,0,.20);
+
+    }
+
+
+    /*
+     * SUCCESS STATE.
+     *
+     * This is the green flash you requested.
+     */
+
+    .scan-overlay.detected
+    .scan-frame {
+
+      border-color:
+        #00ff9d;
+
+      box-shadow:
+
+        0 0 0 9999px
+        rgba(0,0,0,.10),
+
+        0 0 28px
+        rgba(0,255,157,.85);
+
+      animation:
+        detectedPulse
+        .35s
+        ease;
+
+    }
+
+
+    @keyframes detectedPulse {
+
+      0% {
+
+        transform:
+          scale(1);
+
+      }
+
+      50% {
+
+        transform:
+          scale(1.025);
+
+      }
+
+      100% {
+
+        transform:
+          scale(1);
+
+      }
 
     }
 
 
     /* =====================================================
-       LIBRARY UI CLEANUP
+       CAMERA STATUS
        ===================================================== */
 
+    .camera-status {
 
-    /*
-     * We only want CAMERA scanning.
-     *
-     * The file picker is disabled through configuration,
-     * but these styles are additional protection.
-     */
-
-    #html5-qrcode-button-file-selection {
-
-      display: none !important;
-
-    }
-
-
-    /*
-     * Hide "Scan an image file" elements if generated.
-     */
-
-    #reader__dashboard_section_csr
-    > div:last-child {
-
-      display: none !important;
-
-    }
-
-
-    /*
-     * Dashboard styling.
-     */
-
-    #reader__dashboard {
+      margin:
+        10px
+        10px
+        0;
 
       padding:
         12px
-        12px
-        16px !important;
+        14px;
+
+      border-radius:
+        12px;
 
       background:
-        #111114 !important;
-
-      color:
-        #ffffff !important;
-
-    }
-
-
-    #reader__dashboard_section {
-
-      width: 100% !important;
-
-    }
-
-
-    #reader__dashboard_section_csr {
-
-      width: 100% !important;
-
-    }
-
-
-    /*
-     * Camera selection.
-     */
-
-    #reader__camera_selection {
-
-      width: 100% !important;
-
-      max-width: 100% !important;
-
-      padding: 10px !important;
-
-      border-radius: 10px;
-
-      background: #1b1b1f;
-
-      color: #fff;
+        #15171b;
 
       border:
         1px solid
-        #333;
+        rgba(255,255,255,.07);
+
+      text-align:
+        center;
+
+      font-size:
+        13px;
+
+      font-weight:
+        700;
+
+      color:
+        #b8bbc1;
 
     }
 
 
-    /*
-     * Buttons generated by html5-qrcode.
-     */
+    .camera-status.active {
 
-    #reader button {
-
-      min-height: 45px;
-
-      border: none !important;
-
-      border-radius: 10px !important;
-
-      background:
-        #10b981 !important;
-
-      color: #ffffff !important;
-
-      font-size: 15px !important;
-
-      font-weight: 700 !important;
-
-      padding:
-        10px
-        18px !important;
+      color:
+        #34d399;
 
     }
 
 
-    #reader button:hover {
+    .camera-status.error {
 
-      background:
-        #0ea574 !important;
-
-    }
-
-
-    /*
-     * Library status text.
-     */
-
-    #reader span {
-
-      color: #c9c9ce;
+      color:
+        #ff7070;
 
     }
 
 
     /* =====================================================
-       RESULT PANEL
+       START / STOP CONTROLS
        ===================================================== */
 
-    .result-panel {
+    .controls {
+
+      display:
+        grid;
+
+      grid-template-columns:
+        1fr
+        1fr;
+
+      gap:
+        10px;
+
+      margin:
+        10px;
+
+    }
+
+
+    button {
+
+      border:
+        none;
+
+      border-radius:
+        13px;
+
+      padding:
+        15px
+        12px;
+
+      font-size:
+        16px;
+
+      font-weight:
+        800;
+
+      cursor:
+        pointer;
+
+      color:
+        white;
+
+    }
+
+
+    #startButton {
+
+      background:
+        #10b981;
+
+    }
+
+
+    #stopButton {
+
+      background:
+        #34373d;
+
+    }
+
+
+    button:disabled {
+
+      opacity:
+        .45;
+
+      cursor:
+        not-allowed;
+
+    }
+
+
+    /* =====================================================
+       RESULT
+       ===================================================== */
+
+    .result-card {
 
       margin:
         12px
@@ -353,62 +491,88 @@
       padding:
         18px;
 
-      border-radius: 18px;
+      border-radius:
+        18px;
 
       background:
-        #151519;
+        #14161a;
 
       border:
         1px solid
         rgba(255,255,255,.08);
+
+      transition:
+        border-color .2s ease,
+        box-shadow .2s ease;
+
+    }
+
+
+    .result-card.detected {
+
+      border-color:
+        #10b981;
+
+      box-shadow:
+        0 0 28px
+        rgba(16,185,129,.13);
 
     }
 
 
     .result-header {
 
-      display: flex;
+      display:
+        flex;
 
-      align-items: center;
+      align-items:
+        center;
 
-      justify-content: space-between;
+      justify-content:
+        space-between;
 
-      margin-bottom: 14px;
+      margin-bottom:
+        14px;
 
     }
 
 
     .result-title {
 
-      font-size: 17px;
+      font-size:
+        18px;
 
-      font-weight: 700;
+      font-weight:
+        800;
 
     }
 
 
-    .result-status {
+    #resultBadge {
 
       padding:
-        5px
-        9px;
+        6px
+        10px;
 
-      border-radius: 20px;
+      border-radius:
+        20px;
 
       background:
-        #222328;
+        #26292f;
 
       color:
-        #999ba2;
+        #989ba2;
 
-      font-size: 11px;
+      font-size:
+        11px;
 
-      font-weight: 700;
+      font-weight:
+        800;
 
     }
 
 
-    .result-status.detected {
+    #resultBadge.detected {
 
       background:
         #063d2c;
@@ -419,22 +583,24 @@
     }
 
 
-    .item-code-box {
+    .item-code {
 
       padding:
         20px
         12px;
 
-      border-radius: 14px;
+      border-radius:
+        14px;
 
       background:
-        #0e0e11;
+        #0d0f12;
 
       border:
         1px solid
-        #29292e;
+        #282b31;
 
-      text-align: center;
+      text-align:
+        center;
 
     }
 
@@ -442,11 +608,13 @@
     .item-code-label {
 
       color:
-        #8f9097;
+        #858991;
 
-      font-size: 11px;
+      font-size:
+        11px;
 
-      font-weight: 700;
+      font-weight:
+        800;
 
       letter-spacing:
         1px;
@@ -460,10 +628,7 @@
     #itemCode {
 
       margin-top:
-        7px;
-
-      color:
-        #ffffff;
+        8px;
 
       font-size:
         38px;
@@ -472,7 +637,7 @@
         1.1;
 
       font-weight:
-        800;
+        900;
 
       letter-spacing:
         2px;
@@ -483,7 +648,7 @@
     }
 
 
-    .scan-details {
+    .details {
 
       display:
         grid;
@@ -510,7 +675,7 @@
         10px;
 
       background:
-        #1d1d22;
+        #1b1e23;
 
     }
 
@@ -518,16 +683,16 @@
     .detail-label {
 
       color:
-        #888990;
+        #858991;
 
       font-size:
         10px;
 
+      font-weight:
+        800;
+
       text-transform:
         uppercase;
-
-      font-weight:
-        700;
 
     }
 
@@ -535,22 +700,22 @@
     .detail-value {
 
       margin-top:
-        4px;
+        5px;
 
       color:
-        #ffffff;
+        white;
 
       font-size:
         14px;
 
       font-weight:
-        700;
+        800;
 
     }
 
 
     /* =====================================================
-       SCAN ANOTHER
+       SCAN AGAIN
        ===================================================== */
 
     #scanAgain {
@@ -561,34 +726,13 @@
       margin-top:
         14px;
 
-      padding:
-        16px;
-
-      border:
-        none;
-
-      border-radius:
-        14px;
-
       background:
         #10b981;
 
-      color:
-        #ffffff;
-
-      font-size:
-        18px;
-
-      font-weight:
-        800;
-
-      cursor:
-        pointer;
-
       box-shadow:
         0
-        4px
-        16px
+        5px
+        20px
         rgba(16,185,129,.20);
 
     }
@@ -602,82 +746,42 @@
     }
 
 
-    #scanAgain:hover {
-
-      background:
-        #0ea574;
-
-    }
-
-
     /* =====================================================
-       WAITING STATE
+       CAMERA INFORMATION
        ===================================================== */
 
-    .waiting {
+    .diagnostics {
 
-      text-align:
-        center;
+      margin:
+        12px
+        10px
+        20px;
 
       padding:
-        14px
-        5px
-        2px;
-
-      color:
-        #777980;
-
-      font-size:
         12px;
 
-    }
+      border-radius:
+        12px;
 
+      background:
+        #101216;
 
-    /* =====================================================
-       GREEN DETECTION EFFECT
-       ===================================================== */
+      color:
+        #777b83;
 
-    .result-panel.detected {
+      font-size:
+        11px;
 
-      border-color:
-        #10b981;
-
-      box-shadow:
-        0
-        0
-        25px
-        rgba(16,185,129,.14);
-
-      animation:
-        resultPulse
-        .35s
-        ease;
+      line-height:
+        1.6;
 
     }
 
 
-    @keyframes resultPulse {
+    .diagnostics strong {
 
-      0% {
-
-        transform:
-          scale(1);
-
-      }
-
-      50% {
-
-        transform:
-          scale(1.012);
-
-      }
-
-      100% {
-
-        transform:
-          scale(1);
-
-      }
+      color:
+        #aeb2b8;
 
     }
 
@@ -698,14 +802,6 @@
       }
 
 
-      #reader__scan_region {
-
-        min-height:
-          300px;
-
-      }
-
-
       #itemCode {
 
         font-size:
@@ -713,11 +809,21 @@
 
       }
 
+
+      .scan-overlay {
+
+        width:
+          88%;
+
+      }
+
     }
+
 
   </style>
 
 </head>
+
 
 
 <body>
@@ -730,26 +836,86 @@
        HEADER
        =================================================== -->
 
-  <div class="header">
+  <header class="header">
 
     <h1>
       📷 Inventory Scanner
     </h1>
 
     <p>
-      Scan the barcode to identify the item
+      Point the rear camera at the barcode
     </p>
 
-  </div>
+  </header>
 
 
   <!-- ===================================================
        CAMERA
        =================================================== -->
 
-  <div class="scanner-card">
+  <section class="camera-card">
+
 
     <div id="reader"></div>
+
+
+    <!--
+      Visual-only scan guide.
+
+      The actual decoder still uses the qrbox
+      configured in JavaScript.
+    -->
+
+    <div
+      id="scanOverlay"
+      class="scan-overlay scanning">
+
+      <div class="scan-frame"></div>
+
+    </div>
+
+
+  </section>
+
+
+  <!-- ===================================================
+       STATUS
+       =================================================== -->
+
+  <div
+    id="cameraStatus"
+    class="camera-status">
+
+    CAMERA READY — PRESS START CAMERA
+
+  </div>
+
+
+  <!-- ===================================================
+       CONTROLS
+       =================================================== -->
+
+  <div class="controls">
+
+
+    <button
+      id="startButton"
+      onclick="startCamera()">
+
+      START CAMERA
+
+    </button>
+
+
+    <button
+      id="stopButton"
+      onclick="stopCamera()"
+      disabled>
+
+      STOP CAMERA
+
+    </button>
+
 
   </div>
 
@@ -758,29 +924,34 @@
        RESULT
        =================================================== -->
 
-  <div
-    id="resultPanel"
-    class="result-panel">
+  <section
+    id="resultCard"
+    class="result-card">
 
 
     <div class="result-header">
 
+
       <div class="result-title">
+
         Scan Result
+
       </div>
 
+
       <div
-        id="resultStatus"
-        class="result-status">
+        id="resultBadge">
 
         READY
 
       </div>
 
+
     </div>
 
 
-    <div class="item-code-box">
+    <div class="item-code">
+
 
       <div class="item-code-label">
 
@@ -795,17 +966,22 @@
 
       </div>
 
+
     </div>
 
 
-    <div class="scan-details">
+    <div class="details">
 
 
       <div class="detail">
 
+
         <div class="detail-label">
-          Barcode Format
+
+          Barcode
+
         </div>
+
 
         <div
           id="barcodeFormat"
@@ -815,45 +991,62 @@
 
         </div>
 
+
       </div>
 
 
       <div class="detail">
 
+
         <div class="detail-label">
-          Status
+
+          Scanner
+
         </div>
 
+
         <div
-          id="scanStatus"
+          id="scannerState"
           class="detail-value">
 
           Waiting
 
         </div>
 
+
       </div>
 
 
     </div>
 
 
-    <div
-      id="waitingText"
-      class="waiting">
-
-      Point the rear camera at a Code 128 barcode.
-
-    </div>
-
-
     <button
       id="scanAgain"
-      onclick="scanAgain()">
+      onclick="scanAnother()">
 
       SCAN ANOTHER
 
     </button>
+
+
+  </section>
+
+
+  <!-- ===================================================
+       DIAGNOSTICS
+       =================================================== -->
+
+  <div class="diagnostics">
+
+
+    <strong>Camera diagnostics</strong>
+
+
+    <div id="cameraDiagnostics">
+
+      Camera has not started yet.
+
+    </div>
 
 
   </div>
@@ -866,127 +1059,400 @@
 <script>
 
 
-/* ============================================================
-   SCANNER CONFIGURATION
-   ============================================================ */
+/* ==========================================================
+   GLOBALS
+   ========================================================== */
+
+
+/*
+ * The scanner engine is deliberately Html5Qrcode,
+ * NOT Html5QrcodeScanner.
+ *
+ * This preserves the architecture of your fastest
+ * historical c4a9466 version.
+ */
+
+let html5QrCode = null;
+
+
+let scannerRunning = false;
+
+
+let scannerPaused = false;
+
+
+/*
+ * Prevent multiple success callbacks from creating
+ * duplicate results.
+ */
+
+let resultLocked = false;
+
+
+/*
+ * Last result.
+ */
+
+let currentItemCode = "";
+
+
+/*
+ * Used for the green detection flash.
+ */
+
+let greenTimer = null;
+
+
+
+/* ==========================================================
+   CONFIGURATION
+   ========================================================== */
 
 
 /*
  * IMPORTANT:
  *
- * We use the official high-level scanner UI.
+ * We keep 15 FPS because this was part of the
+ * proven fast historical configuration.
+ */
+
+const FPS = 15;
+
+
+/*
+ * 400 × 150 is an official documented rectangular
+ * barcode-style qrbox configuration.
  *
- * This is intentionally much closer to ScanApp's
- * architecture than our previous custom camera engine.
+ * It is slightly wider than the historical 350 × 140,
+ * giving the barcode more usable room.
+ *
+ * If this proves slower than c4a9466, our next test
+ * will simply revert to 350 × 140.
  */
 
+const QRBOX = {
 
-/*
- * Only Code 128 is needed for your inventory labels.
- */
+  width: 400,
 
-const formatsToSupport = [
-
-  Html5QrcodeSupportedFormats.CODE_128
-
-];
-
-
-/*
- * Scanner configuration.
- */
-
-const scannerConfig = {
-
-
-  /*
-   * 15 scans per second.
-   *
-   * This matches the fast historical version
-   * we tested successfully.
-   */
-
-  fps: 15,
-
-
-  /*
-   * Wide barcode-shaped scan region.
-   *
-   * The official documentation explicitly supports
-   * rectangular qrbox dimensions such as 400 x 150.
-   */
-
-  qrbox: {
-
-    width: 400,
-
-    height: 150
-
-  },
-
-
-  /*
-   * Remember the camera that the user selected.
-   */
-
-  rememberLastUsedCamera: true,
-
-
-  /*
-   * Camera scanning ONLY.
-   *
-   * We don't need image-file scanning for inventory.
-   */
-
-  supportedScanTypes: [
-
-    Html5QrcodeScanType.SCAN_TYPE_CAMERA
-
-  ],
-
-
-  /*
-   * Only decode Code 128.
-   */
-
-  formatsToSupport:
-    formatsToSupport,
-
-
-  /*
-   * Let the library provide the torch
-   * button when the Samsung/browser supports it.
-   */
-
-  showTorchButtonIfSupported:
-    true
+  height: 150
 
 };
 
 
+/*
+ * Your actual labels are CODE_128.
+ *
+ * We also keep QR_CODE because you asked for QR
+ * scanning capability.
+ *
+ * Restricting formats is officially supported and
+ * can reduce decoding work.
+ */
 
-/* ============================================================
-   CREATE OFFICIAL SCANNER UI
-   ============================================================ */
+const FORMATS = [
+
+  Html5QrcodeSupportedFormats.CODE_128,
+
+  Html5QrcodeSupportedFormats.QR_CODE
+
+];
 
 
-const html5QrcodeScanner =
 
-  new Html5QrcodeScanner(
+/* ==========================================================
+   START CAMERA
+   ========================================================== */
 
-    "reader",
 
-    scannerConfig,
+function startCamera() {
 
-    false
+
+  /*
+   * Prevent duplicate camera starts.
+   */
+
+  if (scannerRunning) {
+
+    return;
+
+  }
+
+
+  /*
+   * If a scanner object already exists from a
+   * previous session, create a fresh one only after
+   * the previous stream has been stopped.
+   */
+
+  html5QrCode =
+    new Html5Qrcode(
+
+      "reader",
+
+      {
+
+        formatsToSupport:
+          FORMATS,
+
+        /*
+         * Keep the library's native BarcodeDetector
+         * path enabled when the browser supports it.
+         *
+         * The library documents this as potentially
+         * providing faster native scanning.
+         */
+
+        useBarCodeDetectorIfSupported:
+          true,
+
+        verbose:
+          false
+
+      }
+
+    );
+
+
+  setCameraStatus(
+
+    "STARTING CAMERA…",
+
+    ""
 
   );
 
 
+  document
+    .getElementById(
+      "startButton"
+    )
+    .disabled =
+    true;
 
-/* ============================================================
-   SCAN SUCCESS
-   ============================================================ */
+
+  document
+    .getElementById(
+      "stopButton"
+    )
+    .disabled =
+    true;
+
+
+  /*
+   * Reset visual state.
+   */
+
+  resultLocked =
+    false;
+
+  scannerPaused =
+    false;
+
+
+  setScanVisual(
+    "scanning"
+  );
+
+
+
+  /* ========================================================
+     START THE REAR CAMERA
+     ======================================================== */
+
+
+  html5QrCode.start(
+
+    /*
+     * IMPORTANT:
+     *
+     * This is the exact rear-camera approach used
+     * by your historical working version.
+     */
+
+    {
+      facingMode:
+        "environment"
+    },
+
+
+    {
+
+      /*
+       * Proven fast frame rate.
+       */
+
+      fps:
+        FPS,
+
+
+      /*
+       * Barcode-shaped scanning region.
+       */
+
+      qrbox:
+        QRBOX,
+
+
+      /*
+       * Keep mirrored-code support unchanged from
+       * the historical version.
+       */
+
+      disableFlip:
+        false
+
+    },
+
+
+    /*
+     * SUCCESS CALLBACK
+     */
+
+    onScanSuccess,
+
+
+    /*
+     * FAILURE CALLBACK
+     *
+     * Do absolutely nothing here.
+     *
+     * Failed frames are normal.
+     */
+
+    function(errorMessage) {
+
+      /*
+       * Intentionally ignored.
+       */
+
+    }
+
+  )
+
+
+  .then(
+
+    async function() {
+
+
+      scannerRunning =
+        true;
+
+
+      scannerPaused =
+        false;
+
+
+      setCameraStatus(
+
+        "● CAMERA ACTIVE",
+
+        "active"
+
+      );
+
+
+      document
+        .getElementById(
+          "stopButton"
+        )
+        .disabled =
+        false;
+
+
+      document
+        .getElementById(
+          "scannerState"
+        )
+        .textContent =
+        "Scanning";
+
+
+      /*
+       * Inspect the actual Samsung camera.
+       */
+
+      inspectCamera();
+
+
+      /*
+       * Give the camera a moment to stabilize,
+       * then try continuous autofocus only if
+       * the browser reports that it supports it.
+       */
+
+      setTimeout(
+
+        function() {
+
+          tryEnableContinuousFocus();
+
+        },
+
+        700
+
+      );
+
+    }
+
+  )
+
+
+  .catch(
+
+    function(error) {
+
+
+      console.error(
+        "CAMERA START ERROR:",
+        error
+      );
+
+
+      scannerRunning =
+        false;
+
+
+      html5QrCode =
+        null;
+
+
+      setCameraStatus(
+
+        "CAMERA ERROR — " +
+        readableCameraError(error),
+
+        "error"
+
+      );
+
+
+      document
+        .getElementById(
+          "startButton"
+        )
+        .disabled =
+        false;
+
+
+      document
+        .getElementById(
+          "stopButton"
+        )
+        .disabled =
+        true;
+
+    }
+
+  );
+
+}
+
+
+
+/* ==========================================================
+   SUCCESSFUL SCAN
+   ========================================================== */
 
 
 function onScanSuccess(
@@ -999,10 +1465,18 @@ function onScanSuccess(
 
 
   /*
-   * Get decoded item code.
+   * Ignore duplicate callbacks while the result
+   * screen is holding the successful scan.
    */
 
-  const itemCode =
+  if (resultLocked) {
+
+    return;
+
+  }
+
+
+  let value =
 
     String(
       decodedText || ""
@@ -1011,7 +1485,7 @@ function onScanSuccess(
     .toUpperCase();
 
 
-  if (!itemCode) {
+  if (!value) {
 
     return;
 
@@ -1019,59 +1493,113 @@ function onScanSuccess(
 
 
   console.log(
-    "CODE DETECTED:",
-    itemCode
+    "BARCODE DETECTED:",
+    value
   );
 
 
   console.log(
-    "FULL SCAN RESULT:",
+    "FULL RESULT:",
     decodedResult
   );
 
 
   /*
-   * Display item code.
+   * Lock immediately.
+   *
+   * This prevents the same physical barcode
+   * from firing repeatedly.
    */
+
+  resultLocked =
+    true;
+
+
+  currentItemCode =
+    value;
+
+
+  /* ========================================================
+     GREEN DETECTION
+     ======================================================== */
+
+  setScanVisual(
+    "detected"
+  );
+
+
+  /*
+   * Keep the green state visible briefly.
+   */
+
+  if (greenTimer) {
+
+    clearTimeout(
+      greenTimer
+    );
+
+  }
+
+
+  greenTimer =
+
+    setTimeout(
+
+      function() {
+
+        /*
+         * Keep the frame green while the
+         * result is being displayed.
+
+         * We intentionally do not immediately
+         * switch it back to white.
+         */
+
+      },
+
+      350
+
+    );
+
+
+
+  /* ========================================================
+     DISPLAY RESULT
+     ======================================================== */
+
 
   document
     .getElementById(
       "itemCode"
     )
     .textContent =
-    itemCode;
+    value;
 
 
   /*
-   * Format.
+   * Determine the decoded format if available.
    *
-   * Because we restrict the scanner to CODE_128,
-   * this should be CODE_128.
+   * Since the scanner is restricted to CODE_128 + QR,
+   * this is sufficient for our UI.
    */
+
+  let detectedFormat =
+    getDetectedFormat(
+      decodedResult
+    );
+
 
   document
     .getElementById(
       "barcodeFormat"
     )
     .textContent =
-    "CODE_128";
-
-
-  /*
-   * Update status.
-   */
-
-  document
-    .getElementById(
-      "scanStatus"
-    )
-    .textContent =
-    "Detected";
+    detectedFormat;
 
 
   document
     .getElementById(
-      "resultStatus"
+      "resultBadge"
     )
     .textContent =
     "✓ DETECTED";
@@ -1079,7 +1607,7 @@ function onScanSuccess(
 
   document
     .getElementById(
-      "resultStatus"
+      "resultBadge"
     )
     .classList
     .add(
@@ -1087,13 +1615,9 @@ function onScanSuccess(
     );
 
 
-  /*
-   * Green result effect.
-   */
-
   document
     .getElementById(
-      "resultPanel"
+      "resultCard"
     )
     .classList
     .add(
@@ -1101,76 +1625,969 @@ function onScanSuccess(
     );
 
 
-  /*
-   * Change instruction.
-   */
-
   document
     .getElementById(
-      "waitingText"
+      "scannerState"
     )
     .textContent =
-    "Barcode successfully recognized.";
+    "Detected";
 
 
   /*
-   * OPTIONAL BACKEND HOOK
+   * Pause decoding but KEEP THE CAMERA VIDEO RUNNING.
    *
-   * This is deliberately NOT connected yet.
+   * This is important.
    *
-   * Later we can send itemCode to your
-   * Google Apps Script backend here.
+   * We don't want to destroy and restart the camera
+   * every time an item is scanned.
+   */
+
+  if (
+    html5QrCode &&
+    scannerRunning
+  ) {
+
+
+    try {
+
+      html5QrCode.pause(
+        false
+      );
+
+      scannerPaused =
+        true;
+
+    }
+
+    catch(error) {
+
+      console.log(
+        "Pause after scan unavailable:",
+        error
+      );
+
+    }
+
+  }
+
+
+  /*
+   * This is the future Google Apps Script
+   * integration point.
    */
 
   handleInventoryItem(
-    itemCode,
+
+    value,
+
     decodedResult
+
   );
 
 }
 
 
 
-/* ============================================================
-   SCAN FAILURE
-   ============================================================ */
+/* ==========================================================
+   SCAN ANOTHER
+   ========================================================== */
 
 
-function onScanFailure(
-  errorMessage
-) {
+function scanAnother() {
 
 
   /*
-   * Do NOT display every failed frame.
-   *
-   * The scanner will normally fail thousands of
-   * frames while searching. Showing those messages
-   * would make the UI noisy and slow.
+   * Clear previous result.
    */
+
+  resultLocked =
+    false;
+
+
+  currentItemCode =
+    "";
+
+
+  document
+    .getElementById(
+      "itemCode"
+    )
+    .textContent =
+    "—";
+
+
+  document
+    .getElementById(
+      "barcodeFormat"
+    )
+    .textContent =
+    "—";
+
+
+  document
+    .getElementById(
+      "resultBadge"
+    )
+    .textContent =
+    "READY";
+
+
+  document
+    .getElementById(
+      "resultBadge"
+    )
+    .classList
+    .remove(
+      "detected"
+    );
+
+
+  document
+    .getElementById(
+      "resultCard"
+    )
+    .classList
+    .remove(
+      "detected"
+    );
+
+
+  document
+    .getElementById(
+      "scannerState"
+    )
+    .textContent =
+    "Scanning";
+
+
+  /*
+   * Return visual frame to scanning mode.
+   */
+
+  setScanVisual(
+    "scanning"
+  );
+
+
+  /*
+   * Resume the existing camera/decoder.
+   *
+   * This is faster than stopping and starting
+   * the camera again.
+   */
+
+  if (
+    html5QrCode &&
+    scannerRunning &&
+    scannerPaused
+  ) {
+
+
+    try {
+
+      html5QrCode.resume();
+
+      scannerPaused =
+        false;
+
+      setCameraStatus(
+
+        "● CAMERA ACTIVE",
+
+        "active"
+
+      );
+
+    }
+
+    catch(error) {
+
+      console.error(
+        "Resume failed:",
+        error
+      );
+
+      setCameraStatus(
+
+        "PRESS START CAMERA TO CONTINUE",
+
+        ""
+
+      );
+
+    }
+
+  }
 
 }
 
 
 
-/* ============================================================
-   RENDER SCANNER
-   ============================================================ */
+/* ==========================================================
+   STOP CAMERA
+   ========================================================== */
 
 
-html5QrcodeScanner.render(
-
-  onScanSuccess,
-
-  onScanFailure
-
-);
+function stopCamera() {
 
 
+  if (
+    !html5QrCode ||
+    !scannerRunning
+  ) {
 
-/* ============================================================
-   INVENTORY HANDLER
-   ============================================================ */
+    return;
+
+  }
+
+
+  /*
+   * stop() safely closes the video stream.
+   *
+   * The official API recommends calling stop()
+   * when camera scanning is finished.
+   */
+
+  html5QrCode
+    .stop()
+
+    .then(
+
+      function() {
+
+
+        scannerRunning =
+          false;
+
+
+        scannerPaused =
+          false;
+
+
+        html5QrCode =
+          null;
+
+
+        setCameraStatus(
+
+          "CAMERA STOPPED",
+
+          ""
+
+        );
+
+
+        document
+          .getElementById(
+            "startButton"
+          )
+          .disabled =
+          false;
+
+
+        document
+          .getElementById(
+            "stopButton"
+          )
+          .disabled =
+          true;
+
+
+        document
+          .getElementById(
+            "scannerState"
+          )
+          .textContent =
+          "Stopped";
+
+
+      }
+
+    )
+
+    .catch(
+
+      function(error) {
+
+
+        console.error(
+          "STOP CAMERA ERROR:",
+          error
+        );
+
+      }
+
+    );
+
+}
+
+
+
+/* ==========================================================
+   AUTOFOCUS
+   ========================================================== */
+
+
+function tryEnableContinuousFocus() {
+
+
+  /*
+   * Do not attempt anything if the scanner
+   * is no longer running.
+   */
+
+  if (
+    !html5QrCode ||
+    !scannerRunning
+  ) {
+
+    return;
+
+  }
+
+
+  try {
+
+
+    /*
+     * Ask html5-qrcode for the actual camera
+     * capabilities.
+     *
+     * This method is officially exposed by
+     * Html5Qrcode.
+     */
+
+    const capabilities =
+
+      html5QrCode
+        .getRunningTrackCapabilities();
+
+
+    console.log(
+      "CAMERA CAPABILITIES:",
+      capabilities
+    );
+
+
+    /*
+     * Check whether the browser exposes
+     * focusMode.
+     */
+
+    const focusModes =
+      capabilities &&
+      capabilities.focusMode;
+
+
+    if (
+      !focusModes
+    ) {
+
+
+      updateFocusDiagnostic(
+
+        "Continuous focus: NOT EXPOSED"
+
+      );
+
+
+      return;
+
+    }
+
+
+    /*
+     * Browser/device may return an array such as:
+     *
+     * ["none", "manual", "continuous"]
+     */
+
+    let supportsContinuous =
+
+      Array.isArray(
+        focusModes
+      )
+      &&
+      focusModes.includes(
+        "continuous"
+      );
+
+
+    if (
+      !supportsContinuous
+    ) {
+
+
+      updateFocusDiagnostic(
+
+        "Continuous focus: NOT AVAILABLE"
+
+      );
+
+
+      console.log(
+        "Supported focus modes:",
+        focusModes
+      );
+
+
+      return;
+
+    }
+
+
+    /*
+     * The device explicitly reports that
+     * continuous focus is available.
+     *
+     * NOW, and only now, request it.
+     */
+
+    html5QrCode
+
+      .applyVideoConstraints({
+
+        advanced: [
+
+          {
+
+            focusMode:
+              "continuous"
+
+          }
+
+        ]
+
+      })
+
+
+      .then(
+
+        function() {
+
+
+          console.log(
+            "CONTINUOUS AUTOFOCUS REQUESTED"
+          );
+
+
+          updateFocusDiagnostic(
+
+            "Continuous focus: ENABLED"
+
+          );
+
+
+          /*
+           * Verify the resulting settings.
+           */
+
+          try {
+
+            const settings =
+
+              html5QrCode
+                .getRunningTrackSettings();
+
+
+            console.log(
+              "CAMERA SETTINGS AFTER FOCUS:",
+              settings
+            );
+
+          }
+
+          catch(error) {
+
+            console.log(
+              "Could not read camera settings:",
+              error
+            );
+
+          }
+
+        }
+
+      )
+
+
+      .catch(
+
+        function(error) {
+
+
+          console.log(
+            "Continuous focus request rejected:",
+            error
+          );
+
+
+          updateFocusDiagnostic(
+
+            "Continuous focus: AVAILABLE, BUT BROWSER REJECTED REQUEST"
+
+          );
+
+        }
+
+      );
+
+
+  }
+
+  catch(error) {
+
+
+    console.log(
+      "Focus capability check unavailable:",
+      error
+    );
+
+
+    updateFocusDiagnostic(
+
+      "Continuous focus: UNAVAILABLE"
+
+    );
+
+  }
+
+}
+
+
+
+/* ==========================================================
+   CAMERA DIAGNOSTICS
+   ========================================================== */
+
+
+function inspectCamera() {
+
+
+  if (
+    !html5QrCode ||
+    !scannerRunning
+  ) {
+
+    return;
+
+  }
+
+
+  try {
+
+
+    const settings =
+
+      html5QrCode
+        .getRunningTrackSettings();
+
+
+    const capabilities =
+
+      html5QrCode
+        .getRunningTrackCapabilities();
+
+
+    console.log(
+      "RUNNING CAMERA SETTINGS:",
+      settings
+    );
+
+
+    console.log(
+      "RUNNING CAMERA CAPABILITIES:",
+      capabilities
+    );
+
+
+    let resolution =
+      "Unknown";
+
+
+    if (
+      settings.width &&
+      settings.height
+    ) {
+
+      resolution =
+
+        settings.width +
+        " × " +
+        settings.height;
+
+    }
+
+
+    let fps =
+      "Unknown";
+
+
+    if (
+      settings.frameRate
+    ) {
+
+      fps =
+        String(
+          Math.round(
+            settings.frameRate
+          )
+        );
+
+    }
+
+
+    let zoom =
+      "Not reported";
+
+
+    if (
+      settings.zoom !==
+      undefined
+    ) {
+
+      zoom =
+        String(
+          settings.zoom
+        );
+
+    }
+
+
+    document
+      .getElementById(
+        "cameraDiagnostics"
+      )
+      .innerHTML =
+
+        "<strong>Resolution:</strong> " +
+        escapeHtml(resolution) +
+
+        "<br>" +
+
+        "<strong>FPS:</strong> " +
+        escapeHtml(fps) +
+
+        "<br>" +
+
+        "<strong>Zoom:</strong> " +
+        escapeHtml(zoom) +
+
+        "<br>" +
+
+        "<strong>Focus:</strong> checking…";
+
+
+  }
+
+  catch(error) {
+
+
+    document
+      .getElementById(
+        "cameraDiagnostics"
+      )
+      .textContent =
+
+      "Camera is running, but detailed capabilities are unavailable.";
+
+  }
+
+}
+
+
+
+/* ==========================================================
+   FOCUS DIAGNOSTIC
+   ========================================================== */
+
+
+function updateFocusDiagnostic(
+  message
+) {
+
+
+  const element =
+
+    document.getElementById(
+      "cameraDiagnostics"
+    );
+
+
+  /*
+   * Preserve the existing diagnostic text
+   * and append focus information.
+   */
+
+  if (
+    element &&
+    !element.innerHTML.includes(
+      "Focus:"
+    )
+  ) {
+
+    element.innerHTML +=
+      "<br><strong>" +
+      escapeHtml(message) +
+      "</strong>";
+
+  }
+
+  else if (
+    element
+  ) {
+
+    element.innerHTML =
+
+      element.innerHTML
+        .replace(
+          /<strong>Focus:<\/strong>.*$/i,
+          "<strong>" +
+          escapeHtml(message) +
+          "</strong>"
+        );
+
+  }
+
+}
+
+
+
+/* ==========================================================
+   FORMAT DETECTION
+   ========================================================== */
+
+
+function getDetectedFormat(
+  decodedResult
+) {
+
+
+  try {
+
+
+    if (
+      decodedResult &&
+      decodedResult.result &&
+      decodedResult.result.format
+    ) {
+
+
+      const format =
+        decodedResult.result.format;
+
+
+      /*
+       * html5-qrcode may expose a numeric enum.
+       *
+       * Code 128 enum value is 5 in the current
+       * library enum.
+       *
+       * QR_CODE enum value is 0.
+       */
+
+      if (
+        typeof format ===
+        "number"
+      ) {
+
+
+        if (
+          format === 5
+        ) {
+
+          return "CODE_128";
+
+        }
+
+
+        if (
+          format === 0
+        ) {
+
+          return "QR_CODE";
+
+        }
+
+      }
+
+
+      return String(
+        format
+      );
+
+    }
+
+  }
+
+  catch(error) {
+
+    console.log(
+      "Format detection unavailable:",
+      error
+    );
+
+  }
+
+
+  /*
+   * Most of our inventory labels are Code 128.
+   */
+
+  return "CODE_128";
+
+}
+
+
+
+/* ==========================================================
+   GREEN / SCAN VISUAL
+   ========================================================== */
+
+
+function setScanVisual(
+  state
+) {
+
+
+  const overlay =
+
+    document.getElementById(
+      "scanOverlay"
+    );
+
+
+  if (!overlay) {
+
+    return;
+
+  }
+
+
+  overlay.classList.remove(
+    "scanning",
+    "detected"
+  );
+
+
+  overlay.classList.add(
+    state
+  );
+
+}
+
+
+
+/* ==========================================================
+   CAMERA STATUS
+   ========================================================== */
+
+
+function setCameraStatus(
+  message,
+  type
+) {
+
+
+  const element =
+
+    document.getElementById(
+      "cameraStatus"
+    );
+
+
+  element.textContent =
+    message;
+
+
+  element.className =
+    "camera-status";
+
+
+  if (type) {
+
+    element.classList.add(
+      type
+    );
+
+  }
+
+}
+
+
+
+/* ==========================================================
+   CAMERA ERROR MESSAGE
+   ========================================================== */
+
+
+function readableCameraError(
+  error
+) {
+
+
+  const text =
+    String(
+      error || ""
+    );
+
+
+  if (
+    text.includes(
+      "NotAllowedError"
+    )
+  ) {
+
+    return "ALLOW CAMERA PERMISSION";
+
+  }
+
+
+  if (
+    text.includes(
+      "NotFoundError"
+    )
+  ) {
+
+    return "NO CAMERA FOUND";
+
+  }
+
+
+  if (
+    text.includes(
+      "NotReadableError"
+    )
+  ) {
+
+    return "CAMERA IS BUSY — CLOSE OTHER CAMERA APPS";
+
+  }
+
+
+  if (
+    text.includes(
+      "OverconstrainedError"
+    )
+  ) {
+
+    return "CAMERA CONSTRAINT NOT SUPPORTED";
+
+  }
+
+
+  return text.substring(
+    0,
+    120
+  );
+
+}
+
+
+
+/* ==========================================================
+   INVENTORY BACKEND HOOK
+   ========================================================== */
 
 
 function handleInventoryItem(
@@ -1183,125 +2600,78 @@ function handleInventoryItem(
 
 
   /*
-   * For now, simply log the result.
+   * THIS IS WHERE WE WILL CONNECT YOUR
+   * GOOGLE APPS SCRIPT BACKEND.
    *
-   * This is the exact point where we can connect
-   * your Google Apps Script later.
+   * We are deliberately leaving the camera
+   * completely independent from the backend.
+   *
+   * That way a slow Google Sheets request
+   * cannot slow down scanning.
    */
 
+
   console.log(
-    "Inventory item:",
+    "INVENTORY ITEM:",
     itemCode
   );
 
 
   /*
-   * Example future integration:
+   * FUTURE EXAMPLE:
    *
-   * google.script.run
-   *   .withSuccessHandler(...)
-   *   .lookupItem(itemCode);
-   *
-   * OR
-   *
-   * fetch(YOUR_APPS_SCRIPT_URL, ...)
-   *
-   * We intentionally leave that out of this
-   * camera test.
+   * fetch(APPS_SCRIPT_URL, {
+   *   method: "POST",
+   *   body: JSON.stringify({
+   *     itemCode: itemCode
+   *   })
+   * });
    */
 
 }
 
 
 
-/* ============================================================
-   SCAN ANOTHER
-   ============================================================ */
+/* ==========================================================
+   HTML ESCAPE
+   ========================================================== */
 
 
-function scanAgain() {
+function escapeHtml(
+  value
+) {
 
 
-  /*
-   * Clear the previous result.
-   */
+  return String(
+    value
+  )
 
-  document
-    .getElementById(
-      "itemCode"
-    )
-    .textContent =
-    "—";
+  .replace(
+    /&/g,
+    "&amp;"
+  )
 
+  .replace(
+    /</g,
+    "&lt;"
+  )
 
-  document
-    .getElementById(
-      "barcodeFormat"
-    )
-    .textContent =
-    "—";
+  .replace(
+    />/g,
+    "&gt;"
+  )
 
+  .replace(
+    /"/g,
+    "&quot;"
+  )
 
-  document
-    .getElementById(
-      "scanStatus"
-    )
-    .textContent =
-    "Waiting";
-
-
-  document
-    .getElementById(
-      "resultStatus"
-    )
-    .textContent =
-    "READY";
-
-
-  document
-    .getElementById(
-      "resultStatus"
-    )
-    .classList
-    .remove(
-      "detected"
-    );
-
-
-  document
-    .getElementById(
-      "resultPanel"
-    )
-    .classList
-    .remove(
-      "detected"
-    );
-
-
-  document
-    .getElementById(
-      "waitingText"
-    )
-    .textContent =
-    "Point the rear camera at a Code 128 barcode.";
+  .replace(
+    /'/g,
+    "&#039;"
+  );
 
 }
-
-
-/* ============================================================
-   EXPOSE FOR DEBUGGING
-   ============================================================ */
-
-
-window.inventoryScanner = {
-
-  scanner:
-    html5QrcodeScanner,
-
-  scanAgain:
-    scanAgain
-
-};
 
 
 </script>
