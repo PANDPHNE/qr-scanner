@@ -288,7 +288,7 @@
       id="destinationColumn"
       class="small">
 
-      Please select a Google Sheet.
+      Scanner-only test mode is available.
 
     </div>
 
@@ -296,7 +296,7 @@
       onclick="showSetup()"
       class="gray">
 
-      CHANGE DESTINATION
+      CONFIGURE / CHANGE DESTINATION
 
     </button>
 
@@ -416,7 +416,7 @@
     class="status"
     id="status">
 
-    Configure your Google Sheet first.
+    Ready for scanner test.
 
   </div>
 
@@ -525,9 +525,11 @@
 
   <div class="camera-note">
 
-    Hold the barcode inside the scanning box.
-    The scanner accepts item codes beginning with KA
-    followed by one or more numbers.
+    Accepted item format:
+    <strong>KA + one or more numbers</strong>.
+
+    Example:
+    KA7195, KA71955, KA719555.
 
   </div>
 
@@ -581,11 +583,7 @@ let currentColumnNumber = "";
  * ITEM CODE VALIDATION
  * ==========================================================
  *
- * REQUIRED FORMAT:
- *
- * KA + one or more digits
- *
- * Examples:
+ * KA + ONE OR MORE DIGITS
  *
  * KA7195       ✅
  * KA71955      ✅
@@ -649,7 +647,7 @@ function loadSavedDestination() {
 
   if (!saved) {
 
-    showSetup();
+    updateDestinationDisplay();
 
     return;
 
@@ -702,7 +700,13 @@ function loadSavedDestination() {
       error
     );
 
-    showSetup();
+    currentSheetUrl = "";
+
+    currentSheetName = "";
+
+    currentColumnNumber = "";
+
+    updateDestinationDisplay();
 
   }
 
@@ -1205,7 +1209,7 @@ function updateDestinationDisplay() {
     document
       .getElementById("destinationColumn")
       .textContent =
-      "Please select a Google Sheet.";
+      "Scanner-only test mode is available.";
 
     return;
 
@@ -1295,31 +1299,18 @@ function setMode(
  * ==========================================================
  * START CAMERA
  * ==========================================================
- */
+ *
+ * IMPORTANT:
+ *
+ * Camera DOES NOT require a Sheet destination.
+ *
+ ************************************************************/
 
 function startCamera() {
 
   if (
     scannerRunning
   ) {
-
-    return;
-
-  }
-
-
-  if (
-    !currentSheetUrl ||
-    !currentSheetName ||
-    !currentColumnNumber
-  ) {
-
-    showSetup();
-
-    setStatus(
-      "Please configure the Google Sheet destination first.",
-      "error"
-    );
 
     return;
 
@@ -1500,10 +1491,10 @@ function handleScan(
 
 
   /*
-   * Normalize the scanned code.
+   * Convert lowercase "ka" to uppercase.
    *
-   * We allow lowercase KA from the barcode,
-   * but save it as uppercase.
+   * Example:
+   * ka7195 → KA7195
    */
 
   const value =
@@ -1554,11 +1545,6 @@ function handleScan(
       "error"
     );
 
-
-    /*
-     * Do NOT allow a rejected code
-     * to participate in the 3-read confirmation.
-     */
 
     lastReadValue =
       "";
@@ -1672,15 +1658,47 @@ function confirmSingleScan(
     "✓ Barcode verified";
 
 
+  stopCamera();
+
+
+  /*
+   * ========================================================
+   * SCANNER-ONLY MODE
+   * ========================================================
+   *
+   * If there is no Sheet destination,
+   * DO NOT send anything anywhere.
+   *
+   */
+
+  if (
+    !currentSheetUrl ||
+    !currentSheetName ||
+    !currentColumnNumber
+  ) {
+
+    setStatus(
+      "✅ Barcode verified — scanner test only. No Sheet destination configured.",
+      "success"
+    );
+
+    return;
+
+  }
+
+
+  /*
+   * ========================================================
+   * GOOGLE SHEETS MODE
+   * ========================================================
+   */
+
   setStatus(
     "Saving " +
     value +
     " to Google Sheets...",
     ""
   );
-
-
-  stopCamera();
 
 
   sendSingleScan(
@@ -1741,6 +1759,13 @@ function sendSingleScan(
 
   img.onerror =
     function() {
+
+      /*
+       * Browser security can prevent the page
+       * from reading the response from Apps Script.
+       *
+       * The request has still been sent.
+       */
 
       setStatus(
         "✅ Scan sent to Google Sheets: " +
@@ -1919,9 +1944,13 @@ function sendBatch() {
   ) {
 
     setStatus(
-      "Please configure a destination first.",
+      "Batch is ready, but no Google Sheet destination is configured.",
       "error"
     );
+
+
+    showSetup();
+
 
     return;
 
