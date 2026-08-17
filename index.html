@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+  <title>QR Camera Test</title>
+
+  <!-- html5-qrcode library -->
+  <script
+    src="https://unpkg.com/html5-qrcode"
+    type="text/javascript">
+  </script>
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #f3f5f7;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.12);
+    }
+
+    h1 {
+      text-align: center;
+      color: #174d1c;
+    }
+
+    .description {
+      text-align: center;
+      color: #666;
+    }
+
+    #reader {
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #fff3cd;
+      color: #664d03;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .result {
+      margin-top: 15px;
+      padding: 18px;
+      border-radius: 10px;
+      background: #e8f5e9;
+    }
+
+    .result-title {
+      font-size: 14px;
+      color: #2e7d32;
+      font-weight: bold;
+    }
+
+    #result {
+      margin-top: 8px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #111;
+      word-break: break-all;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 15px;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      background: #1976d2;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    button:disabled {
+      background: #aaa;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>📷 QR Scanner</h1>
+
+  <p class="description">
+    Camera test — Google Sheets is not connected yet.
+  </p>
+
+  <div id="reader"></div>
+
+  <div class="status" id="status">
+    Press START CAMERA.
+  </div>
+
+  <div class="result">
+
+    <div class="result-title">
+      SCANNED CODE
+    </div>
+
+    <div id="result">
+      Waiting...
+    </div>
+
+  </div>
+
+  <button
+    id="startButton"
+    onclick="startCamera()">
+
+    START CAMERA
+
+  </button>
+
+  <button
+    id="stopButton"
+    onclick="stopCamera()"
+    disabled>
+
+    STOP CAMERA
+
+  </button>
+
+</div>
+
+
+<script>
+
+let html5QrCode = null;
+
+let scannerRunning = false;
+
+
+/************************************************************
+ * START CAMERA
+ ************************************************************/
+
+function startCamera() {
+
+  if (scannerRunning) {
+    return;
+  }
+
+  document.getElementById("status").textContent =
+    "Requesting camera permission...";
+
+  document.getElementById("startButton").disabled =
+    true;
+
+
+  html5QrCode =
+    new Html5Qrcode("reader");
+
+
+  const config = {
+
+    fps: 10,
+
+    qrbox: {
+      width: 250,
+      height: 250
+    }
+
+  };
+
+
+  html5QrCode.start(
+
+    {
+      facingMode: "environment"
+    },
+
+    config,
+
+    function(decodedText, decodedResult) {
+
+      console.log(
+        "QR CODE:",
+        decodedText
+      );
+
+      document.getElementById("result").textContent =
+        decodedText;
+
+      document.getElementById("status").textContent =
+        "✅ QR CODE DETECTED";
+
+    },
+
+    function(errorMessage) {
+
+      // Normal scanning failures are ignored.
+
+    }
+
+  )
+
+  .then(function() {
+
+    scannerRunning = true;
+
+    document.getElementById("status").textContent =
+      "📷 CAMERA ACTIVE — POINT AT QR CODE";
+
+    document.getElementById("stopButton").disabled =
+      false;
+
+  })
+
+  .catch(function(error) {
+
+    console.error(
+      "Camera start failed:",
+      error
+    );
+
+    document.getElementById("status").textContent =
+      "❌ CAMERA ERROR: " + error;
+
+    document.getElementById("startButton").disabled =
+      false;
+
+  });
+
+}
+
+
+/************************************************************
+ * STOP CAMERA
+ ************************************************************/
+
+function stopCamera() {
+
+  if (!html5QrCode || !scannerRunning) {
+    return;
+  }
+
+  html5QrCode.stop()
+
+    .then(function() {
+
+      scannerRunning = false;
+
+      document.getElementById("status").textContent =
+        "Camera stopped.";
+
+      document.getElementById("startButton").disabled =
+        false;
+
+      document.getElementById("stopButton").disabled =
+        true;
+
+    })
+
+    .catch(function(error) {
+
+      console.error(
+        "Camera stop failed:",
+        error
+      );
+
+    });
+
+}
+
+</script>
+
+</body>
+</html>
