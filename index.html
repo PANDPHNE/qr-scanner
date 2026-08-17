@@ -10,11 +10,11 @@
     content="width=device-width, initial-scale=1.0, viewport-fit=cover"
   >
 
-  <title>KA Barcode Scanner</title>
+  <title>KA Fast Barcode Scanner</title>
 
 
   <!-- =====================================================
-       HTML5 QR CODE / BARCODE SCANNER
+       HTML5-QR-CODE
        ===================================================== -->
 
   <script
@@ -24,6 +24,10 @@
 
 
   <style>
+
+    /* =====================================================
+       GLOBAL
+       ===================================================== */
 
     * {
       box-sizing: border-box;
@@ -55,7 +59,7 @@
     body {
 
       padding:
-        12px;
+        10px;
 
     }
 
@@ -65,10 +69,13 @@
       width: 100%;
 
       max-width:
-        520px;
+        560px;
 
       margin:
         0 auto;
+
+      padding:
+        15px;
 
       background:
         #ffffff;
@@ -76,12 +83,9 @@
       border-radius:
         16px;
 
-      padding:
-        16px;
-
       box-shadow:
         0 4px 18px
-        rgba(0,0,0,.12);
+        rgba(0, 0, 0, 0.12);
 
     }
 
@@ -93,7 +97,7 @@
     h1 {
 
       margin:
-        4px 0 6px;
+        3px 0 6px;
 
       text-align:
         center;
@@ -102,7 +106,7 @@
         #174d1c;
 
       font-size:
-        25px;
+        24px;
 
     }
 
@@ -128,7 +132,7 @@
 
 
     /* =====================================================
-       CAMERA
+       CAMERA AREA
        ===================================================== */
 
     .camera-wrapper {
@@ -165,10 +169,6 @@
     }
 
 
-    /*
-     * Make the camera video use the available width.
-     */
-
     #reader video {
 
       display:
@@ -186,17 +186,21 @@
       background:
         #000000;
 
+      /*
+       * Do NOT force a crop.
+       *
+       * The complete camera image should remain available.
+       */
+
       object-fit:
-        cover;
+        contain;
 
     }
 
 
-    /*
-     * Hide html5-qrcode's built-in dashboard.
-     *
-     * We use our own buttons below.
-     */
+    /* =====================================================
+       HIDE HTML5-QRCODE DEFAULT UI
+       ===================================================== */
 
     #reader__dashboard {
 
@@ -214,14 +218,6 @@
     }
 
 
-    #reader__camera_selection {
-
-      display:
-        none !important;
-
-    }
-
-
     #reader__dashboard_section_csr {
 
       display:
@@ -230,15 +226,22 @@
     }
 
 
+    #reader__camera_selection {
+
+      display:
+        none !important;
+
+    }
+
+
     /* =====================================================
-       VISUAL GUIDE ONLY
+       VISUAL GUIDE
        
        IMPORTANT:
        
-       This DOES NOT restrict scanning.
+       THIS IS ONLY A GUIDE.
        
-       There is NO qrbox in the scanner configuration.
-       The whole camera frame can be decoded.
+       IT DOES NOT RESTRICT DECODING.
        ===================================================== */
 
     .scan-guide {
@@ -256,14 +259,14 @@
         50%;
 
       height:
-        120px;
+        115px;
 
       transform:
         translateY(-50%);
 
       border:
         2px solid
-        rgba(0,170,255,.9);
+        #00aaff;
 
       border-radius:
         10px;
@@ -272,11 +275,76 @@
         none;
 
       z-index:
-        20;
+        30;
 
       box-shadow:
         0 0 0 9999px
-        rgba(0,0,0,.08);
+        rgba(0, 0, 0, 0.07);
+
+      transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.15s ease;
+
+    }
+
+
+    .scan-guide.detected {
+
+      border-color:
+        #00e676;
+
+      box-shadow:
+        0 0 0 9999px
+        rgba(0, 0, 0, 0.04),
+        0 0 25px
+        rgba(0, 230, 118, 0.75);
+
+      animation:
+        greenPulse 0.35s ease;
+
+    }
+
+
+    .scan-guide.verified {
+
+      border-color:
+        #00c853;
+
+      box-shadow:
+        0 0 0 9999px
+        rgba(0, 200, 83, 0.05),
+        0 0 30px
+        rgba(0, 200, 83, 0.85);
+
+    }
+
+
+    @keyframes greenPulse {
+
+      0% {
+
+        transform:
+          translateY(-50%)
+          scale(1);
+
+      }
+
+      50% {
+
+        transform:
+          translateY(-50%)
+          scale(1.025);
+
+      }
+
+      100% {
+
+        transform:
+          translateY(-50%)
+          scale(1);
+
+      }
 
     }
 
@@ -303,7 +371,37 @@
 
       box-shadow:
         0 0 8px
-        rgba(0,170,255,.9);
+        rgba(0, 170, 255, 0.9);
+
+      transition:
+        background 0.15s ease,
+        box-shadow 0.15s ease;
+
+    }
+
+
+    .scan-guide.detected
+    .scan-line {
+
+      background:
+        #00e676;
+
+      box-shadow:
+        0 0 10px
+        rgba(0, 230, 118, 0.95);
+
+    }
+
+
+    .scan-guide.verified
+    .scan-line {
+
+      background:
+        #00c853;
+
+      box-shadow:
+        0 0 12px
+        rgba(0, 200, 83, 1);
 
     }
 
@@ -335,13 +433,34 @@
         #ffffff;
 
       background:
-        rgba(0,0,0,.72);
+        rgba(0, 0, 0, 0.75);
 
       font-size:
-        11px;
+        10px;
 
       font-weight:
         bold;
+
+      transition:
+        background 0.15s ease;
+
+    }
+
+
+    .scan-guide.detected
+    .scan-label {
+
+      background:
+        rgba(0, 180, 80, 0.9);
+
+    }
+
+
+    .scan-guide.verified
+    .scan-label {
+
+      background:
+        rgba(0, 150, 70, 0.95);
 
     }
 
@@ -352,17 +471,14 @@
 
     .status {
 
-      margin-top:
-        14px;
-
       min-height:
         48px;
 
+      margin-top:
+        14px;
+
       padding:
         12px;
-
-      border-radius:
-        10px;
 
       display:
         flex;
@@ -373,20 +489,23 @@
       justify-content:
         center;
 
+      border-radius:
+        10px;
+
       text-align:
         center;
-
-      font-size:
-        14px;
-
-      font-weight:
-        bold;
 
       color:
         #664d03;
 
       background:
         #fff3cd;
+
+      font-size:
+        14px;
+
+      font-weight:
+        bold;
 
     }
 
@@ -402,13 +521,24 @@
     }
 
 
+    .status.detected {
+
+      color:
+        #087f3d;
+
+      background:
+        #d9fbe8;
+
+    }
+
+
     .status.success {
 
       color:
-        #0f5132;
+        #075e2f;
 
       background:
-        #d1e7dd;
+        #c8f7d8;
 
     }
 
@@ -425,7 +555,7 @@
 
 
     /* =====================================================
-       CAMERA INFO
+       CAMERA DIAGNOSTICS
        ===================================================== */
 
     .camera-info {
@@ -452,7 +582,10 @@
         11px;
 
       line-height:
-        1.45;
+        1.5;
+
+      word-break:
+        break-word;
 
     }
 
@@ -480,11 +613,11 @@
 
     .result-title {
 
-      text-align:
-        center;
-
       color:
         #2e7d32;
+
+      text-align:
+        center;
 
       font-size:
         13px;
@@ -498,16 +631,16 @@
     #result {
 
       min-height:
-        38px;
+        40px;
 
       margin-top:
-        6px;
-
-      text-align:
-        center;
+        5px;
 
       color:
         #111111;
+
+      text-align:
+        center;
 
       font-size:
         30px;
@@ -524,13 +657,13 @@
     #confirmation {
 
       margin-top:
-        5px;
-
-      text-align:
-        center;
+        4px;
 
       color:
         #555555;
+
+      text-align:
+        center;
 
       font-size:
         13px;
@@ -548,7 +681,7 @@
         100%;
 
       margin-top:
-        12px;
+        11px;
 
       padding:
         14px;
@@ -626,6 +759,18 @@
 
 
     /* =====================================================
+       TEST / DIAGNOSTIC BUTTON
+       ===================================================== */
+
+    #cameraButton {
+
+      background:
+        #6a1b9a;
+
+    }
+
+
+    /* =====================================================
        INSTRUCTIONS
        ===================================================== */
 
@@ -640,11 +785,11 @@
       border-radius:
         9px;
 
-      background:
-        #f1f3f4;
-
       color:
         #555555;
+
+      background:
+        #f1f3f4;
 
       text-align:
         center;
@@ -653,7 +798,7 @@
         12px;
 
       line-height:
-        1.45;
+        1.5;
 
     }
 
@@ -669,7 +814,7 @@
       body {
 
         padding:
-          8px;
+          7px;
 
       }
 
@@ -679,16 +824,13 @@
         padding:
           12px;
 
-        border-radius:
-          13px;
-
       }
 
 
       h1 {
 
         font-size:
-          23px;
+          22px;
 
       }
 
@@ -726,13 +868,13 @@
        ===================================================== -->
 
   <h1>
-    📷 KA Barcode Scanner
+    📷 KA Fast Barcode Scanner
   </h1>
 
 
   <p class="description">
 
-    Point the camera at the barcode.
+    Point the Samsung camera at the barcode.
 
     <br>
 
@@ -740,7 +882,7 @@
 
     <br>
 
-    You do not need to perfectly center the barcode.
+    The barcode can be anywhere in the camera view.
 
   </p>
 
@@ -756,20 +898,32 @@
 
 
     <!--
-      VISUAL GUIDE ONLY.
+      IMPORTANT:
 
-      It does NOT control the decoder.
+      This rectangle is ONLY a visual guide.
+
+      It does NOT determine the decoding area.
     -->
 
-    <div class="scan-guide">
+    <div
+      id="scanGuide"
+      class="scan-guide">
 
-      <div class="scan-line"></div>
 
-      <div class="scan-label">
+      <div
+        id="scanLine"
+        class="scan-line">
+      </div>
 
-        POINT BARCODE HERE
+
+      <div
+        id="scanLabel"
+        class="scan-label">
+
+        SEARCHING ANYWHERE
 
       </div>
+
 
     </div>
 
@@ -778,7 +932,7 @@
 
 
   <!-- =====================================================
-       CAMERA INFO
+       CAMERA INFORMATION
        ===================================================== -->
 
   <div
@@ -826,7 +980,7 @@
 
     <div id="confirmation">
 
-      No barcode confirmed yet.
+      No barcode detected yet.
 
     </div>
 
@@ -848,7 +1002,7 @@
 
 
   <!-- =====================================================
-       TORCH
+       FLASHLIGHT
        ===================================================== -->
 
   <button
@@ -889,24 +1043,43 @@
 
 
   <!-- =====================================================
-       RULES
+       CAMERA TEST
+       ===================================================== -->
+
+  <button
+    id="cameraButton"
+    onclick="showCameraDetails()">
+
+    📱 CAMERA DETAILS
+
+  </button>
+
+
+  <!-- =====================================================
+       INSTRUCTIONS
        ===================================================== -->
 
   <div class="rules">
 
-    Example:
+    <strong>Fast scanning mode</strong>
 
-    <strong>KA7195</strong>
+    <br><br>
 
-    &nbsp;•&nbsp;
-
-    <strong>KA9876</strong>
+    You do NOT need to place the barcode
+    exactly inside the blue guide.
 
     <br>
 
-    Barcode type:
+    Keep the barcode visible anywhere
+    in the camera image.
 
-    <strong>CODE 128</strong>
+    <br><br>
+
+    Green = barcode detected.
+
+    <br>
+
+    Dark green = barcode verified.
 
   </div>
 
@@ -920,7 +1093,7 @@
 
 /****************************************************************
  * ==============================================================
- * GLOBAL STATE
+ * GLOBAL VARIABLES
  * ==============================================================
  */
 
@@ -935,49 +1108,59 @@ let itemConfirmed = false;
 
 
 /*
- * Confirmation.
- *
- * We use TWO matching successful reads.
- *
- * This is faster than the previous three-read system.
- */
-
-let confirmationCount = 0;
-
-
-/*
- * Last barcode seen.
- */
-
-let lastReadValue = "";
-
-
-/*
- * Last time the barcode was accepted.
- */
-
-let lastAcceptedReadTime = 0;
-
-
-/*
- * Prevent duplicate callbacks from one instant.
- */
-
-const READ_COOLDOWN = 120;
-
-
-/*
- * Camera track.
+ * Current camera track.
  */
 
 let videoTrack = null;
 
 
 /*
- * Torch state.
+ * Current selected camera.
+ */
+
+let selectedCamera = null;
+
+
+/*
+ * Torch.
  */
 
 let torchOn = false;
+
+
+/*
+ * Barcode confirmation.
+ */
+
+let confirmationCount = 0;
+
+let lastReadValue = "";
+
+let lastAcceptedReadTime = 0;
+
+
+/*
+ * Prevent duplicate decoder callbacks.
+ */
+
+const READ_COOLDOWN = 120;
+
+
+/*
+ * Number of matching reads required.
+ *
+ * 2 = fast but still gives us confirmation.
+ */
+
+const REQUIRED_MATCHES = 2;
+
+
+/*
+ * How long the green indication remains visible
+ * after a valid decode.
+ */
+
+const DETECTION_GREEN_TIME = 450;
 
 
 /****************************************************************
@@ -985,11 +1168,10 @@ let torchOn = false;
  * ITEM CODE FORMAT
  * ==============================================================
  *
- * Your inventory codes:
+ * Examples:
  *
  * KA7195
  * KA9876
- * etc.
  *
  ****************************************************************/
 
@@ -999,31 +1181,347 @@ const ITEM_CODE_PATTERN =
 
 /****************************************************************
  * ==============================================================
- * CAMERA SETTINGS
+ * CAMERA PREFERENCES
  * ==============================================================
  *
- * We previously confirmed that your phone can provide:
+ * We DO NOT hard-code a Samsung model.
  *
- * 1080 × 1920
- * 30 FPS
+ * Instead we rank available cameras.
  *
- * We request high quality.
+ * Preferred:
  *
- * We intentionally DO NOT force 1.5× zoom.
- *
- * Digital zoom can enlarge blur instead of giving
- * the decoder more useful barcode pixels.
+ * 1. rear/back/main camera
+ * 2. camera without ultra-wide indicators
+ * 3. camera without front/selfie indicators
  *
  ****************************************************************/
 
 const CAMERA_WIDTH =
-  1080;
+  1920;
 
 const CAMERA_HEIGHT =
-  1920;
+  1080;
 
 const CAMERA_FPS =
   30;
+
+
+/****************************************************************
+ * ==============================================================
+ * CAMERA NAME SCORING
+ * ==============================================================
+ */
+
+function scoreCamera(
+  camera
+) {
+
+
+  const label =
+    String(
+      camera.label || ""
+    )
+    .toLowerCase();
+
+
+  let score =
+    0;
+
+
+  /*
+   * Strong preference for rear-facing names.
+   */
+
+  if (
+    label.includes("back")
+  ) {
+
+    score += 100;
+
+  }
+
+
+  if (
+    label.includes("rear")
+  ) {
+
+    score += 100;
+
+  }
+
+
+  if (
+    label.includes("environment")
+  ) {
+
+    score += 90;
+
+  }
+
+
+  /*
+   * Main / wide camera is preferred.
+   */
+
+  if (
+    label.includes("main")
+  ) {
+
+    score += 60;
+
+  }
+
+
+  if (
+    label.includes("wide")
+  ) &&
+  !label.includes("ultra")
+  {
+
+    score += 50;
+
+  }
+
+
+  if (
+    label.includes("1x")
+  ) {
+
+    score += 70;
+
+  }
+
+
+  if (
+    label.includes("1.0x")
+  ) {
+
+    score += 70;
+
+  }
+
+
+  /*
+   * Penalize front/selfie cameras heavily.
+   */
+
+  if (
+    label.includes("front")
+  ) {
+
+    score -= 200;
+
+  }
+
+
+  if (
+    label.includes("selfie")
+  ) {
+
+    score -= 200;
+
+  }
+
+
+  if (
+    label.includes("user")
+  ) {
+
+    score -= 200;
+
+  }
+
+
+  /*
+   * Penalize ultra-wide.
+   *
+   * We prefer the main camera for close barcode work.
+   */
+
+  if (
+    label.includes("ultra")
+  ) {
+
+    score -= 80;
+
+  }
+
+
+  if (
+    label.includes("ultrawide")
+  ) {
+
+    score -= 100;
+
+  }
+
+
+  if (
+    label.includes("0.5")
+  ) {
+
+    score -= 100;
+
+  }
+
+
+  if (
+    label.includes("0.6")
+  ) {
+
+    score -= 100;
+
+  }
+
+
+  /*
+   * Penalize telephoto only slightly.
+   *
+   * If a phone has no main camera exposed,
+   * we can still use it.
+   */
+
+  if (
+    label.includes("tele")
+  ) {
+
+    score -= 10;
+
+  }
+
+
+  return score;
+
+}
+
+
+/****************************************************************
+ * ==============================================================
+ * GET AVAILABLE CAMERAS
+ * ==============================================================
+ */
+
+async function getAvailableCameras() {
+
+
+  try {
+
+
+    const cameras =
+      await Html5Qrcode.getCameras();
+
+
+    if (
+      !cameras ||
+      cameras.length === 0
+    ) {
+
+      throw new Error(
+        "No camera was found."
+      );
+
+    }
+
+
+    console.log(
+      "AVAILABLE CAMERAS:",
+      cameras
+    );
+
+
+    return cameras;
+
+  }
+
+  catch (error) {
+
+
+    console.error(
+      "Camera enumeration failed:",
+      error
+    );
+
+
+    throw error;
+
+  }
+
+}
+
+
+/****************************************************************
+ * ==============================================================
+ * SELECT BEST CAMERA
+ * ==============================================================
+ */
+
+async function selectBestCamera() {
+
+
+  const cameras =
+    await getAvailableCameras();
+
+
+  /*
+   * Create scored camera list.
+   */
+
+  const ranked =
+    cameras
+      .map(
+        function(camera) {
+
+          return {
+
+            camera:
+              camera,
+
+            score:
+              scoreCamera(
+                camera
+              )
+
+          };
+
+        }
+      )
+      .sort(
+
+        function(a, b) {
+
+          return (
+            b.score -
+            a.score
+          );
+
+        }
+
+      );
+
+
+  console.log(
+    "RANKED CAMERAS:",
+    ranked
+  );
+
+
+  /*
+   * Select highest score.
+   */
+
+  selectedCamera =
+    ranked[0].camera;
+
+
+  console.log(
+    "SELECTED CAMERA:",
+    selectedCamera
+  );
+
+
+  return selectedCamera;
+
+}
 
 
 /****************************************************************
@@ -1035,10 +1533,6 @@ const CAMERA_FPS =
 async function startScanner() {
 
 
-  /*
-   * Prevent double start.
-   */
-
   if (
     scannerRunning ||
     scannerStarting
@@ -1048,11 +1542,6 @@ async function startScanner() {
 
   }
 
-
-  /*
-   * Don't start another scan while an item
-   * is already confirmed.
-   */
 
   if (
     itemConfirmed
@@ -1086,7 +1575,7 @@ async function startScanner() {
 
   setStatus(
 
-    "Starting camera...",
+    "Selecting best rear camera...",
 
     ""
 
@@ -1097,25 +1586,39 @@ async function startScanner() {
 
 
     /************************************************************
-     * CLEAN OLD INSTANCE
+     * CLEAN PREVIOUS INSTANCE
      ************************************************************/
 
     await cleanupScanner();
 
 
-    /*
-     * Clear old camera HTML.
-     */
-
     document
       .getElementById(
         "reader"
       )
-      .innerHTML = "";
+      .innerHTML =
+      "";
 
 
     /************************************************************
-     * CREATE HTML5-QRCODE
+     * SELECT CAMERA
+     ************************************************************/
+
+    const camera =
+      await selectBestCamera();
+
+
+    setStatus(
+
+      "Starting main rear camera...",
+
+      ""
+
+    );
+
+
+    /************************************************************
+     * CREATE SCANNER
      ************************************************************/
 
     scanner =
@@ -1127,11 +1630,7 @@ async function startScanner() {
         {
 
           /*
-           * IMPORTANT:
-           *
-           * Code 128 ONLY.
-           *
-           * This reduces unnecessary decoder work.
+           * ONLY CODE 128.
            */
 
           formatsToSupport: [
@@ -1143,10 +1642,7 @@ async function startScanner() {
 
 
           /*
-           * Use the browser's native BarcodeDetector
-           * when the browser supports it.
-           *
-           * html5-qrcode falls back when it isn't available.
+           * Native BarcodeDetector where available.
            */
 
           useBarCodeDetectorIfSupported:
@@ -1162,15 +1658,13 @@ async function startScanner() {
 
 
     /************************************************************
-     * SCANNER CONFIGURATION
+     * SCANNER CONFIG
      ************************************************************/
 
-    const scanConfig = {
+    const config = {
 
       /*
-       * Faster than the original tutorial's 10 FPS.
-       *
-       * 20 is our target.
+       * Fast decode loop.
        */
 
       fps:
@@ -1178,59 +1672,54 @@ async function startScanner() {
 
 
       /*
-       * VERY IMPORTANT:
-       *
        * NO QRBOX.
        *
-       * This means we are NOT restricting the decoder
-       * to a small square.
+       * The whole frame is available to the decoder.
+       */
+
+      /*
+       * IMPORTANT:
        *
-       * The entire camera frame is available.
+       * No forced 16:9 aspect ratio.
+       *
+       * This allows portrait and landscape.
        */
 
-
-      /*
-       * Standard phone camera aspect ratio.
-       */
-
-      aspectRatio:
-        16 / 9,
-
-
-      /*
-       * Barcode is not mirrored.
-       */
 
       disableFlip:
         true,
 
 
       /*
-       * Request high-resolution rear camera.
+       * Request high-quality video.
        *
-       * Focus is intentionally NOT forced.
+       * We deliberately do NOT request:
+       *
+       * zoom: 1.5
+       *
+       * because we want the main camera's
+       * native image first.
        */
 
       videoConstraints: {
 
-        facingMode: {
-
-          ideal:
-            "environment"
-
-        },
-
         width: {
 
           ideal:
-            CAMERA_WIDTH
+            CAMERA_WIDTH,
+
+          min:
+            640
 
         },
 
         height: {
 
           ideal:
-            CAMERA_HEIGHT
+            CAMERA_HEIGHT,
+
+          min:
+            480
 
         },
 
@@ -1250,27 +1739,23 @@ async function startScanner() {
 
 
     /************************************************************
-     * START
+     * START CAMERA
+     *
+     * We use the selected camera ID.
+     *
+     * This is more deliberate than simply asking
+     * for "environment".
      ************************************************************/
 
     await scanner.start(
 
-      {
+      camera.id,
 
-        facingMode: {
-
-          ideal:
-            "environment"
-
-        }
-
-      },
-
-      scanConfig,
+      config,
 
 
       /*
-       * SUCCESS
+       * SUCCESS CALLBACK
        */
 
       function(
@@ -1290,12 +1775,11 @@ async function startScanner() {
 
 
       /*
-       * ERROR
+       * ERROR CALLBACK
        *
-       * This callback fires constantly when a frame
-       * does not contain a decodable barcode.
+       * Unsuccessful frames are normal.
        *
-       * DO NOT display errors here.
+       * Do not show an error.
        */
 
       function(
@@ -1320,26 +1804,21 @@ async function startScanner() {
 
 
     /************************************************************
-     * GET ACTUAL VIDEO TRACK
+     * FIND ACTUAL VIDEO TRACK
      ************************************************************/
 
     await findVideoTrack();
 
 
     /************************************************************
-     * DISPLAY ACTUAL CAMERA SETTINGS
+     * UPDATE DIAGNOSTICS
      ************************************************************/
 
     updateCameraInfo();
 
 
     /************************************************************
-     * SHORT CAMERA SETTLE PERIOD
-     *
-     * We don't force autofocus.
-     *
-     * We simply give the phone's camera a moment
-     * before the user starts moving the label around.
+     * CAMERA SETTLING
      ************************************************************/
 
     setStatus(
@@ -1352,7 +1831,7 @@ async function startScanner() {
 
 
     await sleep(
-      600
+      700
     );
 
 
@@ -1365,7 +1844,7 @@ async function startScanner() {
 
     setStatus(
 
-      "📷 READY — POINT AT ANY PART OF THE BARCODE",
+      "📷 READY — SEARCHING FULL CAMERA VIEW",
 
       "ready"
 
@@ -1380,10 +1859,6 @@ async function startScanner() {
       false;
 
 
-    /*
-     * Check flashlight.
-     */
-
     updateTorchButton();
 
 
@@ -1394,16 +1869,16 @@ async function startScanner() {
 
 
     console.error(
-      "Scanner start error:",
+      "SCANNER START ERROR:",
       error
     );
 
 
-    scannerStarting =
+    scannerRunning =
       false;
 
 
-    scannerRunning =
+    scannerStarting =
       false;
 
 
@@ -1416,14 +1891,6 @@ async function startScanner() {
       )
       .disabled =
       false;
-
-
-    document
-      .getElementById(
-        "stopButton"
-      )
-      .disabled =
-      true;
 
 
     setStatus(
@@ -1462,14 +1929,9 @@ async function findVideoTrack() {
     );
 
 
-  /*
-   * Wait up to two seconds for html5-qrcode
-   * to attach its video stream.
-   */
-
   for (
     let i = 0;
-    i < 20;
+    i < 30;
     i++
   ) {
 
@@ -1492,7 +1954,7 @@ async function findVideoTrack() {
 
 
       if (
-        tracks.length > 0
+        tracks.length
       ) {
 
         videoTrack =
@@ -1500,7 +1962,7 @@ async function findVideoTrack() {
 
 
         console.log(
-          "Active camera track:",
+          "ACTIVE VIDEO TRACK:",
           videoTrack
         );
 
@@ -1520,7 +1982,7 @@ async function findVideoTrack() {
 
 
   console.warn(
-    "Video track was not found."
+    "Could not find active video track."
   );
 
 }
@@ -1581,7 +2043,8 @@ function updateCameraInfo() {
 
 
     const zoom =
-      settings.zoom
+      settings.zoom !==
+      undefined
 
         ? Number(
             settings.zoom
@@ -1590,22 +2053,33 @@ function updateCameraInfo() {
         : "native";
 
 
+    const facing =
+      settings.facingMode ||
+      "unknown";
+
+
+    const selectedName =
+      videoTrack.label ||
+      (
+        selectedCamera
+          ? selectedCamera.label
+          : "Rear camera"
+      );
+
+
     info.innerHTML =
 
       "<strong>" +
 
       escapeHtml(
-
-        videoTrack.label ||
-        "Rear camera"
-
+        selectedName
       ) +
 
       "</strong>" +
 
       "<br>" +
 
-      "Camera: " +
+      "Resolution: " +
 
       width +
 
@@ -1613,11 +2087,9 @@ function updateCameraInfo() {
 
       height +
 
-      " | " +
+      " | FPS: " +
 
       fps +
-
-      " FPS" +
 
       " | Zoom: " +
 
@@ -1625,7 +2097,13 @@ function updateCameraInfo() {
 
       "<br>" +
 
-      "Decoder: CODE 128 only";
+      "Facing: " +
+
+      escapeHtml(
+        facing
+      ) +
+
+      " | Decoder: CODE 128";
 
   }
 
@@ -1662,10 +2140,6 @@ function handleBarcode(
 ) {
 
 
-  /*
-   * Ignore anything after confirmation.
-   */
-
   if (
     itemConfirmed
   ) {
@@ -1674,10 +2148,6 @@ function handleBarcode(
 
   }
 
-
-  /*
-   * Clean result.
-   */
 
   const value =
 
@@ -1702,7 +2172,8 @@ function handleBarcode(
 
 
   /*
-   * Prevent duplicate callback bursts.
+   * Prevent the same callback from being counted
+   * repeatedly within a tiny time window.
    */
 
   if (
@@ -1726,16 +2197,15 @@ function handleBarcode(
 
 
   console.log(
-    "BARCODE DETECTED:",
+    "CODE 128 DETECTED:",
     value,
-
     decodedResult
   );
 
 
-  /**************************************************************
+  /************************************************************
    * VALIDATE ITEM CODE
-   **************************************************************/
+   ************************************************************/
 
   if (
     !ITEM_CODE_PATTERN.test(
@@ -1744,7 +2214,7 @@ function handleBarcode(
   ) {
 
     console.log(
-      "Barcode rejected:",
+      "Rejected barcode:",
       value
     );
 
@@ -1753,9 +2223,18 @@ function handleBarcode(
   }
 
 
-  /**************************************************************
-   * MATCHING READS
-   **************************************************************/
+  /************************************************************
+   * GREEN FEEDBACK IMMEDIATELY
+   ************************************************************/
+
+  showDetectionFeedback(
+    value
+  );
+
+
+  /************************************************************
+   * CONFIRMATION
+   ************************************************************/
 
   if (
     value === lastReadValue
@@ -1776,9 +2255,9 @@ function handleBarcode(
   }
 
 
-  /**************************************************************
-   * SHOW RESULT IMMEDIATELY
-   **************************************************************/
+  /************************************************************
+   * SHOW RESULT
+   ************************************************************/
 
   document
     .getElementById(
@@ -1798,32 +2277,18 @@ function handleBarcode(
 
     confirmationCount +
 
-    " / 2";
+    " / " +
+
+    REQUIRED_MATCHES;
 
 
-  setStatus(
-
-    "Reading " +
-
-    value +
-
-    " — " +
-
-    confirmationCount +
-
-    " / 2",
-
-    ""
-
-  );
-
-
-  /**************************************************************
-   * CONFIRM AFTER TWO MATCHING READS
-   **************************************************************/
+  /************************************************************
+   * CONFIRM
+   ************************************************************/
 
   if (
-    confirmationCount >= 2
+    confirmationCount >=
+    REQUIRED_MATCHES
   ) {
 
     confirmBarcode(
@@ -1831,6 +2296,107 @@ function handleBarcode(
     );
 
   }
+
+  else {
+
+    setStatus(
+
+      "🟢 BARCODE DETECTED: " +
+      value,
+
+      "detected"
+
+    );
+
+  }
+
+}
+
+
+/****************************************************************
+ * ==============================================================
+ * GREEN DETECTION FEEDBACK
+ * ==============================================================
+ */
+
+function showDetectionFeedback(
+  value
+) {
+
+
+  const guide =
+    document.getElementById(
+      "scanGuide"
+    );
+
+
+  const label =
+    document.getElementById(
+      "scanLabel"
+    );
+
+
+  guide.classList.add(
+    "detected"
+  );
+
+
+  label.textContent =
+    "🟢 BARCODE DETECTED";
+
+
+  /*
+   * Return to blue after a short period
+   * unless the item becomes verified.
+   */
+
+  setTimeout(
+
+    function() {
+
+
+      if (
+        itemConfirmed
+      ) {
+
+        return;
+
+      }
+
+
+      guide.classList.remove(
+        "detected"
+      );
+
+
+      label.textContent =
+        "SEARCHING ANYWHERE";
+
+
+      /*
+       * Only change status if we aren't
+       * already showing another state.
+       */
+
+      if (
+        !itemConfirmed
+      ) {
+
+        setStatus(
+
+          "📷 READY — SEARCHING FULL CAMERA VIEW",
+
+          "ready"
+
+        );
+
+      }
+
+    },
+
+    DETECTION_GREEN_TIME
+
+  );
 
 }
 
@@ -1857,6 +2423,36 @@ async function confirmBarcode(
 
   itemConfirmed =
     true;
+
+
+  const guide =
+    document.getElementById(
+      "scanGuide"
+    );
+
+
+  const label =
+    document.getElementById(
+      "scanLabel"
+    );
+
+
+  /*
+   * Solid green.
+   */
+
+  guide.classList.remove(
+    "detected"
+  );
+
+
+  guide.classList.add(
+    "verified"
+  );
+
+
+  label.textContent =
+    "✓ VERIFIED";
 
 
   document
@@ -1887,15 +2483,78 @@ async function confirmBarcode(
 
 
   /*
-   * Stop camera to prevent another item from
-   * being accidentally captured.
+   * IMPORTANT:
+   *
+   * We do NOT stop the camera.
+   *
+   * The scanner stays alive for rapid inventory work.
    */
 
-  await stopScanner();
+  /*
+   * Instead, temporarily ignore further scans
+   * until the user requests the next item.
+   */
+
+}
+
+
+/****************************************************************
+ * ==============================================================
+ * SCAN NEXT ITEM
+ * ==============================================================
+ */
+
+function scanNextItem() {
 
 
   /*
-   * Keep the confirmed result visible.
+   * Reset item state.
+   */
+
+  itemConfirmed =
+    false;
+
+
+  confirmationCount =
+    0;
+
+
+  lastReadValue =
+    "";
+
+
+  lastAcceptedReadTime =
+    0;
+
+
+  /*
+   * Reset guide.
+   */
+
+  const guide =
+    document.getElementById(
+      "scanGuide"
+    );
+
+
+  const label =
+    document.getElementById(
+      "scanLabel"
+    );
+
+
+  guide.classList.remove(
+    "detected",
+    "verified"
+  );
+
+
+  label.textContent =
+    "SEARCHING ANYWHERE";
+
+
+  /*
+   * Reset result.
    */
 
   document
@@ -1903,7 +2562,7 @@ async function confirmBarcode(
       "result"
     )
     .textContent =
-    value;
+    "Waiting...";
 
 
   document
@@ -1911,7 +2570,38 @@ async function confirmBarcode(
       "confirmation"
     )
     .textContent =
-    "✓ BARCODE VERIFIED — READY FOR NEXT ITEM";
+    "Point at the next barcode.";
+
+
+  /*
+   * If camera is already running,
+   * do NOT restart it.
+   *
+   * This is important for speed.
+   */
+
+  if (
+    scannerRunning
+  ) {
+
+    setStatus(
+
+      "📷 READY — SEARCHING NEXT ITEM",
+
+      "ready"
+
+    );
+
+    return;
+
+  }
+
+
+  /*
+   * Otherwise start it.
+   */
+
+  startScanner();
 
 }
 
@@ -1939,11 +2629,6 @@ async function stopScanner() {
     if (
       scanner
     ) {
-
-      /*
-       * html5-qrcode officially exposes stop()
-       * for ending camera scanning.
-       */
 
       await scanner.stop();
 
@@ -1985,7 +2670,7 @@ async function stopScanner() {
 
 
   /*
-   * Explicitly stop any remaining video tracks.
+   * Stop the underlying camera track.
    */
 
   try {
@@ -2004,7 +2689,7 @@ async function stopScanner() {
   catch (error) {
 
     console.warn(
-      "Video track stop:",
+      "Track stop:",
       error
     );
 
@@ -2027,7 +2712,8 @@ async function stopScanner() {
     .getElementById(
       "reader"
     )
-    .innerHTML = "";
+    .innerHTML =
+    "";
 
 
   document
@@ -2056,136 +2742,69 @@ async function stopScanner() {
 
   document
     .getElementById(
-      "torchButton"
-    )
-    .textContent =
-    "🔦 TURN ON LIGHT";
-
-
-  document
-    .getElementById(
-      "torchButton"
-    )
-    .classList.remove(
-      "active"
-    );
-
-
-  document
-    .getElementById(
       "cameraInfo"
     )
     .textContent =
     "Camera stopped.";
 
-}
-
-
-/****************************************************************
- * ==============================================================
- * SCAN NEXT ITEM
- * ==============================================================
- */
-
-async function scanNextItem() {
-
 
   /*
-   * Stop anything still running.
+   * Reset guide visual state.
    */
 
-  await stopScanner();
+  const guide =
+    document.getElementById(
+      "scanGuide"
+    );
 
 
-  /*
-   * Clear previous result.
-   */
-
-  itemConfirmed =
-    false;
-
-
-  confirmationCount =
-    0;
-
-
-  lastReadValue =
-    "";
-
-
-  lastAcceptedReadTime =
-    0;
-
-
-  torchOn =
-    false;
-
-
-  document
-    .getElementById(
-      "result"
-    )
-    .textContent =
-    "Waiting...";
-
-
-  document
-    .getElementById(
-      "confirmation"
-    )
-    .textContent =
-    "Point at the next barcode.";
-
-
-  document
-    .getElementById(
-      "cameraInfo"
-    )
-    .textContent =
-    "Preparing next scan...";
-
-
-  document
-    .getElementById(
-      "startButton"
-    )
-    .disabled =
-    false;
-
-
-  document
-    .getElementById(
-      "nextButton"
-    )
-    .disabled =
-    false;
-
-
-  setStatus(
-
-    "Ready for next item.",
-
-    ""
-
+  guide.classList.remove(
+    "detected",
+    "verified"
   );
 
 
-  /*
-   * Start immediately.
-   *
-   * This makes the workflow:
-   *
-   * Scan → Confirm → Next Item → Camera.
-   */
+  document
+    .getElementById(
+      "scanLabel"
+    )
+    .textContent =
+    "SEARCHING ANYWHERE";
 
-  await startScanner();
+
+  if (
+    itemConfirmed
+  ) {
+
+    setStatus(
+
+      "Item confirmed. " +
+      "Press SCAN NEXT ITEM.",
+
+      "success"
+
+    );
+
+  }
+
+  else {
+
+    setStatus(
+
+      "Camera stopped.",
+
+      ""
+
+    );
+
+  }
 
 }
 
 
 /****************************************************************
  * ==============================================================
- * TORCH
+ * TORCH AVAILABILITY
  * ==============================================================
  */
 
@@ -2210,22 +2829,6 @@ function updateTorchButton() {
   }
 
 
-  if (
-    typeof videoTrack.getCapabilities !==
-    "function"
-  ) {
-
-    button.disabled =
-      true;
-
-    button.textContent =
-      "🔦 LIGHT NOT AVAILABLE";
-
-    return;
-
-  }
-
-
   try {
 
 
@@ -2241,6 +2844,7 @@ function updateTorchButton() {
 
       button.disabled =
         false;
+
 
       button.textContent =
 
@@ -2268,6 +2872,9 @@ function updateTorchButton() {
 
     button.disabled =
       true;
+
+    button.textContent =
+      "🔦 LIGHT NOT AVAILABLE";
 
   }
 
@@ -2301,6 +2908,7 @@ async function toggleTorch() {
 
 
     if (
+      !capabilities ||
       !capabilities.torch
     ) {
 
@@ -2368,6 +2976,146 @@ async function toggleTorch() {
     torchOn =
       false;
 
+
+    updateTorchButton();
+
+  }
+
+}
+
+
+/****************************************************************
+ * ==============================================================
+ * CAMERA DETAILS
+ * ==============================================================
+ */
+
+async function showCameraDetails() {
+
+
+  try {
+
+
+    const cameras =
+      await getAvailableCameras();
+
+
+    let text =
+      "AVAILABLE CAMERAS:\n\n";
+
+
+    cameras.forEach(
+
+      function(
+        camera,
+        index
+      ) {
+
+        const score =
+          scoreCamera(
+            camera
+          );
+
+
+        text +=
+
+          (
+            index + 1
+          ) +
+
+          ". " +
+
+          (
+            camera.label ||
+            "Unnamed camera"
+          ) +
+
+          "\n" +
+
+          "Score: " +
+
+          score +
+
+          "\n\n";
+
+      }
+
+    );
+
+
+    if (
+      videoTrack
+    ) {
+
+      const settings =
+        videoTrack
+          .getSettings();
+
+
+      text +=
+
+        "ACTIVE CAMERA\n\n" +
+
+        (
+          videoTrack.label ||
+          "Unknown"
+        ) +
+
+        "\n\n" +
+
+        "Resolution: " +
+
+        (
+          settings.width ||
+          "?"
+        ) +
+
+        " × " +
+
+        (
+          settings.height ||
+          "?"
+        ) +
+
+        "\nFPS: " +
+
+        (
+          settings.frameRate ||
+          "?"
+        ) +
+
+        "\nZoom: " +
+
+        (
+          settings.zoom !==
+          undefined
+
+            ? settings.zoom
+
+            : "native"
+
+        );
+
+    }
+
+
+    alert(
+      text
+    );
+
+  }
+
+  catch (error) {
+
+
+    alert(
+
+      "Unable to read camera details.\n\n" +
+
+      error
+
+    );
+
   }
 
 }
@@ -2388,6 +3136,7 @@ async function cleanupScanner() {
     if (
       scanner
     ) {
+
 
       try {
 
@@ -2435,7 +3184,7 @@ async function cleanupScanner() {
 
 
   /*
-   * Stop remaining camera tracks.
+   * Stop underlying track.
    */
 
   try {
@@ -2470,6 +3219,14 @@ async function cleanupScanner() {
 
 
   scannerRunning =
+    false;
+
+
+  scannerStarting =
+    false;
+
+
+  torchOn =
     false;
 
 }
@@ -2578,7 +3335,6 @@ function escapeHtml(
     );
 
 }
-
 
 </script>
 
