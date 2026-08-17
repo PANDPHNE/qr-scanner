@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html>
+
 <head>
+
   <meta charset="UTF-8">
 
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0">
 
-  <title>QR Camera Test</title>
+  <title>Barcode Scanner</title>
 
-  <!-- html5-qrcode library -->
+  <!-- html5-qrcode -->
   <script
     src="https://unpkg.com/html5-qrcode"
     type="text/javascript">
   </script>
+
 
   <style>
 
@@ -20,12 +23,14 @@
       box-sizing: border-box;
     }
 
+
     body {
       margin: 0;
       padding: 20px;
       font-family: Arial, sans-serif;
       background: #f3f5f7;
     }
+
 
     .container {
       max-width: 500px;
@@ -36,20 +41,26 @@
       box-shadow: 0 4px 18px rgba(0,0,0,.12);
     }
 
+
     h1 {
       text-align: center;
       color: #174d1c;
+      margin-bottom: 5px;
     }
+
 
     .description {
       text-align: center;
       color: #666;
+      margin-top: 5px;
     }
+
 
     #reader {
       width: 100%;
       margin-top: 20px;
     }
+
 
     .status {
       margin-top: 20px;
@@ -59,7 +70,21 @@
       color: #664d03;
       text-align: center;
       font-weight: bold;
+      min-height: 48px;
     }
+
+
+    .status.success {
+      background: #d1e7dd;
+      color: #0f5132;
+    }
+
+
+    .status.error {
+      background: #f8d7da;
+      color: #842029;
+    }
+
 
     .result {
       margin-top: 15px;
@@ -68,19 +93,32 @@
       background: #e8f5e9;
     }
 
+
     .result-title {
       font-size: 14px;
       color: #2e7d32;
       font-weight: bold;
     }
 
+
     #result {
       margin-top: 8px;
-      font-size: 24px;
+      font-size: 30px;
       font-weight: bold;
       color: #111;
       word-break: break-all;
+      text-align: center;
+      letter-spacing: 2px;
     }
+
+
+    .confirmation {
+      margin-top: 10px;
+      text-align: center;
+      color: #555;
+      font-size: 14px;
+    }
+
 
     button {
       width: 100%;
@@ -92,42 +130,86 @@
       color: white;
       font-size: 18px;
       font-weight: bold;
+      cursor: pointer;
     }
+
 
     button:disabled {
       background: #aaa;
+      cursor: not-allowed;
+    }
+
+
+    .reset {
+      background: #555;
+    }
+
+
+    .camera-note {
+      margin-top: 15px;
+      padding: 12px;
+      background: #f1f3f4;
+      border-radius: 10px;
+      color: #555;
+      font-size: 13px;
+      text-align: center;
     }
 
   </style>
+
 </head>
+
 
 <body>
 
+
 <div class="container">
 
-  <h1>📷 QR Scanner</h1>
+
+  <h1>📷 Barcode Scanner</h1>
+
 
   <p class="description">
-    Camera test — Google Sheets is not connected yet.
+    Inventory barcode accuracy test
   </p>
+
 
   <div id="reader"></div>
 
-  <div class="status" id="status">
+
+  <div
+    class="status"
+    id="status">
+
     Press START CAMERA.
+
   </div>
+
 
   <div class="result">
 
+
     <div class="result-title">
-      SCANNED CODE
+      CONFIRMED ITEM CODE
     </div>
+
 
     <div id="result">
       Waiting...
     </div>
 
+
+    <div
+      class="confirmation"
+      id="confirmation">
+
+      No barcode confirmed yet.
+
+    </div>
+
+
   </div>
+
 
   <button
     id="startButton"
@@ -136,6 +218,7 @@
     START CAMERA
 
   </button>
+
 
   <button
     id="stopButton"
@@ -146,48 +229,182 @@
 
   </button>
 
+
+  <button
+    id="resetButton"
+    class="reset"
+    onclick="resetScanner()">
+
+    RESET / SCAN NEXT ITEM
+
+  </button>
+
+
+  <div class="camera-note">
+
+    Hold the barcode horizontally inside the scanning box.
+    Keep the camera steady and allow the barcode to appear clearly.
+
+  </div>
+
+
 </div>
 
 
+
 <script>
+
+
+/************************************************************
+ * GLOBAL VARIABLES
+ ************************************************************/
+
 
 let html5QrCode = null;
 
 let scannerRunning = false;
 
 
+/*
+ * Barcode confirmation system.
+ *
+ * A barcode must be successfully detected
+ * three times with the SAME value.
+ */
+
+let lastReadValue = "";
+
+let confirmationCount = 0;
+
+let confirmedCode = "";
+
+
+/*
+ * Prevent repeated confirmation of the same item.
+ */
+
+let itemConfirmed = false;
+
+
+
 /************************************************************
  * START CAMERA
  ************************************************************/
 
+
 function startCamera() {
 
+
   if (scannerRunning) {
+
     return;
+
   }
 
-  document.getElementById("status").textContent =
-    "Requesting camera permission...";
 
-  document.getElementById("startButton").disabled =
-    true;
+  /*
+   * Don't allow another scan until
+   * the previous confirmed item is reset.
+   */
 
+  if (itemConfirmed) {
+
+    setStatus(
+      "Item already confirmed. Press RESET / SCAN NEXT ITEM.",
+      "success"
+    );
+
+    return;
+
+  }
+
+
+  setStatus(
+    "Requesting camera permission...",
+    ""
+  );
+
+
+  document.getElementById(
+    "startButton"
+  ).disabled = true;
+
+
+  /*
+   * Create scanner.
+   */
 
   html5QrCode =
     new Html5Qrcode("reader");
 
 
+
+  /**********************************************************
+   * BARCODE CONFIGURATION
+   **********************************************************/
+
   const config = {
 
-    fps: 10,
+    /*
+     * More frames per second gives the scanner
+     * more opportunities to detect the barcode.
+     */
+
+    fps: 15,
+
+
+    /*
+     * Wide and short scanning box.
+     *
+     * This is intentionally designed for
+     * horizontal 1D barcodes.
+     */
 
     qrbox: {
-      width: 250,
-      height: 250
-    }
+      width: 350,
+      height: 140
+    },
+
+
+    /*
+     * Tell html5-qrcode to focus on common
+     * barcode formats.
+     *
+     * QR is also included so the scanner
+     * remains useful for QR codes.
+     */
+
+    formatsToSupport: [
+
+      Html5QrcodeSupportedFormats.CODE_128,
+
+      Html5QrcodeSupportedFormats.CODE_39,
+
+      Html5QrcodeSupportedFormats.CODE_93,
+
+      Html5QrcodeSupportedFormats.EAN_13,
+
+      Html5QrcodeSupportedFormats.EAN_8,
+
+      Html5QrcodeSupportedFormats.UPC_A,
+
+      Html5QrcodeSupportedFormats.UPC_E,
+
+      Html5QrcodeSupportedFormats.ITF,
+
+      Html5QrcodeSupportedFormats.CODABAR,
+
+      Html5QrcodeSupportedFormats.QR_CODE
+
+    ]
 
   };
 
+
+
+  /**********************************************************
+   * START REAR CAMERA
+   **********************************************************/
 
   html5QrCode.start(
 
@@ -197,52 +414,298 @@ function startCamera() {
 
     config,
 
+
+    /********************************************************
+     * SUCCESSFUL CAMERA READ
+     ********************************************************/
+
     function(decodedText, decodedResult) {
 
+
+      /*
+       * Stop if an item has already been confirmed.
+       */
+
+      if (itemConfirmed) {
+
+        return;
+
+      }
+
+
+      /*
+       * Clean the camera result.
+       */
+
+      let value =
+        String(
+          decodedText || ""
+        )
+        .trim()
+        .toUpperCase();
+
+
       console.log(
-        "QR CODE:",
-        decodedText
+        "CAMERA READ:",
+        value
       );
 
-      document.getElementById("result").textContent =
-        decodedText;
 
-      document.getElementById("status").textContent =
-        "✅ QR CODE DETECTED";
+      /*
+       * Ignore empty results.
+       */
+
+      if (!value) {
+
+        return;
+
+      }
+
+
+
+      /********************************************************
+       * ITEM CODE VALIDATION
+       ********************************************************/
+
+      /*
+       * YOUR CURRENT ITEM CODE FORMAT:
+       *
+       * KA7195
+       * KA3986
+       * KA6399
+       * KA7898
+       *
+       * Therefore:
+       *
+       * KA + 4 digits
+       *
+       * Example:
+       *
+       * KA7195 = ACCEPT
+       *
+       * KA719 = REJECT
+       *
+       * KA71955 = REJECT
+       *
+       * ABC123 = REJECT
+       */
+
+      const itemCodePattern =
+        /^KA\d{4}$/;
+
+
+      if (
+        !itemCodePattern.test(value)
+      ) {
+
+
+        /*
+         * Don't display an invalid camera
+         * result as a confirmed item.
+         */
+
+        setStatus(
+          "Reading barcode...",
+          ""
+        );
+
+
+        document.getElementById(
+          "confirmation"
+        ).textContent =
+          "Barcode detected, but it does not match the expected item-code format.";
+
+
+        console.log(
+          "Rejected camera result:",
+          value
+        );
+
+
+        return;
+
+      }
+
+
+
+      /********************************************************
+       * THREE-READ CONFIRMATION
+       ********************************************************/
+
+
+      if (
+        value === lastReadValue
+      ) {
+
+
+        confirmationCount++;
+
+
+      } else {
+
+
+        /*
+         * A different barcode was detected.
+         *
+         * Start confirmation again.
+         */
+
+        lastReadValue =
+          value;
+
+        confirmationCount =
+          1;
+
+      }
+
+
+      /*
+       * Show the currently detected value.
+       */
+
+      document.getElementById(
+        "result"
+      ).textContent =
+        value;
+
+
+      document.getElementById(
+        "confirmation"
+      ).textContent =
+        "Verification " +
+        confirmationCount +
+        " / 3";
+
+
+      setStatus(
+        "Checking barcode: " +
+        value +
+        " (" +
+        confirmationCount +
+        "/3)",
+        ""
+      );
+
+
+
+      /********************************************************
+       * FINAL CONFIRMATION
+       ********************************************************/
+
+
+      if (
+        confirmationCount >= 3
+      ) {
+
+
+        /*
+         * Confirm the item.
+         */
+
+        confirmedCode =
+          value;
+
+
+        itemConfirmed =
+          true;
+
+
+        document.getElementById(
+          "result"
+        ).textContent =
+          confirmedCode;
+
+
+        document.getElementById(
+          "confirmation"
+        ).textContent =
+          "✓ Barcode verified successfully";
+
+
+        setStatus(
+          "✅ CONFIRMED: " +
+          confirmedCode,
+          "success"
+        );
+
+
+        /*
+         * Stop camera automatically.
+         *
+         * This prevents additional accidental
+         * reads of the same physical item.
+         */
+
+        stopCamera();
+
+      }
 
     },
 
+
+    /********************************************************
+     * SCAN FAILURE
+     ********************************************************/
+
     function(errorMessage) {
 
-      // Normal scanning failures are ignored.
+      /*
+       * Normal frame-by-frame failures are ignored.
+       *
+       * This happens constantly while the camera
+       * is searching for a barcode.
+       */
 
     }
 
   )
 
+
   .then(function() {
 
-    scannerRunning = true;
 
-    document.getElementById("status").textContent =
-      "📷 CAMERA ACTIVE — POINT AT QR CODE";
+    scannerRunning =
+      true;
 
-    document.getElementById("stopButton").disabled =
+
+    setStatus(
+      "📷 CAMERA ACTIVE — ALIGN BARCODE INSIDE THE BOX",
+      ""
+    );
+
+
+    document.getElementById(
+      "stopButton"
+    ).disabled =
       false;
+
 
   })
 
+
   .catch(function(error) {
+
 
     console.error(
       "Camera start failed:",
       error
     );
 
-    document.getElementById("status").textContent =
-      "❌ CAMERA ERROR: " + error;
 
-    document.getElementById("startButton").disabled =
+    scannerRunning =
+      false;
+
+
+    setStatus(
+      "❌ CAMERA ERROR: " +
+      error,
+      "error"
+    );
+
+
+    document.getElementById(
+      "startButton"
+    ).disabled =
       false;
 
   });
@@ -250,45 +713,171 @@ function startCamera() {
 }
 
 
+
 /************************************************************
  * STOP CAMERA
  ************************************************************/
 
+
 function stopCamera() {
 
-  if (!html5QrCode || !scannerRunning) {
+
+  if (
+    !html5QrCode ||
+    !scannerRunning
+  ) {
+
     return;
+
   }
 
-  html5QrCode.stop()
+
+  html5QrCode
+    .stop()
+
 
     .then(function() {
 
-      scannerRunning = false;
 
-      document.getElementById("status").textContent =
-        "Camera stopped.";
-
-      document.getElementById("startButton").disabled =
+      scannerRunning =
         false;
 
-      document.getElementById("stopButton").disabled =
+
+      setStatus(
+        "Camera stopped.",
+        ""
+      );
+
+
+      document.getElementById(
+        "startButton"
+      ).disabled =
+        false;
+
+
+      document.getElementById(
+        "stopButton"
+      ).disabled =
         true;
+
 
     })
 
+
     .catch(function(error) {
+
 
       console.error(
         "Camera stop failed:",
         error
       );
 
+
     });
 
 }
 
+
+
+/************************************************************
+ * RESET FOR NEXT ITEM
+ ************************************************************/
+
+
+function resetScanner() {
+
+
+  /*
+   * Reset confirmation data.
+   */
+
+  lastReadValue =
+    "";
+
+  confirmationCount =
+    0;
+
+  confirmedCode =
+    "";
+
+  itemConfirmed =
+    false;
+
+
+  /*
+   * Reset screen.
+   */
+
+  document.getElementById(
+    "result"
+  ).textContent =
+    "Waiting...";
+
+
+  document.getElementById(
+    "confirmation"
+  ).textContent =
+    "No barcode confirmed yet.";
+
+
+  setStatus(
+    "Ready to scan the next item.",
+    ""
+  );
+
+
+  /*
+   * If camera isn't running,
+   * allow user to start it.
+   */
+
+  document.getElementById(
+    "startButton"
+  ).disabled =
+    false;
+
+}
+
+
+
+/************************************************************
+ * STATUS DISPLAY
+ ************************************************************/
+
+
+function setStatus(
+  message,
+  type
+) {
+
+
+  const status =
+    document.getElementById(
+      "status"
+    );
+
+
+  status.textContent =
+    message;
+
+
+  status.className =
+    "status";
+
+
+  if (type) {
+
+    status.classList.add(
+      type
+    );
+
+  }
+
+}
+
+
 </script>
 
 </body>
+
 </html>
