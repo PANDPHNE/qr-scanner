@@ -15,7 +15,6 @@
 
   <!-- =====================================================
        ZXING BROWSER
-       Direct barcode engine
        ===================================================== -->
 
   <script
@@ -49,7 +48,7 @@
 
       margin: auto;
 
-      background: white;
+      background: #ffffff;
 
       padding: 20px;
 
@@ -97,7 +96,7 @@
 
       width: 100%;
 
-      background: #000;
+      background: #000000;
 
       border-radius: 12px;
 
@@ -120,42 +119,41 @@
 
       object-fit: cover;
 
-      background: #000;
+      background: #000000;
 
     }
 
 
     /* =====================================================
-       VISUAL SCAN GUIDE
+       VISUAL GUIDE
 
+       IMPORTANT:
        This is ONLY a guide.
-
-       It does NOT crop the decoding area.
+       ZXing still analyzes the full video frame.
        ===================================================== */
 
     .scan-guide {
 
       position: absolute;
 
-      left: 6%;
+      left: 5%;
 
-      right: 6%;
+      right: 5%;
 
       top: 50%;
 
-      height: 115px;
+      height: 125px;
 
       transform: translateY(-50%);
 
-      border: 2px solid rgba(0, 150, 255, .85);
+      border: 2px solid rgba(0, 160, 255, .9);
 
       border-radius: 10px;
 
       pointer-events: none;
 
       box-shadow:
-        0 0 0 9999px
-        rgba(0,0,0,.08);
+        0 0 0 9999px rgba(0,0,0,.08);
 
     }
 
@@ -164,9 +162,9 @@
 
       position: absolute;
 
-      left: 3%;
+      left: 2%;
 
-      right: 3%;
+      right: 2%;
 
       top: 50%;
 
@@ -186,15 +184,15 @@
 
       left: 50%;
 
-      bottom: -34px;
+      bottom: -35px;
 
       transform: translateX(-50%);
 
       white-space: nowrap;
 
-      color: white;
+      color: #ffffff;
 
-      background: rgba(0,0,0,.7);
+      background: rgba(0,0,0,.75);
 
       padding: 5px 10px;
 
@@ -294,13 +292,13 @@
 
       font-weight: bold;
 
-      color: #111;
+      color: #111111;
 
       text-align: center;
 
       letter-spacing: 1px;
 
-      min-height: 36px;
+      min-height: 38px;
 
     }
 
@@ -311,7 +309,7 @@
 
       text-align: center;
 
-      color: #555;
+      color: #555555;
 
       font-size: 14px;
 
@@ -354,7 +352,7 @@
 
     .stop-button {
 
-      background: #555;
+      background: #555555;
 
     }
 
@@ -368,7 +366,7 @@
 
     button:disabled {
 
-      background: #aaa;
+      background: #aaaaaa;
 
       cursor: not-allowed;
 
@@ -383,7 +381,7 @@
 
       margin-top: 10px;
 
-      padding: 10px;
+      padding: 11px;
 
       background: #eef3ff;
 
@@ -395,9 +393,27 @@
 
       text-align: center;
 
-      line-height: 1.5;
+      line-height: 1.55;
 
       word-break: break-word;
+
+    }
+
+
+    .focus-good {
+
+      color: #137333;
+
+      font-weight: bold;
+
+    }
+
+
+    .focus-warning {
+
+      color: #b06000;
+
+      font-weight: bold;
 
     }
 
@@ -418,7 +434,7 @@
 
       font-size: 13px;
 
-      color: #555;
+      color: #555555;
 
       text-align: center;
 
@@ -484,7 +500,7 @@
 
     <br>
 
-    Hold the barcode horizontally and allow the camera to focus.
+    Continuous autofocus is enabled when supported.
 
   </p>
 
@@ -605,7 +621,7 @@
 
   <div class="rules">
 
-    Valid examples:
+    Valid item examples:
 
     <strong>KA7195</strong>
 
@@ -615,13 +631,13 @@
 
     <br><br>
 
-    Barcode format:
+    Barcode:
 
     <strong>CODE 128</strong>
 
     <br>
 
-    Item format:
+    Item code:
 
     <strong>KA + numbers</strong>
 
@@ -637,7 +653,7 @@
 
 /************************************************************
  * ==========================================================
- * SCANNER STATE
+ * SCANNER VARIABLES
  * ==========================================================
  */
 
@@ -660,29 +676,20 @@ let confirmationCount = 0;
 
 let lastReadValue = "";
 
-
-/*
- * We don't want the same successful callback
- * to be counted hundreds of times instantly.
- */
-
 let lastAcceptedReadTime = 0;
 
 
 /*
- * Minimum time between accepted identical reads.
- *
- * 120 ms allows fast scanning while preventing
- * one camera frame from artificially counting
- * multiple times.
+ * Prevent the same physical frame from
+ * being counted multiple times.
  */
 
-const READ_COOLDOWN = 120;
+const READ_COOLDOWN = 150;
 
 
 /************************************************************
  * ==========================================================
- * ITEM CODE RULE
+ * ITEM CODE VALIDATION
  * ==========================================================
  */
 
@@ -692,19 +699,102 @@ const ITEM_CODE_PATTERN =
 
 /************************************************************
  * ==========================================================
- * CAMERA SETTINGS
+ * CAMERA PREFERENCES
  * ==========================================================
  */
 
 const CAMERA_SETTINGS = {
 
+  /*
+   * High resolution request.
+   *
+   * The device may choose a lower supported value.
+   */
+
   width: 1920,
 
   height: 1080,
 
-  frameRate: 30
+
+  /*
+   * Desired camera frame rate.
+   */
+
+  frameRate: 30,
+
+
+  /*
+   * Moderate zoom.
+   *
+   * We will NOT force this.
+   *
+   * We first inspect the phone's capabilities.
+   */
+
+  preferredZoom: 1.5
 
 };
+
+
+/************************************************************
+ * ==========================================================
+ * ZXING SETTINGS
+ * ==========================================================
+ */
+
+function createHints() {
+
+
+  const hints =
+    new Map();
+
+
+  /*
+   * Try harder to locate the barcode.
+   */
+
+  if (
+    window.ZXing &&
+    window.ZXing.DecodeHintType
+  ) {
+
+    hints.set(
+
+      window.ZXing.DecodeHintType.TRY_HARDER,
+
+      true
+
+    );
+
+
+    /*
+     * Only Code 128.
+     */
+
+    if (
+      window.ZXing.BarcodeFormat
+    ) {
+
+      hints.set(
+
+        window.ZXing.DecodeHintType.POSSIBLE_FORMATS,
+
+        [
+
+          window.ZXing.BarcodeFormat.CODE_128
+
+        ]
+
+      );
+
+    }
+
+  }
+
+
+  return hints;
+
+}
 
 
 /************************************************************
@@ -744,17 +834,19 @@ async function startCamera() {
   }
 
 
-  scannerBusy = true;
+  scannerBusy =
+    true;
 
 
   document
     .getElementById("startButton")
-    .disabled = true;
+    .disabled =
+    true;
 
 
   setStatus(
 
-    "Starting high-resolution rear camera...",
+    "Starting rear camera and autofocus...",
 
     ""
 
@@ -765,7 +857,7 @@ async function startCamera() {
 
 
     /********************************************************
-     * CLEAN PREVIOUS SCANNER
+     * CLEAN PREVIOUS CAMERA
      ********************************************************/
 
     await cleanupScanner();
@@ -780,55 +872,56 @@ async function startCamera() {
     ) {
 
       throw new Error(
-        "ZXing browser library failed to load."
+        "ZXing Browser failed to load."
       );
 
     }
 
 
     /********************************************************
-     * CREATE CODE 128-FOCUSED READER
+     * CREATE READER
      ********************************************************/
 
+    const hints =
+      createHints();
+
+
     /*
-     * BrowserMultiFormatOneDReader is specifically
-     * designed for 1D barcodes.
+     * BrowserMultiFormatOneDReader is designed
+     * specifically for linear / 1D barcodes.
      *
-     * This is much more appropriate than asking
-     * a QR/general-purpose scanner to process everything.
+     * Our labels are Code 128.
      */
 
     codeReader =
+
       new ZXingBrowser.BrowserMultiFormatOneDReader(
 
-        undefined,
+        hints,
 
         {
 
-          delayBetweenScanSuccess: 100,
+          /*
+           * Keep decoding attempts reasonably fast.
+           */
 
-          delayBetweenScanAttempts: 100
+          delayBetweenScanAttempts: 80,
+
+          delayBetweenScanSuccess: 80
 
         }
 
       );
 
 
-    /*
-     * Tell ZXing we only want Code 128.
-     */
+    /********************************************************
+     * VIDEO ELEMENT
+     ********************************************************/
 
-    if (
-      window.ZXingBrowser.BarcodeFormat
-    ) {
-
-      codeReader.possibleFormats = [
-
-        window.ZXingBrowser.BarcodeFormat.CODE_128
-
-      ];
-
-    }
+    const video =
+      document.getElementById(
+        "video"
+      );
 
 
     /********************************************************
@@ -841,9 +934,21 @@ async function startCamera() {
 
       video: {
 
+        /*
+         * Rear/environment camera.
+         */
+
         facingMode: {
-          ideal: "environment"
+
+          ideal:
+            "environment"
+
         },
+
+
+        /*
+         * High resolution.
+         */
 
         width: {
 
@@ -852,12 +957,18 @@ async function startCamera() {
 
         },
 
+
         height: {
 
           ideal:
             CAMERA_SETTINGS.height
 
         },
+
+
+        /*
+         * Camera frame rate.
+         */
 
         frameRate: {
 
@@ -867,21 +978,24 @@ async function startCamera() {
           max:
             CAMERA_SETTINGS.frameRate
 
-        }
+        },
+
+
+        /*
+         * Ask for continuous focus
+         * at the initial camera request.
+         *
+         * The second focus pass below is
+         * still necessary because browsers
+         * can ignore unsupported constraints.
+         */
+
+        focusMode:
+          "continuous"
 
       }
 
     };
-
-
-    /********************************************************
-     * VIDEO ELEMENT
-     ********************************************************/
-
-    const video =
-      document.getElementById(
-        "video"
-      );
 
 
     /********************************************************
@@ -904,9 +1018,7 @@ async function startCamera() {
 
 
           /*
-           * No result yet.
-           *
-           * ZXing continuously tries to decode.
+           * No barcode in this frame.
            */
 
           if (
@@ -917,10 +1029,6 @@ async function startCamera() {
 
           }
 
-
-          /*
-           * We have a decoded barcode.
-           */
 
           const text =
             result.getText();
@@ -944,7 +1052,51 @@ async function startCamera() {
 
 
     /********************************************************
-     * CAMERA INFO
+     * WAIT FOR CAMERA TO SETTLE
+     ********************************************************/
+
+    await waitForVideoReady(
+      video
+    );
+
+
+    /*
+     * IMPORTANT:
+     *
+     * Now we have the REAL camera track.
+     *
+     * This is where we explicitly force
+     * continuous autofocus.
+     */
+
+    await optimizeCameraFocus(
+      video
+    );
+
+
+    /*
+     * Give autofocus a short moment to settle.
+     */
+
+    await sleep(
+      350
+    );
+
+
+    /*
+     * Run the focus application one more time.
+     *
+     * Some Android browsers expose their
+     * capabilities only after the stream starts.
+     */
+
+    await optimizeCameraFocus(
+      video
+    );
+
+
+    /********************************************************
+     * CAMERA INFORMATION
      ********************************************************/
 
     showCameraInfo(
@@ -958,7 +1110,7 @@ async function startCamera() {
 
     setStatus(
 
-      "📷 CAMERA ACTIVE — ALIGN THE CODE 128 BARCODE",
+      "📷 CAMERA ACTIVE — CONTINUOUS AUTOFOCUS ENABLED",
 
       ""
 
@@ -967,7 +1119,8 @@ async function startCamera() {
 
     document
       .getElementById("stopButton")
-      .disabled = false;
+      .disabled =
+      false;
 
 
   }
@@ -995,12 +1148,14 @@ async function startCamera() {
 
     document
       .getElementById("startButton")
-      .disabled = false;
+      .disabled =
+      false;
 
 
     document
       .getElementById("stopButton")
-      .disabled = true;
+      .disabled =
+      true;
 
 
     setStatus(
@@ -1022,7 +1177,404 @@ async function startCamera() {
 
 /************************************************************
  * ==========================================================
- * HANDLE SCAN
+ * WAIT FOR VIDEO
+ * ==========================================================
+ */
+
+function waitForVideoReady(
+  video
+) {
+
+
+  return new Promise(
+    function(resolve) {
+
+
+      if (
+        video.readyState >= 2
+      ) {
+
+        resolve();
+
+        return;
+
+      }
+
+
+      const timeout =
+        setTimeout(
+          resolve,
+          3000
+        );
+
+
+      video.addEventListener(
+
+        "loadedmetadata",
+
+        function() {
+
+          clearTimeout(
+            timeout
+          );
+
+          resolve();
+
+        },
+
+        {
+          once: true
+        }
+
+      );
+
+    }
+
+  );
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * OPTIMIZE CAMERA FOCUS
+ * ==========================================================
+ *
+ * This is the most important new function.
+ *
+ * It works directly with the actual
+ * MediaStreamTrack.
+ *
+ ************************************************************
+ */
+
+async function optimizeCameraFocus(
+  video
+) {
+
+
+  try {
+
+
+    if (
+      !video ||
+      !video.srcObject
+    ) {
+
+      return;
+
+    }
+
+
+    const tracks =
+      video.srcObject
+        .getVideoTracks();
+
+
+    if (
+      !tracks ||
+      tracks.length === 0
+    ) {
+
+      return;
+
+    }
+
+
+    const track =
+      tracks[0];
+
+
+    const capabilities =
+      typeof track.getCapabilities === "function"
+
+        ? track.getCapabilities()
+
+        : {};
+
+
+    const currentSettings =
+      typeof track.getSettings === "function"
+
+        ? track.getSettings()
+
+        : {};
+
+
+    console.log(
+      "CAMERA CAPABILITIES:",
+      capabilities
+    );
+
+
+    console.log(
+      "CAMERA SETTINGS:",
+      currentSettings
+    );
+
+
+    /********************************************************
+     * BUILD FOCUS CONSTRAINTS
+     ********************************************************/
+
+    const focusConstraints = {};
+
+
+    /*
+     * Continuous autofocus.
+     *
+     * This is the key change.
+     */
+
+    if (
+      capabilities.focusMode &&
+      Array.isArray(
+        capabilities.focusMode
+      )
+    ) {
+
+      console.log(
+        "Supported focus modes:",
+        capabilities.focusMode
+      );
+
+
+      if (
+        capabilities.focusMode.includes(
+          "continuous"
+        )
+      ) {
+
+        focusConstraints.focusMode =
+          "continuous";
+
+      }
+
+      else if (
+        capabilities.focusMode.includes(
+          "single-shot"
+        )
+      ) {
+
+        /*
+         * We prefer continuous.
+         *
+         * If unavailable, we don't
+         * repeatedly force single-shot.
+         */
+
+        console.warn(
+          "Continuous autofocus unavailable."
+        );
+
+      }
+
+    }
+
+
+    /********************************************************
+     * APPLY CONTINUOUS AUTOFOCUS
+     ********************************************************/
+
+    if (
+      focusConstraints.focusMode
+    ) {
+
+      try {
+
+        await track.applyConstraints({
+
+          advanced: [
+
+            focusConstraints
+
+          ]
+
+        });
+
+
+        console.log(
+          "✓ CONTINUOUS AUTOFOCUS APPLIED"
+        );
+
+      }
+
+      catch (focusError) {
+
+        console.warn(
+          "Advanced autofocus failed:",
+          focusError
+        );
+
+
+        /*
+         * Try the simpler constraint form.
+         */
+
+        try {
+
+          await track.applyConstraints({
+
+            focusMode:
+              "continuous"
+
+          });
+
+
+          console.log(
+            "✓ CONTINUOUS AUTOFOCUS APPLIED (fallback)"
+          );
+
+        }
+
+        catch (fallbackError) {
+
+          console.warn(
+            "Fallback autofocus failed:",
+            fallbackError
+          );
+
+        }
+
+      }
+
+    }
+
+
+    /********************************************************
+     * OPTIONAL ZOOM
+     *
+     * Only apply if the device actually supports it.
+     *
+     * We keep it moderate.
+     ********************************************************/
+
+    if (
+      capabilities.zoom &&
+      typeof capabilities.zoom.min === "number" &&
+      typeof capabilities.zoom.max === "number"
+    ) {
+
+
+      const minZoom =
+        capabilities.zoom.min;
+
+
+      const maxZoom =
+        capabilities.zoom.max;
+
+
+      /*
+       * We don't want extreme digital zoom.
+       */
+
+      const desiredZoom =
+        Math.min(
+
+          Math.max(
+
+            CAMERA_SETTINGS.preferredZoom,
+
+            minZoom
+
+          ),
+
+          Math.min(
+            maxZoom,
+            2.0
+          )
+
+        );
+
+
+      /*
+       * Only zoom if the camera supports
+       * something greater than 1.
+       */
+
+      if (
+        desiredZoom > 1
+      ) {
+
+        try {
+
+          await track.applyConstraints({
+
+            advanced: [
+
+              {
+
+                zoom:
+                  desiredZoom
+
+              }
+
+            ]
+
+          });
+
+
+          console.log(
+            "Camera zoom:",
+            desiredZoom
+          );
+
+        }
+
+        catch (zoomError) {
+
+          console.warn(
+            "Zoom unavailable:",
+            zoomError
+          );
+
+        }
+
+      }
+
+    }
+
+
+    /********************************************************
+     * FINAL SETTINGS
+     ********************************************************/
+
+    const finalSettings =
+      typeof track.getSettings === "function"
+
+        ? track.getSettings()
+
+        : {};
+
+
+    console.log(
+      "FINAL CAMERA SETTINGS:",
+      finalSettings
+    );
+
+
+  }
+
+  catch (error) {
+
+    /*
+     * Focus optimization must NEVER
+     * kill the scanner.
+     */
+
+    console.warn(
+      "Camera focus optimization unavailable:",
+      error
+    );
+
+  }
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * HANDLE BARCODE
  * ==========================================================
  */
 
@@ -1063,16 +1615,19 @@ function handleScan(
 
 
   /*
-   * Prevent duplicate callbacks from
-   * the same instant from counting repeatedly.
+   * Ignore repeated callbacks that
+   * happen too quickly.
    */
 
   if (
+
     value === lastReadValue &&
+
     (
       now -
       lastAcceptedReadTime
     ) < READ_COOLDOWN
+
   ) {
 
     return;
@@ -1085,13 +1640,13 @@ function handleScan(
 
 
   console.log(
-    "ZXING BARCODE:",
+    "CODE 128 DETECTED:",
     value
   );
 
 
   /**********************************************************
-   * VALIDATE ITEM CODE
+   * VALIDATE
    **********************************************************/
 
   if (
@@ -1244,6 +1799,198 @@ async function confirmItem(
 
 /************************************************************
  * ==========================================================
+ * SHOW CAMERA INFORMATION
+ * ==========================================================
+ */
+
+function showCameraInfo(
+  video
+) {
+
+
+  try {
+
+
+    if (
+      !video ||
+      !video.srcObject
+    ) {
+
+      return;
+
+    }
+
+
+    const tracks =
+      video.srcObject
+        .getVideoTracks();
+
+
+    if (
+      !tracks.length
+    ) {
+
+      return;
+
+    }
+
+
+    const track =
+      tracks[0];
+
+
+    const settings =
+      track.getSettings();
+
+
+    const capabilities =
+
+      typeof track.getCapabilities === "function"
+
+        ? track.getCapabilities()
+
+        : {};
+
+
+    const width =
+      settings.width ||
+      "?";
+
+
+    const height =
+      settings.height ||
+      "?";
+
+
+    const fps =
+      settings.frameRate
+
+        ? Math.round(
+            settings.frameRate
+          )
+
+        : "?";
+
+
+    const zoom =
+      settings.zoom
+
+        ? Number(
+            settings.zoom
+          ).toFixed(1) + "×"
+
+        : "default";
+
+
+    let focusText =
+      "not reported";
+
+
+    let focusClass =
+      "focus-warning";
+
+
+    if (
+      capabilities.focusMode &&
+      Array.isArray(
+        capabilities.focusMode
+      )
+    ) {
+
+      if (
+        capabilities.focusMode.includes(
+          "continuous"
+        )
+      ) {
+
+        focusText =
+          "CONTINUOUS AUTOFOCUS ✓";
+
+        focusClass =
+          "focus-good";
+
+      }
+
+      else {
+
+        focusText =
+          "continuous focus unavailable";
+
+      }
+
+    }
+
+
+    document
+      .getElementById("cameraInfo")
+      .innerHTML =
+
+      "<strong>" +
+
+      escapeHtml(
+
+        track.label ||
+        "Rear camera"
+
+      ) +
+
+      "</strong>" +
+
+      "<br>" +
+
+      "Resolution: " +
+
+      width +
+
+      " × " +
+
+      height +
+
+      "<br>" +
+
+      "FPS: " +
+
+      fps +
+
+      " | Zoom: " +
+
+      zoom +
+
+      "<br>" +
+
+      "<span class='" +
+
+      focusClass +
+
+      "'>" +
+
+      focusText +
+
+      "</span>";
+
+  }
+
+
+  catch (error) {
+
+    console.warn(
+      "Camera information error:",
+      error
+    );
+
+
+    document
+      .getElementById("cameraInfo")
+      .textContent =
+      "Rear camera active.";
+
+  }
+
+}
+
+
+/************************************************************
+ * ==========================================================
  * STOP CAMERA
  * ==========================================================
  */
@@ -1261,7 +2008,8 @@ async function stopCamera() {
 
   document
     .getElementById("stopButton")
-    .disabled = true;
+    .disabled =
+    true;
 
 
   try {
@@ -1279,7 +2027,7 @@ async function stopCamera() {
   catch (error) {
 
     console.warn(
-      "ZXing controls stop:",
+      "Scanner controls stop:",
       error
     );
 
@@ -1290,7 +2038,7 @@ async function stopCamera() {
 
     if (
       codeReader &&
-      codeReader.reset
+      typeof codeReader.reset === "function"
     ) {
 
       codeReader.reset();
@@ -1302,7 +2050,7 @@ async function stopCamera() {
   catch (error) {
 
     console.warn(
-      "ZXing reset:",
+      "Reader reset:",
       error
     );
 
@@ -1310,7 +2058,7 @@ async function stopCamera() {
 
 
   /*
-   * Explicitly stop camera tracks.
+   * Explicitly stop video tracks.
    */
 
   const video =
@@ -1324,18 +2072,15 @@ async function stopCamera() {
     video.srcObject
   ) {
 
-    const tracks =
-      video.srcObject
-        .getTracks();
+    video.srcObject
+      .getTracks()
+      .forEach(
+        function(track) {
 
+          track.stop();
 
-    tracks.forEach(
-      function(track) {
-
-        track.stop();
-
-      }
-    );
+        }
+      );
 
 
     video.srcObject =
@@ -1358,12 +2103,14 @@ async function stopCamera() {
 
   document
     .getElementById("startButton")
-    .disabled = false;
+    .disabled =
+    false;
 
 
   document
     .getElementById("stopButton")
-    .disabled = true;
+    .disabled =
+    true;
 
 
   document
@@ -1438,7 +2185,7 @@ async function cleanupScanner() {
 
     if (
       codeReader &&
-      codeReader.reset
+      typeof codeReader.reset === "function"
     ) {
 
       codeReader.reset();
@@ -1497,105 +2244,6 @@ async function cleanupScanner() {
 
 /************************************************************
  * ==========================================================
- * CAMERA INFORMATION
- * ==========================================================
- */
-
-function showCameraInfo(
-  video
-) {
-
-
-  try {
-
-
-    const stream =
-      video.srcObject;
-
-
-    if (
-      !stream
-    ) {
-
-      document
-        .getElementById("cameraInfo")
-        .textContent =
-        "Rear camera active.";
-
-      return;
-
-    }
-
-
-    const tracks =
-      stream.getVideoTracks();
-
-
-    if (
-      !tracks.length
-    ) {
-
-      return;
-
-    }
-
-
-    const settings =
-      tracks[0].getSettings();
-
-
-    document
-      .getElementById("cameraInfo")
-      .innerHTML =
-
-      "<strong>" +
-      (
-        tracks[0].label ||
-        "Rear camera"
-      ) +
-      "</strong>" +
-
-      "<br>" +
-
-      "Resolution: " +
-      (
-        settings.width ||
-        "?"
-      ) +
-      " × " +
-      (
-        settings.height ||
-        "?"
-      ) +
-
-      "<br>" +
-
-      "FPS: " +
-      (
-        settings.frameRate
-          ? Math.round(
-              settings.frameRate
-            )
-          : "?"
-      );
-
-  }
-
-
-  catch (error) {
-
-    console.warn(
-      "Camera information:",
-      error
-    );
-
-  }
-
-}
-
-
-/************************************************************
- * ==========================================================
  * RESET
  * ==========================================================
  */
@@ -1642,12 +2290,14 @@ async function resetScanner() {
 
   document
     .getElementById("startButton")
-    .disabled = false;
+    .disabled =
+    false;
 
 
   document
     .getElementById("stopButton")
-    .disabled = true;
+    .disabled =
+    true;
 
 
   setStatus(
@@ -1697,6 +2347,72 @@ function setStatus(
     );
 
   }
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * SLEEP
+ * ==========================================================
+ */
+
+function sleep(
+  milliseconds
+) {
+
+  return new Promise(
+
+    function(resolve) {
+
+      setTimeout(
+        resolve,
+        milliseconds
+      );
+
+    }
+
+  );
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * HTML ESCAPE
+ * ==========================================================
+ */
+
+function escapeHtml(
+  value
+) {
+
+  return String(value)
+
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+
+    .replace(
+      /</g,
+      "&lt;"
+    )
+
+    .replace(
+      />/g,
+      "&gt;"
+    )
+
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+
+    .replace(
+      /'/g,
+      "&#039;"
+    );
 
 }
 
