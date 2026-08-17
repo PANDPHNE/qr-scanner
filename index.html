@@ -8,8 +8,9 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0">
 
-  <title>Barcode → Google Sheets</title>
+  <title>KA Barcode Scanner</title>
 
+  <!-- html5-qrcode -->
   <script
     src="https://unpkg.com/html5-qrcode"
     type="text/javascript">
@@ -23,16 +24,16 @@
 
     body {
       margin: 0;
-      padding: 15px;
+      padding: 20px;
       font-family: Arial, sans-serif;
       background: #f3f5f7;
     }
 
     .container {
-      max-width: 520px;
+      max-width: 500px;
       margin: auto;
       background: white;
-      padding: 18px;
+      padding: 20px;
       border-radius: 16px;
       box-shadow: 0 4px 18px rgba(0,0,0,.12);
     }
@@ -40,119 +41,22 @@
     h1 {
       text-align: center;
       color: #174d1c;
-      margin: 5px 0;
+      margin-top: 5px;
     }
 
     .description {
       text-align: center;
       color: #666;
-      margin: 5px 0 18px;
-    }
-
-    .destination {
-      background: #e8f5e9;
-      padding: 15px;
-      border-radius: 12px;
-      margin-bottom: 15px;
-    }
-
-    .destination-title {
-      font-weight: bold;
-      color: #1b5e20;
-      font-size: 14px;
-      margin-bottom: 5px;
-    }
-
-    .destination-info {
-      font-size: 16px;
-      font-weight: bold;
-      color: #222;
-      word-break: break-word;
-    }
-
-    .small {
-      font-size: 13px;
-      color: #666;
-      margin-top: 4px;
-    }
-
-    label {
-      display: block;
-      margin-top: 14px;
-      margin-bottom: 6px;
-      font-weight: bold;
-      color: #333;
-    }
-
-    input,
-    select {
-      width: 100%;
-      padding: 13px;
-      border: 1px solid #ccc;
-      border-radius: 9px;
-      font-size: 16px;
-      background: white;
-    }
-
-    .setup {
-      background: #f8f9fa;
-      padding: 15px;
-      border-radius: 12px;
-      margin-bottom: 15px;
-    }
-
-    button {
-      width: 100%;
-      margin-top: 12px;
-      padding: 15px;
-      border: none;
-      border-radius: 10px;
-      background: #1976d2;
-      color: white;
-      font-size: 17px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      background: #aaa;
-      cursor: not-allowed;
-    }
-
-    .green {
-      background: #2e7d32;
-    }
-
-    .gray {
-      background: #555;
-    }
-
-    .mode-buttons {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .mode-buttons button {
-      margin-top: 0;
-      background: #e0e0e0;
-      color: #333;
-    }
-
-    .mode-buttons button.active {
-      background: #1976d2;
-      color: white;
+      line-height: 1.4;
     }
 
     #reader {
       width: 100%;
-      margin-top: 15px;
-      overflow: hidden;
-      border-radius: 10px;
+      margin-top: 20px;
     }
 
     .status {
-      margin-top: 15px;
+      margin-top: 20px;
       padding: 14px;
       border-radius: 10px;
       background: #fff3cd;
@@ -180,65 +84,58 @@
     }
 
     .result-title {
-      font-size: 13px;
+      font-size: 14px;
       color: #2e7d32;
       font-weight: bold;
     }
 
     #result {
       margin-top: 8px;
-      font-size: 27px;
+      font-size: 25px;
       font-weight: bold;
       color: #111;
       word-break: break-all;
       text-align: center;
-      letter-spacing: 1px;
     }
 
-    .confirmation {
+    #confirmation {
       margin-top: 8px;
       text-align: center;
       color: #555;
       font-size: 14px;
     }
 
-    .hidden {
-      display: none;
-    }
-
-    .batch-count {
-      margin-top: 12px;
-      padding: 12px;
-      background: #eef3ff;
-      color: #174ea6;
-      border-radius: 9px;
-      text-align: center;
+    button {
+      width: 100%;
+      margin-top: 15px;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      background: #1976d2;
+      color: white;
+      font-size: 18px;
       font-weight: bold;
     }
 
-    .batch-list {
-      margin-top: 10px;
-      max-height: 220px;
-      overflow-y: auto;
-      background: #fafafa;
-      border-radius: 9px;
-      padding: 8px;
+    button:disabled {
+      background: #aaa;
     }
 
-    .batch-item {
-      padding: 9px;
-      border-bottom: 1px solid #ddd;
-      font-family: monospace;
-      word-break: break-all;
+    .stop-button {
+      background: #555;
     }
 
-    .camera-note {
+    .reset-button {
+      background: #2e7d32;
+    }
+
+    .rules {
       margin-top: 15px;
       padding: 12px;
       background: #f1f3f4;
       border-radius: 10px;
-      color: #555;
       font-size: 13px;
+      color: #555;
       text-align: center;
     }
 
@@ -253,144 +150,18 @@
 <div class="container">
 
 
-  <h1>📷 Barcode → Google Sheets</h1>
+  <h1>📷 KA Barcode Scanner</h1>
+
 
   <p class="description">
-    Scan inventory barcodes and send them directly to Google Sheets.
+
+    Scan an item barcode.
+
+    The scanner accepts
+
+    <strong>KA + numbers</strong>.
+
   </p>
-
-
-  <!-- DESTINATION -->
-
-  <div class="destination">
-
-    <div class="destination-title">
-      SCANNING DESTINATION
-    </div>
-
-    <div
-      id="destinationInfo"
-      class="destination-info">
-
-      Not configured yet.
-
-    </div>
-
-    <div
-      id="destinationColumn"
-      class="small">
-
-      Scanner-only test mode is available.
-
-    </div>
-
-    <button
-      onclick="showSetup()"
-      class="gray">
-
-      CONFIGURE / CHANGE DESTINATION
-
-    </button>
-
-  </div>
-
-
-  <!-- SETUP -->
-
-  <div
-    id="setupPanel"
-    class="setup hidden">
-
-    <label>
-      Google Sheet Link
-    </label>
-
-    <input
-      id="sheetUrl"
-      type="text"
-      placeholder="Paste Google Sheet link here">
-
-
-    <button
-      id="loadSheetsButton"
-      onclick="loadSheets()"
-      class="green">
-
-      LOAD SHEET TABS
-
-    </button>
-
-
-    <label>
-      Sheet Tab
-    </label>
-
-    <select
-      id="sheetName"
-      onchange="loadColumns()">
-
-      <option value="">
-        Select sheet tab
-      </option>
-
-    </select>
-
-
-    <label>
-      Destination Column
-    </label>
-
-    <select
-      id="columnNumber">
-
-      <option value="">
-        Select column
-      </option>
-
-    </select>
-
-
-    <button
-      onclick="saveDestination()"
-      class="green">
-
-      SAVE DESTINATION
-
-    </button>
-
-  </div>
-
-
-  <!-- SCAN MODE -->
-
-  <div>
-
-    <strong>
-      Scan Mode
-    </strong>
-
-    <div class="mode-buttons">
-
-      <button
-        id="singleModeButton"
-        class="active"
-        onclick="setMode('single')">
-
-        SINGLE SCAN
-
-      </button>
-
-      <button
-        id="batchModeButton"
-        onclick="setMode('batch')">
-
-        BATCH SCAN
-
-      </button>
-
-    </div>
-
-  </div>
 
 
   <!-- CAMERA -->
@@ -398,11 +169,13 @@
   <div id="reader"></div>
 
 
-  <div
-    class="status"
-    id="status">
+  <!-- STATUS -->
 
-    Ready for scanner test.
+  <div
+    id="status"
+    class="status">
+
+    Press START CAMERA.
 
   </div>
 
@@ -412,65 +185,23 @@
   <div class="result">
 
     <div class="result-title">
-      CONFIRMED ITEM CODE
+      SCANNED ITEM CODE
     </div>
+
 
     <div id="result">
       Waiting...
     </div>
 
-    <div
-      class="confirmation"
-      id="confirmation">
 
+    <div id="confirmation">
       No barcode confirmed yet.
-
     </div>
 
   </div>
 
 
-  <!-- BATCH -->
-
-  <div
-    id="batchArea"
-    class="hidden">
-
-    <div
-      id="batchCount"
-      class="batch-count">
-
-      0 items waiting
-
-    </div>
-
-    <div
-      id="batchList"
-      class="batch-list">
-    </div>
-
-    <button
-      id="sendBatchButton"
-      onclick="sendBatch()"
-      class="green"
-      disabled>
-
-      SEND BATCH TO GOOGLE SHEETS
-
-    </button>
-
-    <button
-      onclick="clearBatch()"
-      class="gray">
-
-      CLEAR BATCH
-
-    </button>
-
-  </div>
-
-
-  <!-- CAMERA BUTTONS -->
+  <!-- START -->
 
   <button
     id="startButton"
@@ -481,34 +212,44 @@
   </button>
 
 
+  <!-- STOP -->
+
   <button
     id="stopButton"
+    class="stop-button"
     onclick="stopCamera()"
-    disabled
-    class="gray">
+    disabled>
 
     STOP CAMERA
 
   </button>
 
 
+  <!-- RESET -->
+
   <button
     id="resetButton"
-    onclick="resetScanner()"
-    class="gray">
+    class="reset-button"
+    onclick="resetScanner()">
 
     RESET / SCAN NEXT ITEM
 
   </button>
 
 
-  <div class="camera-note">
+  <div class="rules">
 
-    Accepted item format:
-    <strong>KA + one or more numbers</strong>.
+    Valid examples:
 
-    Example:
-    KA7195, KA71955, KA719555.
+    <strong>KA7195</strong>,
+
+    <strong>KA71955</strong>,
+
+    <strong>KA719555</strong>
+
+    <br><br>
+
+    The number of digits is not limited.
 
   </div>
 
@@ -521,44 +262,39 @@
 
 
 /************************************************************
- * APPS SCRIPT URL
- ************************************************************/
-
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbw2zVICdB2lRqzA0cZijNvyzT6DiajEkqQHVVwwbYm5T-342bWla6sK-KAHTpNCoO78/exec";
-
-
-/************************************************************
- * GLOBAL VARIABLES
- ************************************************************/
+ * ==========================================================
+ * SCANNER VARIABLES
+ * ==========================================================
+ */
 
 let html5QrCode = null;
 
 let scannerRunning = false;
 
-let scannerStarting = false;
-
-let scanMode = "single";
-
-let lastReadValue = "";
+let scannerBusy = false;
 
 let confirmationCount = 0;
 
+let lastReadValue = "";
+
 let itemConfirmed = false;
-
-let batchValues = [];
-
-let currentSheetUrl = "";
-
-let currentSheetName = "";
-
-let currentColumnNumber = "";
 
 
 /************************************************************
+ * ==========================================================
  * ITEM CODE RULE
+ * ==========================================================
  *
- * KA + one or more digits
+ * KA + ONE OR MORE DIGITS
+ *
+ * KA7195       ✓
+ * KA71955      ✓
+ * KA719555     ✓
+ *
+ * KA            ✗
+ * ABC7195      ✗
+ * 7195         ✗
+ *
  ************************************************************/
 
 const ITEM_CODE_PATTERN =
@@ -566,715 +302,20 @@ const ITEM_CODE_PATTERN =
 
 
 /************************************************************
- * INITIALIZE
- ************************************************************/
-
-window.addEventListener(
-  "load",
-  function() {
-
-    loadSavedDestination();
-
-    updateButtons();
-
-  }
-);
-
-
-/************************************************************
- * SHOW SETUP
- ************************************************************/
-
-function showSetup() {
-
-  document
-    .getElementById("setupPanel")
-    .classList.remove("hidden");
-
-}
-
-
-/************************************************************
- * LOAD SAVED DESTINATION
- ************************************************************/
-
-function loadSavedDestination() {
-
-  const saved =
-    localStorage.getItem(
-      "barcodeScannerDestination"
-    );
-
-
-  if (!saved) {
-
-    updateDestinationDisplay();
-
-    return;
-
-  }
-
-
-  try {
-
-    const data =
-      JSON.parse(saved);
-
-
-    currentSheetUrl =
-      data.sheetUrl || "";
-
-
-    currentSheetName =
-      data.sheetName || "";
-
-
-    currentColumnNumber =
-      data.columnNumber || "";
-
-
-    document
-      .getElementById("sheetUrl")
-      .value =
-      currentSheetUrl;
-
-
-    updateDestinationDisplay();
-
-
-    if (
-      currentSheetUrl &&
-      currentSheetName
-    ) {
-
-      loadSheets(false);
-
-    }
-
-  }
-
-  catch (error) {
-
-    console.error(
-      "Saved destination error:",
-      error
-    );
-
-
-    currentSheetUrl = "";
-
-    currentSheetName = "";
-
-    currentColumnNumber = "";
-
-    updateDestinationDisplay();
-
-  }
-
-}
-
-
-/************************************************************
- * LOAD SHEET TABS
- ************************************************************/
-
-function loadSheets(
-  showMessage = true
-) {
-
-  const sheetUrl =
-    document
-      .getElementById("sheetUrl")
-      .value
-      .trim();
-
-
-  if (!sheetUrl) {
-
-    setStatus(
-      "Please enter a Google Sheet link.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  if (showMessage) {
-
-    setStatus(
-      "Loading sheet tabs...",
-      ""
-    );
-
-  }
-
-
-  const callbackName =
-    "sheetCallback_" +
-    Date.now();
-
-
-  window[callbackName] =
-    function(response) {
-
-      try {
-
-        if (
-          !response ||
-          !response.success
-        ) {
-
-          throw new Error(
-            response &&
-            response.error
-              ? response.error
-              : "Could not load sheet tabs."
-          );
-
-        }
-
-
-        const select =
-          document.getElementById(
-            "sheetName"
-          );
-
-
-        select.innerHTML =
-          '<option value="">Select sheet tab</option>';
-
-
-        response.data.forEach(
-          function(sheet) {
-
-            const option =
-              document.createElement(
-                "option"
-              );
-
-
-            option.value =
-              sheet.name;
-
-
-            option.textContent =
-              sheet.name;
-
-
-            select.appendChild(
-              option
-            );
-
-          }
-        );
-
-
-        if (
-          currentSheetName
-        ) {
-
-          select.value =
-            currentSheetName;
-
-
-          loadColumns();
-
-        }
-
-
-        if (showMessage) {
-
-          setStatus(
-            "Sheet tabs loaded.",
-            "success"
-          );
-
-        }
-
-      }
-
-      catch (error) {
-
-        setStatus(
-          error.message,
-          "error"
-        );
-
-      }
-
-
-      delete window[
-        callbackName
-      ];
-
-    };
-
-
-  const script =
-    document.createElement(
-      "script"
-    );
-
-
-  script.src =
-    API_URL +
-    "?action=getSheets" +
-    "&sheetUrl=" +
-    encodeURIComponent(
-      sheetUrl
-    ) +
-    "&callback=" +
-    callbackName;
-
-
-  script.onerror =
-    function() {
-
-      setStatus(
-        "Could not connect to Google Apps Script.",
-        "error"
-      );
-
-      delete window[
-        callbackName
-      ];
-
-    };
-
-
-  document
-    .body
-    .appendChild(
-      script
-    );
-
-}
-
-
-/************************************************************
- * LOAD COLUMNS
- ************************************************************/
-
-function loadColumns() {
-
-  const sheetUrl =
-    document
-      .getElementById("sheetUrl")
-      .value
-      .trim();
-
-
-  const sheetName =
-    document
-      .getElementById("sheetName")
-      .value;
-
-
-  if (
-    !sheetUrl ||
-    !sheetName
-  ) {
-
-    return;
-
-  }
-
-
-  setStatus(
-    "Loading columns...",
-    ""
-  );
-
-
-  const callbackName =
-    "columnCallback_" +
-    Date.now();
-
-
-  window[callbackName] =
-    function(response) {
-
-      try {
-
-        if (
-          !response ||
-          !response.success
-        ) {
-
-          throw new Error(
-            response &&
-            response.error
-              ? response.error
-              : "Could not load columns."
-          );
-
-        }
-
-
-        const select =
-          document.getElementById(
-            "columnNumber"
-          );
-
-
-        select.innerHTML =
-          '<option value="">Select column</option>';
-
-
-        response.data.forEach(
-          function(column) {
-
-            const option =
-              document.createElement(
-                "option"
-              );
-
-
-            option.value =
-              column.number;
-
-
-            option.textContent =
-              column.letter +
-              (
-                column.header
-                  ? " — " +
-                    column.header
-                  : ""
-              );
-
-
-            select.appendChild(
-              option
-            );
-
-          }
-        );
-
-
-        if (
-          currentColumnNumber
-        ) {
-
-          select.value =
-            currentColumnNumber;
-
-        }
-
-
-        setStatus(
-          "Columns loaded.",
-          "success"
-        );
-
-      }
-
-      catch (error) {
-
-        setStatus(
-          error.message,
-          "error"
-        );
-
-      }
-
-
-      delete window[
-        callbackName
-      ];
-
-    };
-
-
-  const script =
-    document.createElement(
-      "script"
-    );
-
-
-  script.src =
-    API_URL +
-    "?action=getColumns" +
-    "&sheetUrl=" +
-    encodeURIComponent(
-      sheetUrl
-    ) +
-    "&sheetName=" +
-    encodeURIComponent(
-      sheetName
-    ) +
-    "&callback=" +
-    callbackName;
-
-
-  script.onerror =
-    function() {
-
-      setStatus(
-        "Could not connect to Google Apps Script.",
-        "error"
-      );
-
-      delete window[
-        callbackName
-      ];
-
-    };
-
-
-  document
-    .body
-    .appendChild(
-      script
-    );
-
-}
-
-
-/************************************************************
- * SAVE DESTINATION
- ************************************************************/
-
-function saveDestination() {
-
-  const sheetUrl =
-    document
-      .getElementById("sheetUrl")
-      .value
-      .trim();
-
-
-  const sheetName =
-    document
-      .getElementById("sheetName")
-      .value;
-
-
-  const columnNumber =
-    document
-      .getElementById("columnNumber")
-      .value;
-
-
-  if (!sheetUrl) {
-
-    setStatus(
-      "Please enter a Google Sheet link.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  if (!sheetName) {
-
-    setStatus(
-      "Please select a sheet tab.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  if (!columnNumber) {
-
-    setStatus(
-      "Please select a destination column.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  currentSheetUrl =
-    sheetUrl;
-
-
-  currentSheetName =
-    sheetName;
-
-
-  currentColumnNumber =
-    columnNumber;
-
-
-  localStorage.setItem(
-
-    "barcodeScannerDestination",
-
-    JSON.stringify({
-
-      sheetUrl:
-        currentSheetUrl,
-
-      sheetName:
-        currentSheetName,
-
-      columnNumber:
-        currentColumnNumber
-
-    })
-
-  );
-
-
-  updateDestinationDisplay();
-
-
-  document
-    .getElementById("setupPanel")
-    .classList.add("hidden");
-
-
-  setStatus(
-    "✅ Destination saved. Ready to scan.",
-    "success"
-  );
-
-}
-
-
-/************************************************************
- * UPDATE DESTINATION DISPLAY
- ************************************************************/
-
-function updateDestinationDisplay() {
-
-  if (
-    !currentSheetName ||
-    !currentColumnNumber
-  ) {
-
-    document
-      .getElementById("destinationInfo")
-      .textContent =
-      "Not configured yet.";
-
-
-    document
-      .getElementById("destinationColumn")
-      .textContent =
-      "Scanner-only test mode is available.";
-
-    return;
-
-  }
-
-
-  const columnLetter =
-    numberToLetter(
-      Number(
-        currentColumnNumber
-      )
-    );
-
-
-  document
-    .getElementById("destinationInfo")
-    .textContent =
-    currentSheetName +
-    " → Column " +
-    columnLetter;
-
-
-  document
-    .getElementById("destinationColumn")
-    .textContent =
-    currentSheetUrl;
-
-}
-
-
-/************************************************************
- * SCAN MODE
- ************************************************************/
-
-function setMode(
-  mode
-) {
-
-  if (scannerRunning) {
-
-    stopCamera();
-
-  }
-
-
-  scanMode =
-    mode;
-
-
-  document
-    .getElementById("singleModeButton")
-    .classList.toggle(
-      "active",
-      mode === "single"
-    );
-
-
-  document
-    .getElementById("batchModeButton")
-    .classList.toggle(
-      "active",
-      mode === "batch"
-    );
-
-
-  document
-    .getElementById("batchArea")
-    .classList.toggle(
-      "hidden",
-      mode !== "batch"
-    );
-
-
-  resetScanState();
-
-
-  if (
-    mode === "batch"
-  ) {
-
-    setStatus(
-      "Batch mode selected. Press START CAMERA.",
-      ""
-    );
-
-  }
-
-  else {
-
-    setStatus(
-      "Single scan mode selected. Press START CAMERA.",
-      ""
-    );
-
-  }
-
-}
-
-
-/************************************************************
+ * ==========================================================
  * START CAMERA
- ************************************************************/
+ * ==========================================================
+ */
 
-async function startCamera() {
+function startCamera() {
 
   /*
-   * Prevent double-clicks.
+   * Do not allow two cameras to start at the same time.
    */
 
   if (
     scannerRunning ||
-    scannerStarting
+    scannerBusy
   ) {
 
     return;
@@ -1282,440 +323,224 @@ async function startCamera() {
   }
 
 
-  scannerStarting =
-    true;
+  /*
+   * Do not start another scan until
+   * the current item has been reset.
+   */
 
-
-  updateButtons();
-
-
-  try {
-
-    /*
-     * If an old scanner object exists,
-     * completely clean it first.
-     */
-
-    if (html5QrCode) {
-
-      try {
-
-        if (scannerRunning) {
-
-          await html5QrCode.stop();
-
-        }
-
-      }
-
-      catch (error) {
-
-        console.warn(
-          "Previous scanner stop:",
-          error
-        );
-
-      }
-
-
-      try {
-
-        html5QrCode.clear();
-
-      }
-
-      catch (error) {
-
-        console.warn(
-          "Previous scanner clear:",
-          error
-        );
-
-      }
-
-
-      html5QrCode =
-        null;
-
-    }
-
-
-    /*
-     * Completely clear reader.
-     */
-
-    document
-      .getElementById("reader")
-      .innerHTML = "";
-
+  if (
+    itemConfirmed
+  ) {
 
     setStatus(
-      "Requesting camera permission...",
-      ""
+      "Item already confirmed. Press RESET / SCAN NEXT ITEM.",
+      "success"
     );
 
-
-    /*
-     * Create a NEW scanner instance.
-     */
-
-    html5QrCode =
-      new Html5Qrcode(
-        "reader"
-      );
-
-
-    const config = {
-
-      fps: 15,
-
-      qrbox: {
-        width: 350,
-        height: 140
-      },
-
-      formatsToSupport: [
-
-        Html5QrcodeSupportedFormats.CODE_128,
-
-        Html5QrcodeSupportedFormats.CODE_39,
-
-        Html5QrcodeSupportedFormats.CODE_93,
-
-        Html5QrcodeSupportedFormats.EAN_13,
-
-        Html5QrcodeSupportedFormats.EAN_8,
-
-        Html5QrcodeSupportedFormats.UPC_A,
-
-        Html5QrcodeSupportedFormats.UPC_E,
-
-        Html5QrcodeSupportedFormats.ITF,
-
-        Html5QrcodeSupportedFormats.CODABAR,
-
-        Html5QrcodeSupportedFormats.QR_CODE
-
-      ]
-
-    };
-
-
-    await html5QrCode.start(
-
-      {
-        facingMode: "environment"
-      },
-
-      config,
-
-
-      function(
-        decodedText,
-        decodedResult
-      ) {
-
-        handleScan(
-          decodedText
-        );
-
-      },
-
-
-      function(
-        errorMessage
-      ) {
-
-        /*
-         * Normal scanning failures
-         * are ignored.
-         */
-
-      }
-
-    );
-
-
-    scannerRunning =
-      true;
-
-
-    setStatus(
-      "📷 CAMERA ACTIVE — ALIGN BARCODE INSIDE THE BOX",
-      ""
-    );
+    return;
 
   }
 
-  catch (error) {
 
-    console.error(
-      "Camera start failed:",
-      error
+  scannerBusy = true;
+
+
+  setStatus(
+    "Requesting camera permission...",
+    ""
+  );
+
+
+  document
+    .getElementById("startButton")
+    .disabled = true;
+
+
+  /*
+   * Make sure the old reader area is empty.
+   */
+
+  document
+    .getElementById("reader")
+    .innerHTML = "";
+
+
+  /*
+   * Create a fresh scanner.
+   */
+
+  html5QrCode =
+    new Html5Qrcode(
+      "reader"
     );
 
 
-    scannerRunning =
-      false;
+  /*
+   * IMPORTANT:
+   *
+   * We are intentionally keeping the
+   * camera configuration simple.
+   *
+   * This is closer to the version that
+   * was giving you clear scanning.
+   */
+
+  const config = {
+
+    fps: 10,
+
+    qrbox: {
+      width: 250,
+      height: 250
+    },
+
+    formatsToSupport: [
+
+      Html5QrcodeSupportedFormats.CODE_128,
+
+      Html5QrcodeSupportedFormats.CODE_39,
+
+      Html5QrcodeSupportedFormats.CODE_93,
+
+      Html5QrcodeSupportedFormats.EAN_13,
+
+      Html5QrcodeSupportedFormats.EAN_8,
+
+      Html5QrcodeSupportedFormats.UPC_A,
+
+      Html5QrcodeSupportedFormats.UPC_E,
+
+      Html5QrcodeSupportedFormats.ITF,
+
+      Html5QrcodeSupportedFormats.CODABAR,
+
+      Html5QrcodeSupportedFormats.QR_CODE
+
+    ]
+
+  };
 
 
-    try {
+  html5QrCode.start(
 
-      if (html5QrCode) {
+    {
+      facingMode: "environment"
+    },
 
-        html5QrCode.clear();
+    config,
 
-      }
 
-    }
+    function(
+      decodedText,
+      decodedResult
+    ) {
 
-    catch (clearError) {
-
-      console.warn(
-        clearError
+      handleScan(
+        decodedText
       );
 
+    },
+
+
+    function(
+      errorMessage
+    ) {
+
+      /*
+       * Normal scan failures are ignored.
+       */
+
     }
 
+  )
 
-    html5QrCode =
-      null;
+  .then(
+    function() {
+
+      scannerRunning = true;
+
+      scannerBusy = false;
 
 
-    setStatus(
-      "❌ CAMERA ERROR: " +
-      (
-        error.message ||
+      setStatus(
+        "📷 CAMERA ACTIVE — POINT AT THE BARCODE",
+        ""
+      );
+
+
+      document
+        .getElementById("startButton")
+        .disabled = true;
+
+
+      document
+        .getElementById("stopButton")
+        .disabled = false;
+
+    }
+  )
+
+  .catch(
+    function(error) {
+
+      console.error(
+        "Camera start failed:",
         error
-      ),
-      "error"
-    );
-
-  }
-
-  finally {
-
-    scannerStarting =
-      false;
+      );
 
 
-    updateButtons();
+      scannerRunning = false;
 
-  }
+      scannerBusy = false;
 
-}
-
-
-/************************************************************
- * STOP CAMERA
- ************************************************************/
-
-async function stopCamera() {
-
-  /*
-   * Prevent simultaneous stop operations.
-   */
-
-  if (!html5QrCode) {
-
-    scannerRunning =
-      false;
-
-    scannerStarting =
-      false;
+      html5QrCode = null;
 
 
-    document
-      .getElementById("reader")
-      .innerHTML = "";
+      document
+        .getElementById("reader")
+        .innerHTML = "";
 
 
-    updateButtons();
-
-    return;
-
-  }
+      document
+        .getElementById("startButton")
+        .disabled = false;
 
 
-  const scanner =
-    html5QrCode;
+      document
+        .getElementById("stopButton")
+        .disabled = true;
 
 
-  /*
-   * Mark inactive immediately.
-   */
+      setStatus(
+        "❌ CAMERA ERROR: " +
+        (
+          error.message ||
+          error
+        ),
+        "error"
+      );
 
-  scannerRunning =
-    false;
-
-
-  scannerStarting =
-    false;
-
-
-  try {
-
-    /*
-     * Stop the camera stream.
-     */
-
-    await scanner.stop();
-
-  }
-
-  catch (error) {
-
-    console.warn(
-      "Camera stop:",
-      error
-    );
-
-  }
-
-
-  try {
-
-    /*
-     * Clear video/canvas/UI.
-     */
-
-    scanner.clear();
-
-  }
-
-  catch (error) {
-
-    console.warn(
-      "Scanner clear:",
-      error
-    );
-
-  }
-
-
-  /*
-   * Only clear the global reference if
-   * it still points to this scanner.
-   */
-
-  if (
-    html5QrCode === scanner
-  ) {
-
-    html5QrCode =
-      null;
-
-  }
-
-
-  /*
-   * Force reader container empty.
-   */
-
-  document
-    .getElementById("reader")
-    .innerHTML = "";
-
-
-  updateButtons();
-
-
-  setStatus(
-    "Camera stopped. Press START CAMERA to scan again.",
-    ""
+    }
   );
 
 }
 
 
 /************************************************************
- * RESET SCANNER
- ************************************************************/
-
-async function resetScanner() {
-
-  /*
-   * Stop camera completely if necessary.
-   */
-
-  if (
-    html5QrCode ||
-    scannerRunning
-  ) {
-
-    await stopCamera();
-
-  }
-
-
-  resetScanState();
-
-
-  /*
-   * Make absolutely sure reader is empty.
-   */
-
-  document
-    .getElementById("reader")
-    .innerHTML = "";
-
-
-  updateButtons();
-
-
-  setStatus(
-    "Ready for next scan. Press START CAMERA.",
-    ""
-  );
-
-}
-
-
-/************************************************************
- * RESET ONLY SCAN STATE
- ************************************************************/
-
-function resetScanState() {
-
-  lastReadValue =
-    "";
-
-  confirmationCount =
-    0;
-
-  itemConfirmed =
-    false;
-
-
-  document
-    .getElementById("result")
-    .textContent =
-    "Waiting...";
-
-
-  document
-    .getElementById("confirmation")
-    .textContent =
-    "No barcode confirmed yet.";
-
-}
-
-
-/************************************************************
+ * ==========================================================
  * HANDLE SCAN
- ************************************************************/
+ * ==========================================================
+ */
 
 function handleScan(
   decodedText
 ) {
 
   /*
-   * In single mode, ignore scans after
-   * the current item has been confirmed.
+   * Ignore anything after confirmation.
    */
 
   if (
-    scanMode === "single" &&
     itemConfirmed
   ) {
 
@@ -1747,7 +572,7 @@ function handleScan(
 
   /*
    * ========================================================
-   * VALIDATE KA + DIGITS
+   * VALIDATE ITEM CODE
    * ========================================================
    */
 
@@ -1766,25 +591,23 @@ function handleScan(
     document
       .getElementById("confirmation")
       .textContent =
-      "Invalid item code.";
+      "Rejected barcode.";
 
 
     setStatus(
-      "❌ REJECTED — Item code must start with KA followed by numbers.",
+      "❌ REJECTED — Code must be KA followed by numbers.",
       "error"
     );
 
 
     /*
-     * Rejected values cannot participate
-     * in confirmation.
+     * Do not allow an invalid read
+     * to participate in confirmation.
      */
 
-    lastReadValue =
-      "";
+    lastReadValue = "";
 
-    confirmationCount =
-      0;
+    confirmationCount = 0;
 
 
     return;
@@ -1794,7 +617,7 @@ function handleScan(
 
   /*
    * ========================================================
-   * THREE-READ VERIFICATION
+   * CONFIRM SAME CODE THREE TIMES
    * ========================================================
    */
 
@@ -1832,49 +655,28 @@ function handleScan(
 
 
   setStatus(
-    "Checking item code: " +
+    "Checking " +
     value +
-    " (" +
+    " — " +
     confirmationCount +
-    "/3)",
+    " / 3",
     ""
   );
 
+
+  /*
+   * ========================================================
+   * CONFIRMED
+   * ========================================================
+   */
 
   if (
     confirmationCount >= 3
   ) {
 
-    /*
-     * Prevent repeated confirmation while
-     * the camera is still sending frames.
-     */
-
-    confirmationCount =
-      0;
-
-
-    lastReadValue =
-      "";
-
-
-    if (
-      scanMode === "single"
-    ) {
-
-      confirmSingleScan(
-        value
-      );
-
-    }
-
-    else {
-
-      confirmBatchScan(
-        value
-      );
-
-    }
+    confirmItem(
+      value
+    );
 
   }
 
@@ -1882,15 +684,25 @@ function handleScan(
 
 
 /************************************************************
- * CONFIRM SINGLE SCAN
- ************************************************************/
+ * ==========================================================
+ * CONFIRM ITEM
+ * ==========================================================
+ */
 
-async function confirmSingleScan(
+function confirmItem(
   value
 ) {
 
-  itemConfirmed =
-    true;
+  /*
+   * Immediately lock the item.
+   */
+
+  itemConfirmed = true;
+
+
+  confirmationCount = 0;
+
+  lastReadValue = "";
 
 
   document
@@ -1902,375 +714,271 @@ async function confirmSingleScan(
   document
     .getElementById("confirmation")
     .textContent =
-    "✓ Barcode verified";
-
-
-  /*
-   * Stop camera BEFORE doing anything else.
-   */
-
-  await stopCamera();
-
-
-  /*
-   * ========================================================
-   * SCANNER-ONLY MODE
-   * ========================================================
-   */
-
-  if (
-    !currentSheetUrl ||
-    !currentSheetName ||
-    !currentColumnNumber
-  ) {
-
-    setStatus(
-      "✅ Barcode verified — scanner test only. No Sheet destination configured.",
-      "success"
-    );
-
-    return;
-
-  }
-
-
-  /*
-   * ========================================================
-   * GOOGLE SHEETS MODE
-   * ========================================================
-   */
-
-  setStatus(
-    "Saving " +
-    value +
-    " to Google Sheets...",
-    ""
-  );
-
-
-  sendSingleScan(
-    value
-  );
-
-}
-
-
-/************************************************************
- * SEND SINGLE SCAN
- ************************************************************/
-
-function sendSingleScan(
-  value
-) {
-
-  const url =
-    API_URL +
-    "?action=saveScan" +
-    "&sheetUrl=" +
-    encodeURIComponent(
-      currentSheetUrl
-    ) +
-    "&sheetName=" +
-    encodeURIComponent(
-      currentSheetName
-    ) +
-    "&columnNumber=" +
-    encodeURIComponent(
-      currentColumnNumber
-    ) +
-    "&qrValue=" +
-    encodeURIComponent(
-      value
-    ) +
-    "&addNewRow=true";
-
-
-  const img =
-    new Image();
-
-
-  img.onload =
-    function() {
-
-      setStatus(
-        "✅ " +
-        value +
-        " sent to Google Sheets.",
-        "success"
-      );
-
-    };
-
-
-  img.onerror =
-    function() {
-
-      /*
-       * The browser may block reading the
-       * Apps Script response because of CORS.
-       *
-       * The request itself has still been sent.
-       */
-
-      setStatus(
-        "✅ Scan sent to Google Sheets: " +
-        value,
-        "success"
-      );
-
-    };
-
-
-  img.src =
-    url;
-
-}
-
-
-/************************************************************
- * CONFIRM BATCH SCAN
- ************************************************************/
-
-function confirmBatchScan(
-  value
-) {
-
-  /*
-   * Prevent duplicate item codes in the
-   * current batch.
-   */
-
-  if (
-    batchValues.indexOf(
-      value
-    ) !== -1
-  ) {
-
-    setStatus(
-      "Already scanned in this batch: " +
-      value,
-      ""
-    );
-
-
-    return;
-
-  }
-
-
-  batchValues.push(
-    value
-  );
-
-
-  updateBatchDisplay();
-
-
-  document
-    .getElementById("result")
-    .textContent =
-    value;
-
-
-  document
-    .getElementById("confirmation")
-    .textContent =
-    "✓ Added to batch";
+    "✓ BARCODE VERIFIED";
 
 
   setStatus(
-    "Added " +
+    "✅ " +
     value +
-    " to batch.",
+    " verified.",
     "success"
   );
 
+
+  /*
+   * Stop camera safely.
+   */
+
+  stopCamera();
+
 }
 
 
 /************************************************************
- * UPDATE BATCH DISPLAY
- ************************************************************/
+ * ==========================================================
+ * STOP CAMERA
+ * ==========================================================
+ */
 
-function updateBatchDisplay() {
+function stopCamera() {
+
+  /*
+   * Nothing to stop.
+   */
+
+  if (
+    !html5QrCode
+  ) {
+
+    scannerRunning = false;
+
+    scannerBusy = false;
+
+
+    document
+      .getElementById("reader")
+      .innerHTML = "";
+
+
+    document
+      .getElementById("startButton")
+      .disabled = false;
+
+
+    document
+      .getElementById("stopButton")
+      .disabled = true;
+
+
+    return;
+
+  }
+
+
+  /*
+   * Keep reference to the current scanner.
+   */
+
+  const scanner =
+    html5QrCode;
+
+
+  /*
+   * Immediately mark scanner as inactive
+   * so another start cannot happen during
+   * the shutdown process.
+   */
+
+  scannerRunning = false;
+
+  scannerBusy = true;
+
 
   document
-    .getElementById("batchCount")
-    .textContent =
-    batchValues.length +
-    (
-      batchValues.length === 1
-        ? " item waiting"
-        : " items waiting"
-    );
+    .getElementById("stopButton")
+    .disabled = true;
 
 
-  const list =
-    document.getElementById(
-      "batchList"
-    );
+  /*
+   * Stop camera stream.
+   */
 
+  scanner.stop()
 
-  list.innerHTML =
-    "";
+  .then(
+    function() {
 
+      /*
+       * Clear the scanner UI.
+       */
 
-  batchValues.forEach(
-    function(value, index) {
+      try {
 
-      const div =
-        document.createElement(
-          "div"
+        scanner.clear();
+
+      }
+
+      catch (error) {
+
+        console.warn(
+          "Scanner clear warning:",
+          error
         );
 
-
-      div.className =
-        "batch-item";
+      }
 
 
-      div.textContent =
-        (
-          index + 1
-        ) +
-        ". " +
-        value;
+      finishCameraStop();
 
+    }
+  )
 
-      list.appendChild(
-        div
+  .catch(
+    function(error) {
+
+      console.warn(
+        "Camera stop warning:",
+        error
       );
+
+
+      /*
+       * Even if stop() reports an error,
+       * attempt to clear the scanner.
+       */
+
+      try {
+
+        scanner.clear();
+
+      }
+
+      catch (clearError) {
+
+        console.warn(
+          "Clear warning:",
+          clearError
+        );
+
+      }
+
+
+      finishCameraStop();
 
     }
   );
 
-
-  document
-    .getElementById("sendBatchButton")
-    .disabled =
-    batchValues.length === 0;
-
 }
 
 
 /************************************************************
- * SEND BATCH
- ************************************************************/
+ * ==========================================================
+ * FINISH CAMERA STOP
+ * ==========================================================
+ */
 
-function sendBatch() {
+function finishCameraStop() {
+
+  /*
+   * Remove old scanner reference.
+   */
+
+  html5QrCode = null;
+
+
+  scannerRunning = false;
+
+  scannerBusy = false;
+
+
+  /*
+   * Completely empty the camera container.
+   */
+
+  document
+    .getElementById("reader")
+    .innerHTML = "";
+
+
+  /*
+   * Restore buttons.
+   */
+
+  document
+    .getElementById("startButton")
+    .disabled = false;
+
+
+  document
+    .getElementById("stopButton")
+    .disabled = true;
+
+
+  /*
+   * If an item was confirmed, tell the user
+   * what to do next.
+   */
 
   if (
-    batchValues.length === 0
-  ) {
-
-    return;
-
-  }
-
-
-  if (
-    !currentSheetUrl ||
-    !currentSheetName ||
-    !currentColumnNumber
+    itemConfirmed
   ) {
 
     setStatus(
-      "Batch is ready, but no Google Sheet destination is configured.",
-      "error"
+      "Item confirmed. Press RESET / SCAN NEXT ITEM.",
+      "success"
     );
-
-
-    showSetup();
-
-
-    return;
 
   }
 
+  else {
 
-  const values =
-    JSON.stringify(
-      batchValues
+    setStatus(
+      "Camera stopped. Press START CAMERA to scan again.",
+      ""
     );
 
-
-  setStatus(
-    "Sending " +
-    batchValues.length +
-    " items to Google Sheets...",
-    ""
-  );
-
-
-  document
-    .getElementById("sendBatchButton")
-    .disabled =
-    true;
-
-
-  const url =
-    API_URL +
-    "?action=saveBatch" +
-    "&sheetUrl=" +
-    encodeURIComponent(
-      currentSheetUrl
-    ) +
-    "&sheetName=" +
-    encodeURIComponent(
-      currentSheetName
-    ) +
-    "&columnNumber=" +
-    encodeURIComponent(
-      currentColumnNumber
-    ) +
-    "&addNewRow=true" +
-    "&qrValues=" +
-    encodeURIComponent(
-      values
-    );
-
-
-  const img =
-    new Image();
-
-
-  img.onload =
-    function() {
-
-      finishBatchSend();
-
-    };
-
-
-  img.onerror =
-    function() {
-
-      finishBatchSend();
-
-    };
-
-
-  img.src =
-    url;
+  }
 
 }
 
 
 /************************************************************
- * FINISH BATCH
- ************************************************************/
+ * ==========================================================
+ * RESET / SCAN NEXT ITEM
+ * ==========================================================
+ */
 
-function finishBatchSend() {
+function resetScanner() {
 
-  const count =
-    batchValues.length;
+  /*
+   * If the camera is currently active,
+   * stop it first.
+   */
+
+  if (
+    scannerRunning ||
+    html5QrCode
+  ) {
+
+    stopCamera();
+
+  }
 
 
-  batchValues =
-    [];
+  /*
+   * Reset item confirmation.
+   */
+
+  itemConfirmed = false;
+
+  confirmationCount = 0;
+
+  lastReadValue = "";
 
 
-  updateBatchDisplay();
-
+  /*
+   * Clear result.
+   */
 
   document
     .getElementById("result")
@@ -2281,48 +989,35 @@ function finishBatchSend() {
   document
     .getElementById("confirmation")
     .textContent =
-    count +
-    " items sent.";
+    "No barcode confirmed yet.";
 
 
-  setStatus(
-    "✅ " +
-    count +
-    " items sent to Google Sheets.",
-    "success"
-  );
+  /*
+   * Make sure the camera container
+   * is empty.
+   */
+
+  document
+    .getElementById("reader")
+    .innerHTML = "";
 
 
-  lastReadValue =
-    "";
+  /*
+   * Make sure START is available.
+   */
 
-  confirmationCount =
-    0;
+  document
+    .getElementById("startButton")
+    .disabled = false;
 
 
   document
-    .getElementById("sendBatchButton")
-    .disabled =
-    true;
-
-}
-
-
-/************************************************************
- * CLEAR BATCH
- ************************************************************/
-
-function clearBatch() {
-
-  batchValues =
-    [];
-
-
-  updateBatchDisplay();
+    .getElementById("stopButton")
+    .disabled = true;
 
 
   setStatus(
-    "Batch cleared.",
+    "Ready for next scan. Press START CAMERA.",
     ""
   );
 
@@ -2330,52 +1025,10 @@ function clearBatch() {
 
 
 /************************************************************
- * UPDATE BUTTONS
- ************************************************************/
-
-function updateButtons() {
-
-  const startButton =
-    document.getElementById(
-      "startButton"
-    );
-
-
-  const stopButton =
-    document.getElementById(
-      "stopButton"
-    );
-
-
-  if (
-    scannerRunning ||
-    scannerStarting
-  ) {
-
-    startButton.disabled =
-      true;
-
-    stopButton.disabled =
-      false;
-
-  }
-
-  else {
-
-    startButton.disabled =
-      false;
-
-    stopButton.disabled =
-      true;
-
-  }
-
-}
-
-
-/************************************************************
+ * ==========================================================
  * STATUS
- ************************************************************/
+ * ==========================================================
+ */
 
 function setStatus(
   message,
@@ -2396,52 +1049,15 @@ function setStatus(
     "status";
 
 
-  if (type) {
+  if (
+    type
+  ) {
 
     status.classList.add(
       type
     );
 
   }
-
-}
-
-
-/************************************************************
- * COLUMN NUMBER → LETTER
- ************************************************************/
-
-function numberToLetter(
-  number
-) {
-
-  let result = "";
-
-
-  while (
-    number > 0
-  ) {
-
-    const remainder =
-      (number - 1) % 26;
-
-
-    result =
-      String.fromCharCode(
-        65 + remainder
-      ) +
-      result;
-
-
-    number =
-      Math.floor(
-        (number - 1) / 26
-      );
-
-  }
-
-
-  return result;
 
 }
 
