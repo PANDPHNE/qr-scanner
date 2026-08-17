@@ -14,11 +14,12 @@
 
 
   <!-- =====================================================
-       ZXING BROWSER
+       HTML5-QR-CODE
        ===================================================== -->
 
   <script
-    src="https://unpkg.com/@zxing/browser@0.2.1">
+    src="https://unpkg.com/html5-qrcode"
+    type="text/javascript">
   </script>
 
 
@@ -105,17 +106,28 @@
     }
 
 
-    #video {
-
-      display: block;
+    #reader {
 
       width: 100%;
 
-      height: auto;
+      min-height: 300px;
 
-      min-height: 260px;
+      background: #000000;
 
-      max-height: 70vh;
+    }
+
+
+    /*
+     * Make the video fill the camera area.
+     */
+
+    #reader video {
+
+      width: 100% !important;
+
+      height: auto !important;
+
+      display: block;
 
       object-fit: cover;
 
@@ -124,12 +136,42 @@
     }
 
 
-    /* =====================================================
-       VISUAL GUIDE
+    /*
+     * Hide html5-qrcode's default UI buttons.
+     *
+     * We use our own buttons.
+     */
 
+    #reader__dashboard {
+
+      display: none !important;
+
+    }
+
+
+    #reader__dashboard_section {
+
+      display: none !important;
+
+    }
+
+
+    #reader__camera_selection {
+
+      display: none !important;
+
+    }
+
+
+    /* =====================================================
+       VISUAL BARCODE GUIDE
+       
        IMPORTANT:
-       This is ONLY a guide.
-       ZXing still analyzes the full video frame.
+       
+       This is ONLY a visual guide.
+       
+       We deliberately DO NOT use qrbox because the
+       decoder should be able to inspect the whole frame.
        ===================================================== */
 
     .scan-guide {
@@ -146,7 +188,7 @@
 
       transform: translateY(-50%);
 
-      border: 2px solid rgba(0, 160, 255, .9);
+      border: 2px solid rgba(0,160,255,.9);
 
       border-radius: 10px;
 
@@ -154,6 +196,8 @@
 
       box-shadow:
         0 0 0 9999px rgba(0,0,0,.08);
+
+      z-index: 10;
 
     }
 
@@ -184,7 +228,7 @@
 
       left: 50%;
 
-      bottom: -35px;
+      bottom: -34px;
 
       transform: translateX(-50%);
 
@@ -250,6 +294,15 @@
       background: #f8d7da;
 
       color: #842029;
+
+    }
+
+
+    .status.ready {
+
+      background: #dbeafe;
+
+      color: #174ea6;
 
     }
 
@@ -343,6 +396,15 @@
     }
 
 
+    button:disabled {
+
+      background: #aaaaaa;
+
+      cursor: not-allowed;
+
+    }
+
+
     #startButton {
 
       background: #1976d2;
@@ -364,11 +426,19 @@
     }
 
 
-    button:disabled {
+    .torch-button {
 
-      background: #aaaaaa;
+      background: #f57c00;
 
-      cursor: not-allowed;
+    }
+
+
+    .torch-button.active {
+
+      background: #ff9800;
+
+      box-shadow:
+        0 0 10px rgba(255,152,0,.55);
 
     }
 
@@ -396,24 +466,6 @@
       line-height: 1.55;
 
       word-break: break-word;
-
-    }
-
-
-    .focus-good {
-
-      color: #137333;
-
-      font-weight: bold;
-
-    }
-
-
-    .focus-warning {
-
-      color: #b06000;
-
-      font-weight: bold;
 
     }
 
@@ -459,9 +511,9 @@
       }
 
 
-      #video {
+      #reader {
 
-        min-height: 250px;
+        min-height: 280px;
 
       }
 
@@ -496,11 +548,11 @@
 
     <br>
 
-    <strong>CODE 128</strong>
+    <strong>CODE 128 ONLY</strong>
 
     <br>
 
-    Continuous autofocus is enabled when supported.
+    Keep the barcode horizontal and allow the camera to focus.
 
   </p>
 
@@ -511,29 +563,30 @@
 
   <div class="camera-wrapper">
 
-    <video
-      id="video"
-      playsinline
-      muted
-      autoplay>
-    </video>
 
+    <div id="reader"></div>
+
+
+    <!-- Visual guide only -->
 
     <div class="scan-guide">
 
       <div class="scan-line"></div>
 
       <div class="scan-label">
+
         ALIGN BARCODE HERE
+
       </div>
 
     </div>
+
 
   </div>
 
 
   <!-- =====================================================
-       CAMERA INFO
+       CAMERA INFORMATION
        ===================================================== -->
 
   <div
@@ -564,25 +617,33 @@
 
   <div class="result">
 
+
     <div class="result-title">
+
       SCANNED ITEM CODE
+
     </div>
 
 
     <div id="result">
+
       Waiting...
+
     </div>
 
 
     <div id="confirmation">
+
       No barcode confirmed yet.
+
     </div>
+
 
   </div>
 
 
   <!-- =====================================================
-       BUTTONS
+       START CAMERA
        ===================================================== -->
 
   <button
@@ -594,6 +655,25 @@
   </button>
 
 
+  <!-- =====================================================
+       FLASHLIGHT
+       ===================================================== -->
+
+  <button
+    id="torchButton"
+    class="torch-button"
+    onclick="toggleTorch()"
+    disabled>
+
+    🔦 TURN ON LIGHT
+
+  </button>
+
+
+  <!-- =====================================================
+       STOP
+       ===================================================== -->
+
   <button
     id="stopButton"
     class="stop-button"
@@ -604,6 +684,10 @@
 
   </button>
 
+
+  <!-- =====================================================
+       RESET
+       ===================================================== -->
 
   <button
     id="resetButton"
@@ -621,7 +705,7 @@
 
   <div class="rules">
 
-    Valid item examples:
+    Valid examples:
 
     <strong>KA7195</strong>
 
@@ -637,7 +721,7 @@
 
     <br>
 
-    Item code:
+    Item:
 
     <strong>KA + numbers</strong>
 
@@ -657,9 +741,7 @@
  * ==========================================================
  */
 
-let codeReader = null;
-
-let scannerControls = null;
+let html5QrCode = null;
 
 let scannerRunning = false;
 
@@ -669,7 +751,7 @@ let itemConfirmed = false;
 
 
 /*
- * Confirmation system.
+ * Confirmation state.
  */
 
 let confirmationCount = 0;
@@ -680,11 +762,25 @@ let lastAcceptedReadTime = 0;
 
 
 /*
- * Prevent the same physical frame from
- * being counted multiple times.
+ * Prevent the same successful decoder event
+ * from being counted multiple times instantly.
  */
 
 const READ_COOLDOWN = 150;
+
+
+/*
+ * Camera track.
+ */
+
+let currentVideoTrack = null;
+
+
+/*
+ * Torch state.
+ */
+
+let torchOn = false;
 
 
 /************************************************************
@@ -706,95 +802,24 @@ const ITEM_CODE_PATTERN =
 const CAMERA_SETTINGS = {
 
   /*
-   * High resolution request.
+   * The phone previously reported:
    *
-   * The device may choose a lower supported value.
+   * 1080 × 1920
+   * 30 FPS
+   * 1.5× zoom
+   *
+   * We request the same general quality.
    */
 
-  width: 1920,
+  width: 1080,
 
-  height: 1080,
-
-
-  /*
-   * Desired camera frame rate.
-   */
+  height: 1920,
 
   frameRate: 30,
-
-
-  /*
-   * Moderate zoom.
-   *
-   * We will NOT force this.
-   *
-   * We first inspect the phone's capabilities.
-   */
 
   preferredZoom: 1.5
 
 };
-
-
-/************************************************************
- * ==========================================================
- * ZXING SETTINGS
- * ==========================================================
- */
-
-function createHints() {
-
-
-  const hints =
-    new Map();
-
-
-  /*
-   * Try harder to locate the barcode.
-   */
-
-  if (
-    window.ZXing &&
-    window.ZXing.DecodeHintType
-  ) {
-
-    hints.set(
-
-      window.ZXing.DecodeHintType.TRY_HARDER,
-
-      true
-
-    );
-
-
-    /*
-     * Only Code 128.
-     */
-
-    if (
-      window.ZXing.BarcodeFormat
-    ) {
-
-      hints.set(
-
-        window.ZXing.DecodeHintType.POSSIBLE_FORMATS,
-
-        [
-
-          window.ZXing.BarcodeFormat.CODE_128
-
-        ]
-
-      );
-
-    }
-
-  }
-
-
-  return hints;
-
-}
 
 
 /************************************************************
@@ -806,6 +831,10 @@ function createHints() {
 async function startCamera() {
 
 
+  /*
+   * Prevent duplicate starts.
+   */
+
   if (
     scannerRunning ||
     scannerBusy
@@ -815,6 +844,11 @@ async function startCamera() {
 
   }
 
+
+  /*
+   * Don't scan another item until
+   * current item is reset.
+   */
 
   if (
     itemConfirmed
@@ -846,7 +880,7 @@ async function startCamera() {
 
   setStatus(
 
-    "Starting rear camera and autofocus...",
+    "Preparing rear camera...",
 
     ""
 
@@ -857,57 +891,47 @@ async function startCamera() {
 
 
     /********************************************************
-     * CLEAN PREVIOUS CAMERA
+     * CLEAN PREVIOUS SCANNER
      ********************************************************/
 
     await cleanupScanner();
 
 
-    /********************************************************
-     * CHECK ZXING
-     ********************************************************/
-
-    if (
-      !window.ZXingBrowser
-    ) {
-
-      throw new Error(
-        "ZXing Browser failed to load."
-      );
-
-    }
+    document
+      .getElementById("reader")
+      .innerHTML = "";
 
 
     /********************************************************
-     * CREATE READER
+     * CREATE SCANNER
      ********************************************************/
 
-    const hints =
-      createHints();
+    html5QrCode =
 
+      new Html5Qrcode(
 
-    /*
-     * BrowserMultiFormatOneDReader is designed
-     * specifically for linear / 1D barcodes.
-     *
-     * Our labels are Code 128.
-     */
-
-    codeReader =
-
-      new ZXingBrowser.BrowserMultiFormatOneDReader(
-
-        hints,
+        "reader",
 
         {
 
           /*
-           * Keep decoding attempts reasonably fast.
+           * Only Code 128.
+           *
+           * This is important for performance because
+           * we do not need QR/EAN/UPC/etc.
            */
 
-          delayBetweenScanAttempts: 80,
+          formatsToSupport: [
 
-          delayBetweenScanSuccess: 80
+            Html5QrcodeSupportedFormats.CODE_128
+
+          ],
+
+          /*
+           * Keep the scanner quiet.
+           */
+
+          verbose: false
 
         }
 
@@ -915,28 +939,56 @@ async function startCamera() {
 
 
     /********************************************************
-     * VIDEO ELEMENT
+     * SCANNER CONFIG
      ********************************************************/
 
-    const video =
-      document.getElementById(
-        "video"
-      );
+    const config = {
+
+      /*
+       * 15 scanner attempts per second.
+       *
+       * Higher than the original tutorial's 10,
+       * but not excessively high.
+       */
+
+      fps: 15,
 
 
-    /********************************************************
-     * CAMERA CONSTRAINTS
-     ********************************************************/
+      /*
+       * IMPORTANT:
+       *
+       * NO QRBOX.
+       *
+       * The scanner therefore analyzes the
+       * entire camera frame.
+       *
+       * This is intentional because your barcode
+       * is small and horizontal.
+       */
 
-    const constraints = {
 
-      audio: false,
+      /*
+       * Standard mobile camera aspect ratio.
+       */
 
-      video: {
+      aspectRatio: 16 / 9,
 
-        /*
-         * Rear/environment camera.
-         */
+
+      /*
+       * Your rear camera should not be mirrored.
+       */
+
+      disableFlip: true,
+
+
+      /*
+       * Camera quality.
+       *
+       * We deliberately do NOT force focusMode
+       * because your browser does not expose it.
+       */
+
+      videoConstraints: {
 
         facingMode: {
 
@@ -945,11 +997,6 @@ async function startCamera() {
 
         },
 
-
-        /*
-         * High resolution.
-         */
-
         width: {
 
           ideal:
@@ -957,18 +1004,12 @@ async function startCamera() {
 
         },
 
-
         height: {
 
           ideal:
             CAMERA_SETTINGS.height
 
         },
-
-
-        /*
-         * Camera frame rate.
-         */
 
         frameRate: {
 
@@ -978,20 +1019,7 @@ async function startCamera() {
           max:
             CAMERA_SETTINGS.frameRate
 
-        },
-
-
-        /*
-         * Ask for continuous focus
-         * at the initial camera request.
-         *
-         * The second focus pass below is
-         * still necessary because browsers
-         * can ignore unsupported constraints.
-         */
-
-        focusMode:
-          "continuous"
+        }
 
       }
 
@@ -999,48 +1027,62 @@ async function startCamera() {
 
 
     /********************************************************
-     * START ZXING
+     * START CAMERA
      ********************************************************/
 
-    scannerControls =
+    await html5QrCode.start(
 
-      await codeReader.decodeFromConstraints(
+      {
 
-        constraints,
+        facingMode: {
 
-        video,
-
-        function(
-          result,
-          error,
-          controls
-        ) {
-
-
-          /*
-           * No barcode in this frame.
-           */
-
-          if (
-            !result
-          ) {
-
-            return;
-
-          }
-
-
-          const text =
-            result.getText();
-
-
-          handleScan(
-            text
-          );
+          ideal:
+            "environment"
 
         }
 
-      );
+      },
+
+      config,
+
+
+      /*
+       * SUCCESS CALLBACK
+       */
+
+      function(
+        decodedText,
+        decodedResult
+      ) {
+
+        handleScan(
+
+          decodedText,
+
+          decodedResult
+
+        );
+
+      },
+
+
+      /*
+       * SCAN ERROR CALLBACK
+       *
+       * Normal unsuccessful frames are ignored.
+       */
+
+      function(
+        errorMessage
+      ) {
+
+        /*
+         * Intentionally empty.
+         */
+
+      }
+
+    );
 
 
     scannerRunning =
@@ -1052,67 +1094,58 @@ async function startCamera() {
 
 
     /********************************************************
-     * WAIT FOR CAMERA TO SETTLE
+     * GET ACTUAL CAMERA TRACK
      ********************************************************/
 
-    await waitForVideoReady(
-      video
-    );
+    await captureCurrentVideoTrack();
 
 
-    /*
-     * IMPORTANT:
-     *
-     * Now we have the REAL camera track.
-     *
-     * This is where we explicitly force
-     * continuous autofocus.
-     */
+    /********************************************************
+     * APPLY SUPPORTED ZOOM
+     ********************************************************/
 
-    await optimizeCameraFocus(
-      video
-    );
-
-
-    /*
-     * Give autofocus a short moment to settle.
-     */
-
-    await sleep(
-      350
-    );
-
-
-    /*
-     * Run the focus application one more time.
-     *
-     * Some Android browsers expose their
-     * capabilities only after the stream starts.
-     */
-
-    await optimizeCameraFocus(
-      video
-    );
+    await applySupportedZoom();
 
 
     /********************************************************
      * CAMERA INFORMATION
      ********************************************************/
 
-    showCameraInfo(
-      video
-    );
+    showCameraInfo();
 
 
     /********************************************************
-     * UI
+     * FOCUS SETTLING
+     *
+     * We are not forcing focus.
+     *
+     * We simply allow the phone's native camera
+     * autofocus to settle before telling the user
+     * the scanner is ready.
      ********************************************************/
 
     setStatus(
 
-      "📷 CAMERA ACTIVE — CONTINUOUS AUTOFOCUS ENABLED",
+      "🔎 FOCUSING CAMERA...",
 
-      ""
+      "ready"
+
+    );
+
+
+    await sleep(
+      900
+    );
+
+
+    showCameraInfo();
+
+
+    setStatus(
+
+      "📷 READY TO SCAN — KEEP BARCODE SHARP",
+
+      "ready"
 
     );
 
@@ -1123,6 +1156,13 @@ async function startCamera() {
       false;
 
 
+    /********************************************************
+     * TORCH AVAILABILITY
+     ********************************************************/
+
+    updateTorchButton();
+
+
   }
 
 
@@ -1130,7 +1170,7 @@ async function startCamera() {
 
 
     console.error(
-      "Scanner start error:",
+      "Camera start failed:",
       error
     );
 
@@ -1177,59 +1217,93 @@ async function startCamera() {
 
 /************************************************************
  * ==========================================================
- * WAIT FOR VIDEO
+ * CAPTURE CURRENT VIDEO TRACK
  * ==========================================================
  */
 
-function waitForVideoReady(
-  video
-) {
+async function captureCurrentVideoTrack() {
 
 
-  return new Promise(
-    function(resolve) {
+  /*
+   * html5-qrcode creates the video element
+   * inside #reader.
+   */
+
+  const reader =
+    document.getElementById(
+      "reader"
+    );
+
+
+  const video =
+    reader.querySelector(
+      "video"
+    );
+
+
+  if (
+    !video
+  ) {
+
+    console.warn(
+      "Camera video element not found."
+    );
+
+    return;
+
+  }
+
+
+  /*
+   * Wait briefly for the stream to attach.
+   */
+
+  for (
+    let attempt = 0;
+    attempt < 20;
+    attempt++
+  ) {
+
+
+    if (
+      video.srcObject
+    ) {
+
+      const tracks =
+        video.srcObject
+          .getVideoTracks();
 
 
       if (
-        video.readyState >= 2
+        tracks.length
       ) {
 
-        resolve();
+        currentVideoTrack =
+          tracks[0];
+
+
+        console.log(
+          "CURRENT CAMERA TRACK:",
+          currentVideoTrack
+        );
+
 
         return;
 
       }
 
-
-      const timeout =
-        setTimeout(
-          resolve,
-          3000
-        );
-
-
-      video.addEventListener(
-
-        "loadedmetadata",
-
-        function() {
-
-          clearTimeout(
-            timeout
-          );
-
-          resolve();
-
-        },
-
-        {
-          once: true
-        }
-
-      );
-
     }
 
+
+    await sleep(
+      100
+    );
+
+  }
+
+
+  console.warn(
+    "Could not capture camera track."
   );
 
 }
@@ -1237,68 +1311,38 @@ function waitForVideoReady(
 
 /************************************************************
  * ==========================================================
- * OPTIMIZE CAMERA FOCUS
+ * APPLY SUPPORTED ZOOM
  * ==========================================================
- *
- * This is the most important new function.
- *
- * It works directly with the actual
- * MediaStreamTrack.
- *
- ************************************************************
  */
 
-async function optimizeCameraFocus(
-  video
-) {
+async function applySupportedZoom() {
+
+
+  if (
+    !currentVideoTrack
+  ) {
+
+    return;
+
+  }
+
+
+  if (
+    typeof currentVideoTrack.getCapabilities !==
+    "function"
+  ) {
+
+    return;
+
+  }
 
 
   try {
 
 
-    if (
-      !video ||
-      !video.srcObject
-    ) {
-
-      return;
-
-    }
-
-
-    const tracks =
-      video.srcObject
-        .getVideoTracks();
-
-
-    if (
-      !tracks ||
-      tracks.length === 0
-    ) {
-
-      return;
-
-    }
-
-
-    const track =
-      tracks[0];
-
-
     const capabilities =
-      typeof track.getCapabilities === "function"
-
-        ? track.getCapabilities()
-
-        : {};
-
-
-    const currentSettings =
-      typeof track.getSettings === "function"
-
-        ? track.getSettings()
-
-        : {};
+      currentVideoTrack
+        .getCapabilities();
 
 
     console.log(
@@ -1307,249 +1351,99 @@ async function optimizeCameraFocus(
     );
 
 
-    console.log(
-      "CAMERA SETTINGS:",
-      currentSettings
-    );
-
-
-    /********************************************************
-     * BUILD FOCUS CONSTRAINTS
-     ********************************************************/
-
-    const focusConstraints = {};
-
-
-    /*
-     * Continuous autofocus.
-     *
-     * This is the key change.
-     */
-
     if (
-      capabilities.focusMode &&
-      Array.isArray(
-        capabilities.focusMode
-      )
+      !capabilities.zoom
     ) {
 
       console.log(
-        "Supported focus modes:",
-        capabilities.focusMode
+        "Zoom is not exposed by this browser."
+      );
+
+      return;
+
+    }
+
+
+    const minZoom =
+      Number(
+        capabilities.zoom.min
       );
 
 
-      if (
-        capabilities.focusMode.includes(
-          "continuous"
-        )
-      ) {
+    const maxZoom =
+      Number(
+        capabilities.zoom.max
+      );
 
-        focusConstraints.focusMode =
-          "continuous";
-
-      }
-
-      else if (
-        capabilities.focusMode.includes(
-          "single-shot"
-        )
-      ) {
-
-        /*
-         * We prefer continuous.
-         *
-         * If unavailable, we don't
-         * repeatedly force single-shot.
-         */
-
-        console.warn(
-          "Continuous autofocus unavailable."
-        );
-
-      }
-
-    }
-
-
-    /********************************************************
-     * APPLY CONTINUOUS AUTOFOCUS
-     ********************************************************/
 
     if (
-      focusConstraints.focusMode
+      !Number.isFinite(
+        minZoom
+      ) ||
+      !Number.isFinite(
+        maxZoom
+      )
     ) {
 
-      try {
-
-        await track.applyConstraints({
-
-          advanced: [
-
-            focusConstraints
-
-          ]
-
-        });
-
-
-        console.log(
-          "✓ CONTINUOUS AUTOFOCUS APPLIED"
-        );
-
-      }
-
-      catch (focusError) {
-
-        console.warn(
-          "Advanced autofocus failed:",
-          focusError
-        );
-
-
-        /*
-         * Try the simpler constraint form.
-         */
-
-        try {
-
-          await track.applyConstraints({
-
-            focusMode:
-              "continuous"
-
-          });
-
-
-          console.log(
-            "✓ CONTINUOUS AUTOFOCUS APPLIED (fallback)"
-          );
-
-        }
-
-        catch (fallbackError) {
-
-          console.warn(
-            "Fallback autofocus failed:",
-            fallbackError
-          );
-
-        }
-
-      }
+      return;
 
     }
 
 
-    /********************************************************
-     * OPTIONAL ZOOM
-     *
-     * Only apply if the device actually supports it.
-     *
-     * We keep it moderate.
-     ********************************************************/
+    /*
+     * We want approximately 1.5×,
+     * but never outside the device's range.
+     */
+
+    const targetZoom =
+      Math.min(
+
+        Math.max(
+
+          CAMERA_SETTINGS.preferredZoom,
+
+          minZoom
+
+        ),
+
+        maxZoom
+
+      );
+
+
+    /*
+     * Don't apply a useless 1× constraint.
+     */
 
     if (
-      capabilities.zoom &&
-      typeof capabilities.zoom.min === "number" &&
-      typeof capabilities.zoom.max === "number"
+      targetZoom <= 1
     ) {
 
-
-      const minZoom =
-        capabilities.zoom.min;
-
-
-      const maxZoom =
-        capabilities.zoom.max;
-
-
-      /*
-       * We don't want extreme digital zoom.
-       */
-
-      const desiredZoom =
-        Math.min(
-
-          Math.max(
-
-            CAMERA_SETTINGS.preferredZoom,
-
-            minZoom
-
-          ),
-
-          Math.min(
-            maxZoom,
-            2.0
-          )
-
-        );
-
-
-      /*
-       * Only zoom if the camera supports
-       * something greater than 1.
-       */
-
-      if (
-        desiredZoom > 1
-      ) {
-
-        try {
-
-          await track.applyConstraints({
-
-            advanced: [
-
-              {
-
-                zoom:
-                  desiredZoom
-
-              }
-
-            ]
-
-          });
-
-
-          console.log(
-            "Camera zoom:",
-            desiredZoom
-          );
-
-        }
-
-        catch (zoomError) {
-
-          console.warn(
-            "Zoom unavailable:",
-            zoomError
-          );
-
-        }
-
-      }
+      return;
 
     }
 
 
-    /********************************************************
-     * FINAL SETTINGS
-     ********************************************************/
+    await currentVideoTrack
+      .applyConstraints({
 
-    const finalSettings =
-      typeof track.getSettings === "function"
+        advanced: [
 
-        ? track.getSettings()
+          {
 
-        : {};
+            zoom:
+              targetZoom
+
+          }
+
+        ]
+
+      });
 
 
     console.log(
-      "FINAL CAMERA SETTINGS:",
-      finalSettings
+      "✓ CAMERA ZOOM APPLIED:",
+      targetZoom
     );
 
 
@@ -1557,13 +1451,8 @@ async function optimizeCameraFocus(
 
   catch (error) {
 
-    /*
-     * Focus optimization must NEVER
-     * kill the scanner.
-     */
-
     console.warn(
-      "Camera focus optimization unavailable:",
+      "Zoom could not be applied:",
       error
     );
 
@@ -1574,12 +1463,331 @@ async function optimizeCameraFocus(
 
 /************************************************************
  * ==========================================================
- * HANDLE BARCODE
+ * CAMERA INFORMATION
+ * ==========================================================
+ */
+
+function showCameraInfo() {
+
+
+  const info =
+    document.getElementById(
+      "cameraInfo"
+    );
+
+
+  try {
+
+
+    if (
+      !currentVideoTrack
+    ) {
+
+      info.textContent =
+        "Camera is starting...";
+
+      return;
+
+    }
+
+
+    const settings =
+      currentVideoTrack
+        .getSettings();
+
+
+    const width =
+      settings.width ||
+      "?";
+
+
+    const height =
+      settings.height ||
+      "?";
+
+
+    const fps =
+      settings.frameRate
+
+        ? Math.round(
+            settings.frameRate
+          )
+
+        : "?";
+
+
+    const zoom =
+      settings.zoom
+
+        ? Number(
+            settings.zoom
+          ).toFixed(1) + "×"
+
+        : "default";
+
+
+    info.innerHTML =
+
+      "<strong>" +
+
+      escapeHtml(
+
+        currentVideoTrack.label ||
+        "Rear camera"
+
+      ) +
+
+      "</strong>" +
+
+      "<br>" +
+
+      "Resolution: " +
+
+      width +
+
+      " × " +
+
+      height +
+
+      "<br>" +
+
+      "FPS: " +
+
+      fps +
+
+      " | Zoom: " +
+
+      zoom +
+
+      "<br>" +
+
+      "Autofocus: managed by device/browser";
+
+  }
+
+
+  catch (error) {
+
+    console.warn(
+      "Camera info error:",
+      error
+    );
+
+
+    info.textContent =
+      "Rear camera active.";
+
+  }
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * TORCH SUPPORT
+ * ==========================================================
+ */
+
+function updateTorchButton() {
+
+
+  const button =
+    document.getElementById(
+      "torchButton"
+    );
+
+
+  if (
+    !currentVideoTrack ||
+    typeof currentVideoTrack.getCapabilities !==
+    "function"
+  ) {
+
+    button.disabled =
+      true;
+
+    button.textContent =
+      "🔦 LIGHT NOT AVAILABLE";
+
+    return;
+
+  }
+
+
+  try {
+
+
+    const capabilities =
+      currentVideoTrack
+        .getCapabilities();
+
+
+    if (
+      capabilities.torch
+    ) {
+
+      button.disabled =
+        false;
+
+      button.textContent =
+
+        torchOn
+
+          ? "🔦 TURN OFF LIGHT"
+
+          : "🔦 TURN ON LIGHT";
+
+    }
+
+    else {
+
+      button.disabled =
+        true;
+
+      button.textContent =
+        "🔦 LIGHT NOT AVAILABLE";
+
+    }
+
+  }
+
+  catch (error) {
+
+    console.warn(
+      "Torch capability check:",
+      error
+    );
+
+
+    button.disabled =
+      true;
+
+  }
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * TOGGLE TORCH
+ * ==========================================================
+ */
+
+async function toggleTorch() {
+
+
+  if (
+    !currentVideoTrack
+  ) {
+
+    return;
+
+  }
+
+
+  try {
+
+
+    const capabilities =
+      currentVideoTrack
+        .getCapabilities();
+
+
+    if (
+      !capabilities.torch
+    ) {
+
+      return;
+
+    }
+
+
+    torchOn =
+      !torchOn;
+
+
+    await currentVideoTrack
+      .applyConstraints({
+
+        advanced: [
+
+          {
+
+            torch:
+              torchOn
+
+          }
+
+        ]
+
+      });
+
+
+    const button =
+      document.getElementById(
+        "torchButton"
+      );
+
+
+    button.textContent =
+
+      torchOn
+
+        ? "🔦 TURN OFF LIGHT"
+
+        : "🔦 TURN ON LIGHT";
+
+
+    button.classList.toggle(
+
+      "active",
+
+      torchOn
+
+    );
+
+
+    console.log(
+      "Torch:",
+      torchOn
+    );
+
+
+  }
+
+  catch (error) {
+
+    console.warn(
+      "Torch failed:",
+      error
+    );
+
+
+    /*
+     * Restore the previous state if the
+     * device rejects the request.
+     */
+
+    torchOn =
+      !torchOn;
+
+  }
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * HANDLE SCAN
  * ==========================================================
  */
 
 function handleScan(
-  decodedText
+
+  decodedText,
+
+  decodedResult
+
 ) {
 
 
@@ -1615,8 +1823,8 @@ function handleScan(
 
 
   /*
-   * Ignore repeated callbacks that
-   * happen too quickly.
+   * Avoid counting an identical callback
+   * from the same moment repeatedly.
    */
 
   if (
@@ -1640,13 +1848,14 @@ function handleScan(
 
 
   console.log(
-    "CODE 128 DETECTED:",
-    value
+    "CODE 128 READ:",
+    value,
+    decodedResult
   );
 
 
   /**********************************************************
-   * VALIDATE
+   * VALIDATE KA + NUMBERS
    **********************************************************/
 
   if (
@@ -1660,13 +1869,19 @@ function handleScan(
       value
     );
 
+
+    /*
+     * Don't constantly flash an error
+     * for random decoder attempts.
+     */
+
     return;
 
   }
 
 
   /**********************************************************
-   * CONFIRMATION
+   * THREE READ CONFIRMATION
    **********************************************************/
 
   if (
@@ -1689,7 +1904,7 @@ function handleScan(
 
 
   /**********************************************************
-   * DISPLAY
+   * SHOW RESULT
    **********************************************************/
 
   document
@@ -1703,16 +1918,22 @@ function handleScan(
     .textContent =
 
     "Verification " +
+
     confirmationCount +
+
     " / 3";
 
 
   setStatus(
 
     "Checking " +
+
     value +
+
     " — " +
+
     confirmationCount +
+
     " / 3",
 
     ""
@@ -1799,198 +2020,6 @@ async function confirmItem(
 
 /************************************************************
  * ==========================================================
- * SHOW CAMERA INFORMATION
- * ==========================================================
- */
-
-function showCameraInfo(
-  video
-) {
-
-
-  try {
-
-
-    if (
-      !video ||
-      !video.srcObject
-    ) {
-
-      return;
-
-    }
-
-
-    const tracks =
-      video.srcObject
-        .getVideoTracks();
-
-
-    if (
-      !tracks.length
-    ) {
-
-      return;
-
-    }
-
-
-    const track =
-      tracks[0];
-
-
-    const settings =
-      track.getSettings();
-
-
-    const capabilities =
-
-      typeof track.getCapabilities === "function"
-
-        ? track.getCapabilities()
-
-        : {};
-
-
-    const width =
-      settings.width ||
-      "?";
-
-
-    const height =
-      settings.height ||
-      "?";
-
-
-    const fps =
-      settings.frameRate
-
-        ? Math.round(
-            settings.frameRate
-          )
-
-        : "?";
-
-
-    const zoom =
-      settings.zoom
-
-        ? Number(
-            settings.zoom
-          ).toFixed(1) + "×"
-
-        : "default";
-
-
-    let focusText =
-      "not reported";
-
-
-    let focusClass =
-      "focus-warning";
-
-
-    if (
-      capabilities.focusMode &&
-      Array.isArray(
-        capabilities.focusMode
-      )
-    ) {
-
-      if (
-        capabilities.focusMode.includes(
-          "continuous"
-        )
-      ) {
-
-        focusText =
-          "CONTINUOUS AUTOFOCUS ✓";
-
-        focusClass =
-          "focus-good";
-
-      }
-
-      else {
-
-        focusText =
-          "continuous focus unavailable";
-
-      }
-
-    }
-
-
-    document
-      .getElementById("cameraInfo")
-      .innerHTML =
-
-      "<strong>" +
-
-      escapeHtml(
-
-        track.label ||
-        "Rear camera"
-
-      ) +
-
-      "</strong>" +
-
-      "<br>" +
-
-      "Resolution: " +
-
-      width +
-
-      " × " +
-
-      height +
-
-      "<br>" +
-
-      "FPS: " +
-
-      fps +
-
-      " | Zoom: " +
-
-      zoom +
-
-      "<br>" +
-
-      "<span class='" +
-
-      focusClass +
-
-      "'>" +
-
-      focusText +
-
-      "</span>";
-
-  }
-
-
-  catch (error) {
-
-    console.warn(
-      "Camera information error:",
-      error
-    );
-
-
-    document
-      .getElementById("cameraInfo")
-      .textContent =
-      "Rear camera active.";
-
-  }
-
-}
-
-
-/************************************************************
- * ==========================================================
  * STOP CAMERA
  * ==========================================================
  */
@@ -2014,11 +2043,12 @@ async function stopCamera() {
 
   try {
 
+
     if (
-      scannerControls
+      html5QrCode
     ) {
 
-      scannerControls.stop();
+      await html5QrCode.stop();
 
     }
 
@@ -2027,7 +2057,7 @@ async function stopCamera() {
   catch (error) {
 
     console.warn(
-      "Scanner controls stop:",
+      "Camera stop warning:",
       error
     );
 
@@ -2036,12 +2066,12 @@ async function stopCamera() {
 
   try {
 
+
     if (
-      codeReader &&
-      typeof codeReader.reset === "function"
+      html5QrCode
     ) {
 
-      codeReader.reset();
+      html5QrCode.clear();
 
     }
 
@@ -2050,51 +2080,32 @@ async function stopCamera() {
   catch (error) {
 
     console.warn(
-      "Reader reset:",
+      "Scanner clear warning:",
       error
     );
 
   }
 
 
-  /*
-   * Explicitly stop video tracks.
-   */
-
-  const video =
-    document.getElementById(
-      "video"
-    );
-
-
-  if (
-    video &&
-    video.srcObject
-  ) {
-
-    video.srcObject
-      .getTracks()
-      .forEach(
-        function(track) {
-
-          track.stop();
-
-        }
-      );
-
-
-    video.srcObject =
-      null;
-
-  }
-
-
-  scannerControls =
+  html5QrCode =
     null;
 
 
-  codeReader =
+  currentVideoTrack =
     null;
+
+
+  torchOn =
+    false;
+
+
+  document
+    .getElementById("reader")
+    .innerHTML = "";
+
+
+  scannerRunning =
+    false;
 
 
   scannerBusy =
@@ -2111,6 +2122,25 @@ async function stopCamera() {
     .getElementById("stopButton")
     .disabled =
     true;
+
+
+  document
+    .getElementById("torchButton")
+    .disabled =
+    true;
+
+
+  document
+    .getElementById("torchButton")
+    .textContent =
+    "🔦 TURN ON LIGHT";
+
+
+  document
+    .getElementById("torchButton")
+    .classList.remove(
+      "active"
+    );
 
 
   document
@@ -2162,10 +2192,39 @@ async function cleanupScanner() {
   try {
 
     if (
-      scannerControls
+      html5QrCode
     ) {
 
-      scannerControls.stop();
+      try {
+
+        await html5QrCode.stop();
+
+      }
+
+      catch (error) {
+
+        console.warn(
+          "Cleanup stop:",
+          error
+        );
+
+      }
+
+
+      try {
+
+        html5QrCode.clear();
+
+      }
+
+      catch (error) {
+
+        console.warn(
+          "Cleanup clear:",
+          error
+        );
+
+      }
 
     }
 
@@ -2174,84 +2233,44 @@ async function cleanupScanner() {
   catch (error) {
 
     console.warn(
-      "Cleanup controls:",
+      "Cleanup error:",
       error
     );
 
   }
 
 
-  try {
-
-    if (
-      codeReader &&
-      typeof codeReader.reset === "function"
-    ) {
-
-      codeReader.reset();
-
-    }
-
-  }
-
-  catch (error) {
-
-    console.warn(
-      "Cleanup reader:",
-      error
-    );
-
-  }
-
-
-  const video =
-    document.getElementById(
-      "video"
-    );
-
-
-  if (
-    video &&
-    video.srcObject
-  ) {
-
-    video.srcObject
-      .getTracks()
-      .forEach(
-        function(track) {
-
-          track.stop();
-
-        }
-      );
-
-
-    video.srcObject =
-      null;
-
-  }
-
-
-  scannerControls =
+  html5QrCode =
     null;
 
 
-  codeReader =
+  currentVideoTrack =
     null;
+
+
+  torchOn =
+    false;
 
 }
 
 
 /************************************************************
  * ==========================================================
- * RESET
+ * RESET / SCAN NEXT ITEM
  * ==========================================================
  */
 
 async function resetScanner() {
 
 
-  await stopCamera();
+  if (
+    html5QrCode ||
+    scannerRunning
+  ) {
+
+    await stopCamera();
+
+  }
 
 
   itemConfirmed =
@@ -2268,6 +2287,10 @@ async function resetScanner() {
 
   lastAcceptedReadTime =
     0;
+
+
+  torchOn =
+    false;
 
 
   document
@@ -2298,6 +2321,25 @@ async function resetScanner() {
     .getElementById("stopButton")
     .disabled =
     true;
+
+
+  document
+    .getElementById("torchButton")
+    .disabled =
+    true;
+
+
+  document
+    .getElementById("torchButton")
+    .textContent =
+    "🔦 TURN ON LIGHT";
+
+
+  document
+    .getElementById("torchButton")
+    .classList.remove(
+      "active"
+    );
 
 
   setStatus(
