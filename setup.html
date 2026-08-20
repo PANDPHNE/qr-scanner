@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>QR Code Scanner - Setup</title>
+
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 24px 16px 40px;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  background: #080b0a;
+  color: #ffffff;
+}
+
+.container {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.header p {
+  margin: 8px 0 0;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.card {
+  background: #111615;
+  border: 1px solid #252c2a;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 16px;
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.25);
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+.field {
+  margin-bottom: 18px;
+}
+
+label {
+  display: block;
+  margin-bottom: 7px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  color: #cbd5d1;
+}
+
+input[type="url"],
+select {
+  width: 100%;
+  min-height: 50px;
+
+  border: 1px solid #343c39;
+  border-radius: 12px;
+
+  background: #090c0b;
+  color: #ffffff;
+
+  padding: 0 14px;
+
+  font-size: 15px;
+  outline: none;
+}
+
+input[type="url"]:focus,
+select:focus {
+  border-color: #00d084;
+
+  box-shadow:
+    0 0 0 2px rgba(0,208,132,.12);
+}
+
+button {
+  width: 100%;
+  min-height: 52px;
+
+  border: 0;
+  border-radius: 14px;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.primary {
+  background: #00c981;
+  color: #06100c;
+}
+
+.secondary {
+  background: #202825;
+  color: #ffffff;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 4px 0 18px;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+
+  accent-color: #00d084;
+}
+
+.checkbox-row label {
+  margin: 0;
+
+  font-size: 15px;
+  color: #ffffff;
+}
+
+.small-note {
+  margin-top: 7px;
+
+  color: #7d8985;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.status {
+  display: none;
+
+  margin-top: 18px;
+  padding: 16px;
+
+  border-radius: 14px;
+}
+
+.status.success {
+  display: block;
+
+  background:
+    rgba(0,208,132,.10);
+
+  border:
+    1px solid rgba(0,208,132,.35);
+
+  color: #5ff0b1;
+}
+
+.status.error {
+  display: block;
+
+  background:
+    rgba(255,70,70,.10);
+
+  border:
+    1px solid rgba(255,70,70,.35);
+
+  color: #ff8f8f;
+}
+
+.status-title {
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+
+.destination-details {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #d1d5db;
+}
+
+#startScanning {
+  display: none;
+  margin-top: 16px;
+}
+
+.loading {
+  opacity: .7;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+  <div class="header">
+
+    <h1>
+      QR CODE SCANNER
+    </h1>
+
+    <p>
+      Destination Setup
+    </p>
+
+  </div>
+
+
+  <div class="card">
+
+    <div class="section-title">
+      Scan Destination
+    </div>
+
+
+    <!-- GOOGLE SHEET -->
+
+    <div class="field">
+
+      <label for="spreadsheetUrl">
+        Google Sheet Link
+      </label>
+
+      <input
+        id="spreadsheetUrl"
+        type="url"
+        placeholder="Paste Google Sheet link"
+        autocomplete="off"
+      >
+
+      <div class="small-note">
+        Paste the Google Sheet that will receive
+        successful scans.
+      </div>
+
+    </div>
+
+
+    <button
+      id="loadSheets"
+      class="primary"
+    >
+      LOAD SHEETS
+    </button>
+
+
+    <!-- SHEET TAB -->
+
+    <div
+      id="sheetField"
+      class="field hidden"
+      style="margin-top:18px;"
+    >
+
+      <label for="sheetName">
+        Sheet Tab
+      </label>
+
+      <select id="sheetName">
+
+        <option value="">
+          Select sheet tab
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <!-- COLUMNS -->
+
+    <div
+      id="columnField"
+      class="hidden"
+    >
+
+
+      <!-- ITEM CODE -->
+
+      <div class="field">
+
+        <label for="itemCodeColumn">
+          Item Code Column
+        </label>
+
+        <select id="itemCodeColumn">
+
+          <option value="">
+            Select Item Code column
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- TIMESTAMP -->
+
+      <div class="checkbox-row">
+
+        <input
+          id="timestampEnabled"
+          type="checkbox"
+          checked
+        >
+
+        <label for="timestampEnabled">
+          Add timestamp for every successful scan
+        </label>
+
+      </div>
+
+
+      <div
+        id="timestampField"
+        class="field"
+      >
+
+        <label for="timestampColumn">
+          Timestamp Column
+        </label>
+
+        <select id="timestampColumn">
+
+          <option value="">
+            Select Timestamp column
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- SAVE -->
+
+      <button
+        id="saveDestination"
+        class="primary"
+      >
+        SAVE DESTINATION
+      </button>
+
+    </div>
+
+
+    <!-- STATUS -->
+
+    <div
+      id="status"
+      class="status"
+    >
+
+      <div
+        id="statusTitle"
+        class="status-title"
+      ></div>
+
+      <div
+        id="statusDetails"
+        class="destination-details"
+      ></div>
+
+    </div>
+
+
+    <!-- START SCANNING -->
+
+    <button
+      id="startScanning"
+      class="primary"
+    >
+      START SCANNING
+    </button>
+
+  </div>
+
+</div>
+
+
+<script>
+
+/************************************************************
+ * ==========================================================
+ * APPS SCRIPT WEB APP
+ * ==========================================================
+ */
+
+const APPS_SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbwmBAvEqx6ud9I9017fF7zfATCJ3b4-N73pkAqDOafgE1yIPW0xPtJkThEXTZxTqVSv/exec';
+
+
+/************************************************************
+ * ==========================================================
+ * ELEMENTS
+ * ==========================================================
+ */
+
+const spreadsheetUrl =
+  document.getElementById(
+    'spreadsheetUrl'
+  );
+
+const loadSheetsButton =
+  document.getElementById(
+    'loadSheets'
+  );
+
+const sheetField =
+  document.getElementById(
+    'sheetField'
+  );
+
+const sheetName =
+  document.getElementById(
+    'sheetName'
+  );
+
+const columnField =
+  document.getElementById(
+    'columnField'
+  );
+
+const itemCodeColumn =
+  document.getElementById(
+    'itemCodeColumn'
+  );
+
+const timestampEnabled =
+  document.getElementById(
+    'timestampEnabled'
+  );
+
+const timestampField =
+  document.getElementById(
+    'timestampField'
+  );
+
+const timestampColumn =
+  document.getElementById(
+    'timestampColumn'
+  );
+
+const saveDestinationButton =
+  document.getElementById(
+    'saveDestination'
+  );
+
+const status =
+  document.getElementById(
+    'status'
+  );
+
+const statusTitle =
+  document.getElementById(
+    'statusTitle'
+  );
+
+const statusDetails =
+  document.getElementById(
+    'statusDetails'
+  );
+
+const startScanningButton =
+  document.getElementById(
+    'startScanning'
+  );
+
+
+/************************************************************
+ * ==========================================================
+ * JSONP REQUEST
+ * ==========================================================
+ *
+ * Allows this GitHub page to communicate with
+ * Google Apps Script.
+ *
+ ************************************************************/
+
+function jsonp(url) {
+
+  return new Promise(
+    function(resolve, reject) {
+
+      const callbackName =
+        'scannerCallback_' +
+        Date.now() +
+        '_' +
+        Math.random()
+          .toString(36)
+          .substring(2);
+
+
+      const script =
+        document.createElement(
+          'script'
+        );
+
+
+      let finished =
+        false;
+
+
+      const timeout =
+        setTimeout(
+          function() {
+
+            if (finished) {
+              return;
+            }
+
+            finished = true;
+
+            cleanup();
+
+            reject(
+              new Error(
+                'The Apps Script backend did not respond.'
+              )
+            );
+
+          },
+          15000
+        );
+
+
+      function cleanup() {
+
+        clearTimeout(
+          timeout
+        );
+
+        delete window[
+          callbackName
+        ];
+
+        if (
+          script.parentNode
+        ) {
+
+          script.parentNode.removeChild(
+            script
+          );
+
+        }
+
+      }
+
+
+      window[
+        callbackName
+      ] = function(data) {
+
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+
+        cleanup();
+
+        resolve(
+          data
+        );
+
+      };
+
+
+      script.onerror =
+        function() {
+
+          if (finished) {
+            return;
+          }
+
+          finished = true;
+
+          cleanup();
+
+          reject(
+            new Error(
+              'Could not connect to the Apps Script backend.'
+            )
+          );
+
+        };
+
+
+      const separator =
+        url.includes('?')
+          ? '&'
+          : '?';
+
+
+      script.src =
+        url +
+        separator +
+        'callback=' +
+        encodeURIComponent(
+          callbackName
+        );
+
+
+      document.body.appendChild(
+        script
+      );
+
+    }
+  );
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * LOAD SHEETS
+ * ==========================================================
+ */
+
+loadSheetsButton.addEventListener(
+  'click',
+  async function() {
+
+    const url =
+      spreadsheetUrl.value.trim();
+
+
+    if (!url) {
+
+      showError(
+        'Please enter the Google Sheet link.'
+      );
+
+      return;
+
+    }
+
+
+    setButtonLoading(
+      loadSheetsButton,
+      'LOADING SHEETS...'
+    );
+
+
+    try {
+
+      const response =
+        await jsonp(
+
+          APPS_SCRIPT_URL +
+          '?action=sheets' +
+          '&spreadsheetUrl=' +
+          encodeURIComponent(
+            url
+          )
+
+        );
+
+
+      if (
+        !response ||
+        response.success !== true
+      ) {
+
+        throw new Error(
+
+          response &&
+          response.error
+
+            ? response.error
+
+            : 'Unable to load sheet tabs.'
+
+        );
+
+      }
+
+
+      sheetName.innerHTML =
+        '<option value="">Select sheet tab</option>';
+
+
+      if (
+        !Array.isArray(
+          response.sheets
+        )
+      ) {
+
+        throw new Error(
+          'No sheet tabs were returned.'
+        );
+
+      }
+
+
+      response.sheets.forEach(
+        function(sheet) {
+
+          const option =
+            document.createElement(
+              'option'
+            );
+
+          option.value =
+            sheet.name;
+
+          option.textContent =
+            sheet.name;
+
+          sheetName.appendChild(
+            option
+          );
+
+        }
+      );
+
+
+      sheetField
+        .classList
+        .remove(
+          'hidden'
+        );
+
+
+      columnField
+        .classList
+        .add(
+          'hidden'
+        );
+
+
+      hideStatus();
+
+    }
+
+    catch(error) {
+
+      showError(
+        error.message
+      );
+
+    }
+
+    finally {
+
+      resetButton(
+        loadSheetsButton,
+        'LOAD SHEETS'
+      );
+
+    }
+
+  }
+);
+
+
+/************************************************************
+ * ==========================================================
+ * WHEN SHEET TAB IS SELECTED
+ * ==========================================================
+ */
+
+sheetName.addEventListener(
+  'change',
+  async function() {
+
+    const url =
+      spreadsheetUrl.value.trim();
+
+    const selectedSheet =
+      sheetName.value;
+
+
+    if (
+      !url ||
+      !selectedSheet
+    ) {
+
+      columnField
+        .classList
+        .add(
+          'hidden'
+        );
+
+      return;
+
+    }
+
+
+    columnField
+      .classList
+      .add(
+        'hidden'
+      );
+
+
+    try {
+
+      const response =
+        await jsonp(
+
+          APPS_SCRIPT_URL +
+          '?action=columns' +
+          '&spreadsheetUrl=' +
+          encodeURIComponent(
+            url
+          ) +
+          '&sheetName=' +
+          encodeURIComponent(
+            selectedSheet
+          )
+
+        );
+
+
+      if (
+        !response ||
+        response.success !== true
+      ) {
+
+        throw new Error(
+
+          response &&
+          response.error
+
+            ? response.error
+
+            : 'Unable to load columns.'
+
+        );
+
+      }
+
+
+      populateColumns(
+        response.columns
+      );
+
+
+      columnField
+        .classList
+        .remove(
+          'hidden'
+        );
+
+
+      hideStatus();
+
+    }
+
+    catch(error) {
+
+      showError(
+        error.message
+      );
+
+    }
+
+  }
+);
+
+
+/************************************************************
+ * ==========================================================
+ * POPULATE COLUMN DROPDOWNS
+ * ==========================================================
+ */
+
+function populateColumns(
+  columns
+) {
+
+  itemCodeColumn.innerHTML =
+    '<option value="">Select Item Code column</option>';
+
+  timestampColumn.innerHTML =
+    '<option value="">Select Timestamp column</option>';
+
+
+  if (
+    !Array.isArray(
+      columns
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  columns.forEach(
+    function(column) {
+
+      const headerText =
+        column.header
+          ? column.header
+          : 'Column ' +
+            column.letter;
+
+
+      const label =
+        column.letter +
+        ' — ' +
+        headerText;
+
+
+      const itemOption =
+        document.createElement(
+          'option'
+        );
+
+      itemOption.value =
+        column.columnNumber;
+
+      itemOption.textContent =
+        label;
+
+
+      itemCodeColumn.appendChild(
+        itemOption
+      );
+
+
+      const timestampOption =
+        document.createElement(
+          'option'
+        );
+
+      timestampOption.value =
+        column.columnNumber;
+
+      timestampOption.textContent =
+        label;
+
+
+      timestampColumn.appendChild(
+        timestampOption
+      );
+
+    }
+  );
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * TIMESTAMP CHECKBOX
+ * ==========================================================
+ */
+
+timestampEnabled.addEventListener(
+  'change',
+  function() {
+
+    if (
+      timestampEnabled.checked
+    ) {
+
+      timestampField
+        .classList
+        .remove(
+          'hidden'
+        );
+
+    }
+
+    else {
+
+      timestampField
+        .classList
+        .add(
+          'hidden'
+        );
+
+      timestampColumn.value =
+        '';
+
+    }
+
+  }
+);
+
+
+/************************************************************
+ * ==========================================================
+ * SAVE / VERIFY DESTINATION
+ * ==========================================================
+ */
+
+saveDestinationButton.addEventListener(
+  'click',
+  async function() {
+
+    const url =
+      spreadsheetUrl.value.trim();
+
+    const selectedSheet =
+      sheetName.value;
+
+    const selectedItemColumn =
+      itemCodeColumn.value;
+
+    const useTimestamp =
+      timestampEnabled.checked;
+
+    const selectedTimestampColumn =
+      timestampColumn.value;
+
+
+    if (!url) {
+
+      showError(
+        'Please enter the Google Sheet link.'
+      );
+
+      return;
+
+    }
+
+
+    if (!selectedSheet) {
+
+      showError(
+        'Please select a Sheet Tab.'
+      );
+
+      return;
+
+    }
+
+
+    if (!selectedItemColumn) {
+
+      showError(
+        'Please select the Item Code column.'
+      );
+
+      return;
+
+    }
+
+
+    if (
+      useTimestamp &&
+      !selectedTimestampColumn
+    ) {
+
+      showError(
+        'Please select the Timestamp column.'
+      );
+
+      return;
+
+    }
+
+
+    if (
+      useTimestamp &&
+      selectedItemColumn ===
+      selectedTimestampColumn
+    ) {
+
+      showError(
+        'Item Code and Timestamp must use different columns.'
+      );
+
+      return;
+
+    }
+
+
+    setButtonLoading(
+      saveDestinationButton,
+      'VERIFYING...'
+    );
+
+
+    try {
+
+      const query =
+
+        APPS_SCRIPT_URL +
+
+        '?action=verifyDestination' +
+
+        '&spreadsheetUrl=' +
+        encodeURIComponent(
+          url
+        ) +
+
+        '&sheetName=' +
+        encodeURIComponent(
+          selectedSheet
+        ) +
+
+        '&itemCodeColumn=' +
+        encodeURIComponent(
+          selectedItemColumn
+        ) +
+
+        '&timestampEnabled=' +
+        encodeURIComponent(
+          useTimestamp
+        );
+
+
+      let finalQuery =
+        query;
+
+
+      if (
+        useTimestamp
+      ) {
+
+        finalQuery +=
+
+          '&timestampColumn=' +
+          encodeURIComponent(
+            selectedTimestampColumn
+          );
+
+      }
+
+
+      const response =
+        await jsonp(
+          finalQuery
+        );
+
+
+      if (
+        !response ||
+        response.success !== true ||
+        response.valid !== true
+      ) {
+
+        throw new Error(
+
+          response &&
+          response.error
+
+            ? response.error
+
+            : 'Destination verification failed.'
+
+        );
+
+      }
+
+
+      /*
+       * Save the verified destination locally.
+       *
+       * This lets the scanner page use the same
+       * configuration later.
+       */
+
+      localStorage.setItem(
+
+        'qrScannerDestination',
+
+        JSON.stringify({
+
+          spreadsheetUrl:
+            url,
+
+          sheetName:
+            selectedSheet,
+
+          itemCodeColumn:
+            Number(
+              selectedItemColumn
+            ),
+
+          timestampEnabled:
+            useTimestamp,
+
+          timestampColumn:
+
+            useTimestamp
+
+              ? Number(
+                  selectedTimestampColumn
+                )
+
+              : null
+
+        })
+
+      );
+
+
+      showSuccess(
+        response
+      );
+
+    }
+
+    catch(error) {
+
+      showError(
+        error.message
+      );
+
+    }
+
+    finally {
+
+      resetButton(
+        saveDestinationButton,
+        'SAVE DESTINATION'
+      );
+
+    }
+
+  }
+);
+
+
+/************************************************************
+ * ==========================================================
+ * START SCANNING
+ * ==========================================================
+ *
+ * IMPORTANT:
+ *
+ * For now we are sending the user to index.html.
+ *
+ * We will later connect this to the proven scanner
+ * and make sure the saved destination configuration
+ * is used by the scanner.
+ *
+ ************************************************************/
+
+startScanningButton.addEventListener(
+  'click',
+  function() {
+
+    window.location.href =
+      'index.html';
+
+  }
+);
+
+
+/************************************************************
+ * ==========================================================
+ * SUCCESS MESSAGE
+ * ==========================================================
+ */
+
+function showSuccess(
+  response
+) {
+
+  status.className =
+    'status success';
+
+
+  statusTitle.textContent =
+    '🟢 Destination Ready';
+
+
+  let html =
+
+    'Spreadsheet: <strong>' +
+    escapeHtml(
+      response.spreadsheetName
+    ) +
+    '</strong><br>' +
+
+    'Sheet: <strong>' +
+    escapeHtml(
+      response.sheetName
+    ) +
+    '</strong><br>' +
+
+    'Item Code: <strong>' +
+    escapeHtml(
+      response.itemCode.letter
+    ) +
+    '</strong>';
+
+
+  if (
+    response.timestamp &&
+    response.timestamp.enabled
+  ) {
+
+    html +=
+
+      '<br>Timestamp: <strong>' +
+      escapeHtml(
+        response.timestamp.letter
+      ) +
+      '</strong>';
+
+  }
+
+  else {
+
+    html +=
+      '<br>Timestamp: <strong>OFF</strong>';
+
+  }
+
+
+  statusDetails.innerHTML =
+    html;
+
+
+  startScanningButton.style.display =
+    'block';
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * ERROR MESSAGE
+ * ==========================================================
+ */
+
+function showError(
+  message
+) {
+
+  status.className =
+    'status error';
+
+
+  statusTitle.textContent =
+    '⚠️ Destination Not Ready';
+
+
+  statusDetails.textContent =
+    message;
+
+
+  startScanningButton.style.display =
+    'none';
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * HIDE STATUS
+ * ==========================================================
+ */
+
+function hideStatus() {
+
+  status.className =
+    'status';
+
+
+  statusTitle.textContent =
+    '';
+
+
+  statusDetails.textContent =
+    '';
+
+
+  startScanningButton.style.display =
+    'none';
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * BUTTON HELPERS
+ * ==========================================================
+ */
+
+function setButtonLoading(
+  button,
+  text
+) {
+
+  button.disabled =
+    true;
+
+  button.dataset.originalText =
+    button.textContent;
+
+  button.textContent =
+    text;
+
+  button.classList.add(
+    'loading'
+  );
+
+}
+
+
+function resetButton(
+  button,
+  text
+) {
+
+  button.disabled =
+    false;
+
+  button.textContent =
+    text;
+
+  button.classList.remove(
+    'loading'
+  );
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * HTML ESCAPE
+ * ==========================================================
+ */
+
+function escapeHtml(
+  value
+) {
+
+  return String(
+    value || ''
+  )
+
+    .replace(
+      /&/g,
+      '&amp;'
+    )
+
+    .replace(
+      /</g,
+      '&lt;'
+    )
+
+    .replace(
+      />/g,
+      '&gt;'
+    )
+
+    .replace(
+      /"/g,
+      '&quot;'
+    )
+
+    .replace(
+      /'/g,
+      '&#039;'
+    );
+
+}
+
+</script>
+
+</body>
+</html>
