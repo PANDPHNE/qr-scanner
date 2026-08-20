@@ -1173,6 +1173,8 @@ async function processScannerSyncQueue() {
 
           item.status =
             'saved';
+          
+          incrementScannerSyncSavedCount();
 
 
           item.savedAt =
