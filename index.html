@@ -70,7 +70,142 @@ body {
 
 }
 
+/* =========================================================
+   SCANNER NAVIGATION BAR
+   ========================================================= */
 
+.scanner-navigation-bar {
+
+  width:
+    100%;
+
+  min-height:
+    46px;
+
+  padding:
+    7px 12px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    10px;
+
+  background:
+    #111317;
+
+  border-bottom:
+    1px solid
+    rgba(255,255,255,.08);
+
+}
+
+
+/* =========================================================
+   BACK TO SETUP
+   ========================================================= */
+
+.scanner-back-button {
+
+  width:
+    auto;
+
+  margin:
+    0;
+
+  padding:
+    7px 4px;
+
+  border:
+    none;
+
+  background:
+    transparent;
+
+  color:
+    #ffffff;
+
+  font-size:
+    12px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    .2px;
+
+  cursor:
+    pointer;
+
+  white-space:
+    nowrap;
+
+}
+
+
+.scanner-back-button:hover {
+
+  color:
+    #34d399;
+
+}
+
+
+/* =========================================================
+   CURRENT DESTINATION
+   ========================================================= */
+
+.scanner-current-destination {
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    flex-end;
+
+  gap:
+    5px;
+
+  color:
+    #ffffff;
+
+  font-size:
+    13px;
+
+  font-weight:
+    800;
+
+  white-space:
+    nowrap;
+
+}
+
+
+/* =========================================================
+   TIMESTAMP ICON
+   ========================================================= */
+
+.scanner-timestamp-icon {
+
+  color:
+    #34d399;
+
+  font-size:
+    14px;
+
+  line-height:
+    1;
+
+}
 /* =========================================================
    HEADER
    ========================================================= */
@@ -914,6 +1049,35 @@ button:disabled {
 
 
 <div class="app">
+
+
+<!-- =======================================================
+     SCANNER NAVIGATION BAR
+     ======================================================= -->
+
+<nav
+  id="scannerNavigationBar"
+  class="scanner-navigation-bar">
+
+  <button
+    type="button"
+    class="scanner-back-button"
+    onclick="goBackToSetup()">
+
+    ← BACK TO SETUP
+
+  </button>
+
+
+  <div
+    id="scannerCurrentDestination"
+    class="scanner-current-destination">
+
+    Loading…
+
+  </div>
+
+</nav>
 
 
 <!-- =======================================================
@@ -3232,9 +3396,126 @@ function escapeHtml(
     );
 
 }
+/* ==========================================================
+   SCANNER NAVIGATION — CURRENT DESTINATION
+   ========================================================== */
 
+function loadScannerNavigationDestination() {
+
+  const destinationElement =
+    document.getElementById(
+      "scannerCurrentDestination"
+    );
+
+
+  if (!destinationElement) {
+
+    return;
+
+  }
+
+
+  try {
+
+    /*
+     * Read the SAME saved destination used
+     * by scanner-sync.js.
+     */
+
+    const destination =
+      getScannerSyncDestination();
+
+
+    /*
+     * No saved destination.
+     */
+
+    if (!destination) {
+
+      destinationElement.textContent =
+        "NO DESTINATION";
+
+      destinationElement.style.color =
+        "#ff7070";
+
+      return;
+
+    }
+
+
+    destinationElement.style.color =
+      "#ffffff";
+
+
+    /*
+     * Show only the selected sheet/tab.
+     */
+
+    let displayHtml =
+      escapeHtml(
+        destination.sheetName
+      );
+
+
+    /*
+     * Show timestamp icon ONLY when enabled.
+     */
+
+    if (
+      destination.timestampEnabled
+    ) {
+
+      displayHtml +=
+
+        ' <span ' +
+        'class="scanner-timestamp-icon" ' +
+        'title="Timestamp enabled">' +
+        '🕒' +
+        '</span>';
+
+    }
+
+
+    destinationElement.innerHTML =
+      displayHtml;
+
+  }
+
+  catch (error) {
+
+    console.error(
+      "SCANNER NAVIGATION ERROR:",
+      error
+    );
+
+
+    destinationElement.textContent =
+      "DESTINATION ERROR";
+
+    destinationElement.style.color =
+      "#ff7070";
+
+  }
+
+}
+
+
+/* ==========================================================
+   BACK TO SETUP
+   ========================================================== */
+
+function goBackToSetup() {
+
+  window.location.href =
+    "setup.html";
+
+}
 </script>
 <script src="scanner-sync.js"></script>
+  
+  <script>
+  loadScannerNavigationDestination();
+</script>
 </body>
 
 </html>
