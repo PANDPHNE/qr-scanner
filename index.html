@@ -3451,11 +3451,19 @@ function loadScannerNavigationDestination() {
      * Show only the selected sheet/tab.
      */
 
-    let displayHtml =
-      escapeHtml(
-        destination.sheetName
-      );
+   let displayHtml =
 
+  escapeHtml(
+    destination.sheetName
+  ) +
+
+  " - " +
+
+  escapeHtml(
+    columnNumberToLetter(
+      destination.itemCodeColumn
+    )
+  );
 
     /*
      * Show timestamp icon ONLY when enabled.
