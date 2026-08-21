@@ -495,14 +495,12 @@ function getScannerSyncDestination() {
    * we may establish later.
    */
   const preferredKeys = [
-
-    'qrScannerDestinationConfig',
-
-    'qrScannerConfig',
-
-    'scannerDestinationConfig',
-
-    'universalQrScannerConfig'
+  'qrScannerDestination',
+  'qrScannerDestinationConfig',
+  'qrScannerConfig',
+  'scannerDestinationConfig',
+  'universalQrScannerConfig'
+];
 
   ];
 
