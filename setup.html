@@ -228,102 +228,6 @@ button:disabled {
   opacity: .7;
 }
 
-
-/* =========================================================
-   EXISTING DESTINATION PREVIEW
-   ========================================================= */
-
-.existing-destination {
-
-  padding:
-    18px;
-
-  border-radius:
-    16px;
-
-  background:
-    #10251d;
-
-  border:
-    1px solid
-    rgba(0,208,132,.30);
-
-}
-
-
-.existing-destination-title {
-
-  color:
-    #5ff0b1;
-
-  font-size:
-    13px;
-
-  font-weight:
-    800;
-
-  letter-spacing:
-    .5px;
-
-  margin-bottom:
-    12px;
-
-}
-
-
-.existing-destination-details {
-
-  color:
-    #ffffff;
-
-  font-size:
-    14px;
-
-  line-height:
-    1.8;
-
-  margin-bottom:
-    16px;
-
-}
-
-
-.existing-destination-details strong {
-
-  color:
-    #9ca3af;
-
-}
-
-
-.existing-destination-status {
-
-  display:
-    inline-block;
-
-  margin-bottom:
-    14px;
-
-  padding:
-    5px 9px;
-
-  border-radius:
-    20px;
-
-  background:
-    rgba(0,208,132,.12);
-
-  color:
-    #5ff0b1;
-
-  font-size:
-    11px;
-
-  font-weight:
-    800;
-
-}
-
 </style>
 
 </head>
@@ -348,104 +252,85 @@ button:disabled {
 
   <div class="card">
 
+    <div class="section-title">
+      Scan Destination
+    </div>
 
-    <!-- ===================================================
-         EXISTING DESTINATION PREVIEW
-         =================================================== -->
 
-    <div
-      id="existingDestination"
-      class="existing-destination hidden"
-    >
+    <!-- GOOGLE SHEET -->
 
-      <div class="existing-destination-title">
-        CURRENT DESTINATION
-      </div>
+    <div class="field">
 
-      <div
-        id="existingDestinationDetails"
-        class="existing-destination-details"
-      ></div>
+      <label for="spreadsheetUrl">
+        Google Sheet Link
+      </label>
 
-      <button
-        id="changeDestination"
-        type="button"
-        class="secondary"
+      <input
+        id="spreadsheetUrl"
+        type="url"
+        placeholder="Paste Google Sheet link"
+        autocomplete="off"
       >
-        CHANGE DESTINATION
-      </button>
-      <button
-  id="proceedScanning"
-  type="button"
-  class="primary"
-  style="margin-top:12px;"
->
-  PROCEED TO SCANNING
-  </button>
+
+      <div class="small-note">
+        Paste the Google Sheet that will receive
+        successful scans.
+      </div>
 
     </div>
 
 
-    <!-- ===================================================
-         NEW DESTINATION SETUP
-         =================================================== -->
+    <button
+      id="loadSheets"
+      class="primary"
+    >
+      LOAD SHEETS
+    </button>
+
+
+    <!-- SHEET TAB -->
 
     <div
-      id="destinationSetup"
+      id="sheetField"
+      class="field hidden"
+      style="margin-top:18px;"
     >
 
-      <div class="section-title">
-        Scan Destination
-      </div>
+      <label for="sheetName">
+        Sheet Tab
+      </label>
+
+      <select id="sheetName">
+
+        <option value="">
+          Select sheet tab
+        </option>
+
+      </select>
+
+    </div>
 
 
-      <!-- GOOGLE SHEET -->
+    <!-- COLUMNS -->
+
+    <div
+      id="columnField"
+      class="hidden"
+    >
+
+
+      <!-- ITEM CODE -->
 
       <div class="field">
 
-        <label for="spreadsheetUrl">
-          Google Sheet Link
+        <label for="itemCodeColumn">
+          Item Code Column
         </label>
 
-        <input
-          id="spreadsheetUrl"
-          type="url"
-          placeholder="Paste Google Sheet link"
-          autocomplete="off"
-        >
-
-        <div class="small-note">
-          Paste the Google Sheet that will receive
-          successful scans.
-        </div>
-
-      </div>
-
-
-      <button
-        id="loadSheets"
-        class="primary"
-      >
-        LOAD SHEETS
-      </button>
-
-
-      <!-- SHEET TAB -->
-
-      <div
-        id="sheetField"
-        class="field hidden"
-        style="margin-top:18px;"
-      >
-
-        <label for="sheetName">
-          Sheet Tab
-        </label>
-
-        <select id="sheetName">
+        <select id="itemCodeColumn">
 
           <option value="">
-            Select sheet tab
+            Select Item Code column
           </option>
 
         </select>
@@ -453,112 +338,83 @@ button:disabled {
       </div>
 
 
-      <!-- COLUMNS -->
+      <!-- TIMESTAMP -->
 
-      <div
-        id="columnField"
-        class="hidden"
-      >
+      <div class="checkbox-row">
 
-
-        <!-- ITEM CODE -->
-
-        <div class="field">
-
-          <label for="itemCodeColumn">
-            Item Code Column
-          </label>
-
-          <select id="itemCodeColumn">
-
-            <option value="">
-              Select Item Code column
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <!-- TIMESTAMP -->
-
-        <div class="checkbox-row">
-
-          <input
-            id="timestampEnabled"
-            type="checkbox"
-            checked
-          >
-
-          <label for="timestampEnabled">
-            Add timestamp for every successful scan
-          </label>
-
-        </div>
-
-
-        <div
-          id="timestampField"
-          class="field"
+        <input
+          id="timestampEnabled"
+          type="checkbox"
+          checked
         >
 
-          <label for="timestampColumn">
-            Timestamp Column
-          </label>
-
-          <select id="timestampColumn">
-
-            <option value="">
-              Select Timestamp column
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <!-- SAVE -->
-
-        <button
-          id="saveDestination"
-          class="primary"
-        >
-          SAVE DESTINATION
-        </button>
+        <label for="timestampEnabled">
+          Add timestamp for every successful scan
+        </label>
 
       </div>
 
 
-      <!-- STATUS -->
-
       <div
-        id="status"
-        class="status"
+        id="timestampField"
+        class="field"
       >
 
-        <div
-          id="statusTitle"
-          class="status-title"
-        ></div>
+        <label for="timestampColumn">
+          Timestamp Column
+        </label>
 
-        <div
-          id="statusDetails"
-          class="destination-details"
-        ></div>
+        <select id="timestampColumn">
+
+          <option value="">
+            Select Timestamp column
+          </option>
+
+        </select>
 
       </div>
 
 
-      <!-- START SCANNING -->
+      <!-- SAVE -->
 
       <button
-        id="startScanning"
+        id="saveDestination"
         class="primary"
       >
-        START SCANNING
+        SAVE DESTINATION
       </button>
 
     </div>
+
+
+    <!-- STATUS -->
+
+    <div
+      id="status"
+      class="status"
+    >
+
+      <div
+        id="statusTitle"
+        class="status-title"
+      ></div>
+
+      <div
+        id="statusDetails"
+        class="destination-details"
+      ></div>
+
+    </div>
+
+
+    <!-- START SCANNING -->
+
+    <button
+      id="startScanning"
+      class="primary"
+    >
+      START SCANNING
+    </button>
 
   </div>
 
@@ -575,7 +431,6 @@ button:disabled {
 
 const APPS_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbw5UNZLFYecKu-uh0_6mI1QsyyTXlmBb9OfVCYs-c3vTtbKawphBD0ClrFy1fVExmpo/exec';
-
 
 /************************************************************
  * ==========================================================
@@ -656,40 +511,13 @@ const startScanningButton =
 
 /************************************************************
  * ==========================================================
- * EXISTING DESTINATION ELEMENTS
- * ==========================================================
- */
-
-const existingDestination =
-  document.getElementById(
-    'existingDestination'
-  );
-
-const existingDestinationDetails =
-  document.getElementById(
-    'existingDestinationDetails'
-  );
-
-const destinationSetup =
-  document.getElementById(
-    'destinationSetup'
-  );
-
-const changeDestinationButton =
-  document.getElementById(
-    'changeDestination'
-  );
-  const proceedScanningButton =
-  document.getElementById(
-    'proceedScanning'
-  );
-
-
-/************************************************************
- * ==========================================================
  * JSONP REQUEST
  * ==========================================================
- */
+ *
+ * Allows this GitHub page to communicate with
+ * Google Apps Script.
+ *
+ ************************************************************/
 
 function jsonp(url) {
 
@@ -1364,10 +1192,10 @@ saveDestinationButton.addEventListener(
 
 
       /*
-       * Save the VERIFIED destination.
+       * Save the verified destination locally.
        *
-       * The old destination is replaced only here,
-       * after the new destination has passed verification.
+       * This lets the scanner page use the same
+       * configuration later.
        */
 
       localStorage.setItem(
@@ -1409,21 +1237,6 @@ saveDestinationButton.addEventListener(
         response
       );
 
-
-      /*
-       * Return to the saved-destination view
-       * after the successful save.
-       */
-
-      setTimeout(
-        function() {
-
-          loadExistingDestination();
-
-        },
-        250
-      );
-
     }
 
     catch(error) {
@@ -1451,7 +1264,16 @@ saveDestinationButton.addEventListener(
  * ==========================================================
  * START SCANNING
  * ==========================================================
- */
+ *
+ * IMPORTANT:
+ *
+ * For now we are sending the user to index.html.
+ *
+ * We will later connect this to the proven scanner
+ * and make sure the saved destination configuration
+ * is used by the scanner.
+ *
+ ************************************************************/
 
 startScanningButton.addEventListener(
   'click',
@@ -1675,374 +1497,6 @@ function escapeHtml(
     );
 
 }
-
-
-/************************************************************
- * ==========================================================
- * COLUMN NUMBER → LETTER
- * ==========================================================
- */
-
-function columnNumberToLetter(
-  columnNumber
-) {
-
-  let number =
-    Number(
-      columnNumber
-    );
-
-
-  if (
-    !Number.isInteger(
-      number
-    ) ||
-    number < 1
-  ) {
-
-    return '?';
-
-  }
-
-
-  let result =
-    '';
-
-
-  while (
-    number > 0
-  ) {
-
-    const remainder =
-      (number - 1) % 26;
-
-
-    result =
-      String.fromCharCode(
-        65 + remainder
-      ) +
-      result;
-
-
-    number =
-      Math.floor(
-        (number - 1) / 26
-      );
-
-  }
-
-
-  return result;
-
-}
-
-
-/************************************************************
- * ==========================================================
- * LOAD EXISTING DESTINATION
- * ==========================================================
- */
-
-function loadExistingDestination() {
-
-  const raw =
-    localStorage.getItem(
-      'qrScannerDestination'
-    );
-
-
-  /*
-   * No saved destination.
-   * Show the normal setup form.
-   */
-
-  if (!raw) {
-
-    existingDestination
-      .classList
-      .add(
-        'hidden'
-      );
-
-    destinationSetup
-      .classList
-      .remove(
-        'hidden'
-      );
-
-    return;
-
-  }
-
-
-  try {
-
-    const destination =
-      JSON.parse(
-        raw
-      );
-
-
-    /*
-     * Validate the saved configuration.
-     */
-
-    if (
-      !destination ||
-      !destination.sheetName ||
-      !destination.spreadsheetUrl ||
-      !destination.itemCodeColumn
-    ) {
-
-      throw new Error(
-        'Invalid saved destination.'
-      );
-
-    }
-
-
-    /*
-     * Show the saved destination.
-     */
-
-    existingDestination
-      .classList
-      .remove(
-        'hidden'
-      );
-
-    destinationSetup
-      .classList
-      .add(
-        'hidden'
-      );
-
-
-    const itemColumn =
-      columnNumberToLetter(
-        destination.itemCodeColumn
-      );
-
-
-    let html =
-
-      '<div class="existing-destination-status">' +
-
-      '● DESTINATION READY' +
-
-      '</div>' +
-
-      '<strong>Spreadsheet:</strong> ' +
-
-      escapeHtml(
-        destination.spreadsheetName ||
-        'Saved Google Sheet'
-      ) +
-
-      '<br>' +
-
-      '<strong>Sheet:</strong> ' +
-
-      escapeHtml(
-        destination.sheetName
-      ) +
-
-      '<br>' +
-
-      '<strong>Item Code:</strong> Column ' +
-
-      escapeHtml(
-        itemColumn
-      );
-
-
-    if (
-      destination.timestampEnabled
-    ) {
-
-      const timestampColumn =
-        columnNumberToLetter(
-          destination.timestampColumn
-        );
-
-
-      html +=
-
-        '<br>' +
-
-        '<strong>Timestamp:</strong> Column ' +
-
-        escapeHtml(
-          timestampColumn
-        );
-
-    }
-
-    else {
-
-      html +=
-
-        '<br>' +
-
-        '<strong>Timestamp:</strong> OFF';
-
-    }
-
-
-    existingDestinationDetails.innerHTML =
-      html;
-
-  }
-
-  catch(error) {
-
-    console.error(
-      'INVALID SAVED DESTINATION:',
-      error
-    );
-
-
-    /*
-     * Only corrupted/invalid saved data is removed.
-     */
-
-    localStorage.removeItem(
-      'qrScannerDestination'
-    );
-
-
-    existingDestination
-      .classList
-      .add(
-        'hidden'
-      );
-
-    destinationSetup
-      .classList
-      .remove(
-        'hidden'
-      );
-
-  }
-
-}
-
-
-/************************************************************
- * ==========================================================
- * CHANGE DESTINATION
- * ==========================================================
- */
-
-changeDestinationButton.addEventListener(
-  'click',
-  function() {
-
-    /*
-     * Hide the current destination preview.
-     */
-
-    existingDestination
-      .classList
-      .add(
-        'hidden'
-      );
-
-
-    /*
-     * Show a fresh setup form.
-     */
-
-    destinationSetup
-      .classList
-      .remove(
-        'hidden'
-      );
-
-
-    /*
-     * IMPORTANT:
-     *
-     * We DO NOT remove the existing destination
-     * from localStorage here.
-     *
-     * The old configuration remains protected until
-     * a new destination successfully passes verification.
-     */
-
-    spreadsheetUrl.value =
-      '';
-
-    sheetName.innerHTML =
-      '<option value="">Select sheet tab</option>';
-
-    itemCodeColumn.innerHTML =
-      '<option value="">Select Item Code column</option>';
-
-    timestampColumn.innerHTML =
-      '<option value="">Select Timestamp column</option>';
-
-    timestampEnabled.checked =
-      true;
-
-    timestampField
-      .classList
-      .remove(
-        'hidden'
-      );
-
-    sheetField
-      .classList
-      .add(
-        'hidden'
-      );
-
-    columnField
-      .classList
-      .add(
-        'hidden'
-      );
-
-    hideStatus();
-
-
-    window.scrollTo(
-      {
-        top: 0,
-        behavior: 'smooth'
-      }
-    );
-
-  }
-);
-/************************************************************
- * ==========================================================
- * PROCEED TO SCANNING
- * ==========================================================
- */
-
-proceedScanningButton.addEventListener(
-  'click',
-  function() {
-
-    /*
-     * The destination has already been saved and verified.
-     * Send the user to the scanner.
-     */
-
-    window.location.href =
-      'index.html';
-
-  }
-);
-
-/************************************************************
- * ==========================================================
- * INITIALIZE
- * ==========================================================
- */
-
-loadExistingDestination();
 
 </script>
 
