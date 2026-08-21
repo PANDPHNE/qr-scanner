@@ -374,6 +374,14 @@ button:disabled {
       >
         CHANGE DESTINATION
       </button>
+      <button
+  id="proceedScanning"
+  type="button"
+  class="primary"
+  style="margin-top:12px;"
+>
+  PROCEED TO SCANNING
+  </button>
 
     </div>
 
@@ -670,6 +678,10 @@ const destinationSetup =
 const changeDestinationButton =
   document.getElementById(
     'changeDestination'
+  );
+  const proceedScanningButton =
+  document.getElementById(
+    'proceedScanning'
   );
 
 
@@ -2003,7 +2015,26 @@ changeDestinationButton.addEventListener(
 
   }
 );
+/************************************************************
+ * ==========================================================
+ * PROCEED TO SCANNING
+ * ==========================================================
+ */
 
+proceedScanningButton.addEventListener(
+  'click',
+  function() {
+
+    /*
+     * The destination has already been saved and verified.
+     * Send the user to the scanner.
+     */
+
+    window.location.href =
+      'index.html';
+
+  }
+);
 
 /************************************************************
  * ==========================================================
