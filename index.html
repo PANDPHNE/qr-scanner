@@ -3002,7 +3002,7 @@ function setCameraStatus(
 
 
 /* ==========================================================
-   BACKEND HOOK
+   BACKEND HOOK — QUEUED GOOGLE SHEETS SAVE
    ========================================================== */
 
 function handleInventoryItem(
@@ -3017,29 +3017,116 @@ function handleInventoryItem(
   /*
    * ONLY VERIFIED KA#### CODES REACH HERE.
    *
-   * This is the safe place for your
-   * Google Apps Script integration.
+   * The scanner has already completed:
+   *
+   * 1/3
+   * 2/3
+   * 3/3
+   *
+   * Therefore this is the safe handoff point.
    */
 
+
   console.log(
-    "VERIFIED ITEM READY FOR BACKEND:",
+    "VERIFIED ITEM READY FOR SYNC QUEUE:",
     itemCode
   );
 
 
   /*
-   * Later:
+   * Send the verified item to scanner-sync.js.
    *
-   * fetch(APPS_SCRIPT_URL, {
-   *   method: "POST",
-   *   body: JSON.stringify({
-   *     itemCode: itemCode
-   *   })
-   * });
+   * IMPORTANT:
+   *
+   * queueVerifiedScan() does NOT wait for Google Sheets.
+   *
+   * It saves the item locally first and returns immediately.
+   *
+   * Google Sheets saving happens in the background.
    */
 
-}
+  try {
 
+
+    const result =
+
+      queueVerifiedScan(
+        itemCode
+      );
+
+
+    console.log(
+      "SCANNER SYNC QUEUE RESULT:",
+      result
+    );
+
+
+    /*
+     * If the item was successfully placed into
+     * the local queue, we are done here.
+     *
+     * The scanner itself remains untouched.
+     */
+
+
+    if (
+      result &&
+      result.success
+    ) {
+
+      console.log(
+
+        "ITEM QUEUED FOR BACKGROUND SAVE:",
+
+        result.itemCode,
+
+        result.scanId
+
+      );
+
+      return;
+
+    }
+
+
+    /*
+     * Queue rejected the item.
+     */
+
+    console.error(
+
+      "ITEM WAS NOT QUEUED:",
+
+      result
+
+    );
+
+
+  }
+
+  catch(error) {
+
+
+    /*
+     * IMPORTANT:
+     *
+     * A sync problem must NOT crash the scanner.
+     *
+     * The camera/scanner remains independent.
+     */
+
+    console.error(
+
+      "SCANNER SYNC ERROR:",
+
+      error
+
+    );
+
+
+  }
+
+}
 
 /* ==========================================================
    CAMERA ERROR
