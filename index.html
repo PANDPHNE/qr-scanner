@@ -2810,6 +2810,7 @@ function tryEnableContinuousFocus() {
             "REJECTED"
           );
 
+
         }
 
       );
@@ -3396,6 +3397,64 @@ function escapeHtml(
     );
 
 }
+
+
+/* ==========================================================
+   COLUMN NUMBER → LETTER
+   ========================================================== */
+
+function columnNumberToLetter(
+  columnNumber
+) {
+
+  let number =
+    Number(columnNumber);
+
+
+  if (
+    !Number.isInteger(number) ||
+    number < 1
+  ) {
+
+    return '?';
+
+  }
+
+
+  let result =
+    '';
+
+
+  while (
+    number > 0
+  ) {
+
+    const remainder =
+      (number - 1) % 26;
+
+
+    result =
+
+      String.fromCharCode(
+        65 + remainder
+      ) +
+
+      result;
+
+
+    number =
+      Math.floor(
+        (number - 1) / 26
+      );
+
+  }
+
+
+  return result;
+
+}
+
+
 /* ==========================================================
    SCANNER NAVIGATION — CURRENT DESTINATION
    ========================================================== */
