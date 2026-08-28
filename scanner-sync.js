@@ -496,15 +496,14 @@ function getScannerSyncDestination() {
    */
   const preferredKeys = [
 
-  'qrScannerDestinationConfig',
+    'qrScannerDestinationConfig',
 
-  'qrScannerConfig',
+    'qrScannerConfig',
 
-  'scannerDestinationConfig',
+    'scannerDestinationConfig',
 
-  'universalQrScannerConfig'
+    'universalQrScannerConfig'
 
-];
   ];
 
 
@@ -1174,7 +1173,7 @@ async function processScannerSyncQueue() {
 
           item.status =
             'saved';
-          
+
           incrementScannerSyncSavedCount();
 
 
