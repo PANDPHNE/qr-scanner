@@ -224,6 +224,11 @@ button:disabled {
   margin-top: 16px;
 }
 
+#changeDestination {
+  display: none;
+  margin-top: 10px;
+}
+
 .loading {
   opacity: .7;
 }
@@ -259,7 +264,10 @@ button:disabled {
 
     <!-- GOOGLE SHEET -->
 
-    <div class="field">
+    <div
+      id="spreadsheetField"
+      class="field"
+    >
 
       <label for="spreadsheetUrl">
         Google Sheet Link
@@ -416,6 +424,16 @@ button:disabled {
       START SCANNING
     </button>
 
+
+    <!-- CHANGE DESTINATION -->
+
+    <button
+      id="changeDestination"
+      class="secondary"
+    >
+      CHANGE DESTINATION
+    </button>
+
   </div>
 
 </div>
@@ -432,11 +450,17 @@ button:disabled {
 const APPS_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbw5UNZLFYecKu-uh0_6mI1QsyyTXlmBb9OfVCYs-c3vTtbKawphBD0ClrFy1fVExmpo/exec';
 
+
 /************************************************************
  * ==========================================================
  * ELEMENTS
  * ==========================================================
  */
+
+const spreadsheetField =
+  document.getElementById(
+    'spreadsheetField'
+  );
 
 const spreadsheetUrl =
   document.getElementById(
@@ -506,6 +530,11 @@ const statusDetails =
 const startScanningButton =
   document.getElementById(
     'startScanning'
+  );
+
+const changeDestinationButton =
+  document.getElementById(
+    'changeDestination'
   );
 
 
@@ -655,13 +684,570 @@ function jsonp(url) {
 
 /************************************************************
  * ==========================================================
- * LOAD SHEETS
+ * LOAD EXISTING VERIFIED DESTINATION
+ * ==========================================================
+ *
+ * If the user returns to Setup from the scanner,
+ * show the existing verified destination first.
+ *
+ * The saved destination is NOT modified here.
+ *
+ ************************************************************/
+
+loadExistingDestination();
+
+
+function loadExistingDestination() {
+
+  const raw =
+    localStorage.getItem(
+      'qrScannerDestination'
+    );
+
+
+  if (!raw) {
+
+    return;
+
+  }
+
+
+  try {
+
+    const destination =
+      JSON.parse(
+        raw
+      );
+
+
+    if (
+      !destination ||
+      !destination.spreadsheetUrl ||
+      !destination.sheetName ||
+      !destination.itemCodeColumn
+    ) {
+
+      return;
+
+    }
+
+
+    /*
+     * Show the current verified destination.
+     */
+
+    spreadsheetField
+      .classList
+      .add(
+        'hidden'
+      );
+
+    loadSheetsButton.style.display =
+      'none';
+
+    sheetField
+      .classList
+      .add(
+        'hidden'
+      );
+
+    columnField
+      .classList
+      .add(
+        'hidden'
+      );
+
+
+    status.className =
+      'status success';
+
+
+    statusTitle.textContent =
+      '🟢 Destination Ready';
+
+
+    let html =
+
+      'Spreadsheet: <strong>' +
+      'Saved Google Sheet' +
+      '</strong><br>' +
+
+      'Sheet: <strong>' +
+      escapeHtml(
+        destination.sheetName
+      ) +
+      '</strong><br>' +
+
+      'Item Code: <strong>Column ' +
+      escapeHtml(
+        columnNumberToLetter(
+          destination.itemCodeColumn
+        )
+      ) +
+      '</strong>';
+
+
+    if (
+      destination.timestampEnabled
+    ) {
+
+      html +=
+
+        '<br>Timestamp: <strong>Column ' +
+        escapeHtml(
+          columnNumberToLetter(
+            destination.timestampColumn
+          )
+        ) +
+        '</strong>';
+
+    }
+
+    else {
+
+      html +=
+        '<br>Timestamp: <strong>OFF</strong>';
+
+    }
+
+
+    statusDetails.innerHTML =
+      html;
+
+
+    startScanningButton.style.display =
+      'block';
+
+    changeDestinationButton.style.display =
+      'block';
+
+  }
+
+  catch(error) {
+
+    console.error(
+      'SAVED DESTINATION READ ERROR:',
+      error
+    );
+
+  }
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * CHANGE DESTINATION
+ * ==========================================================
+ *
+ * IMPORTANT:
+ *
+ * This does NOT erase the currently verified
+ * destination.
+ *
+ * It simply loads that destination into the
+ * setup controls for editing.
+ *
+ ************************************************************/
+
+changeDestinationButton.addEventListener(
+  'click',
+  async function() {
+
+    const raw =
+      localStorage.getItem(
+        'qrScannerDestination'
+      );
+
+
+    if (!raw) {
+
+      return;
+
+    }
+
+
+    let destination;
+
+
+    try {
+
+      destination =
+        JSON.parse(
+          raw
+        );
+
+    }
+
+    catch(error) {
+
+      showError(
+        'The saved destination could not be read.'
+      );
+
+      return;
+
+    }
+
+
+    /*
+     * Hide the ready-state buttons while editing.
+     */
+
+    startScanningButton.style.display =
+      'none';
+
+    changeDestinationButton.style.display =
+      'none';
+
+
+    /*
+     * Restore the saved Sheet Link.
+     */
+
+    spreadsheetUrl.value =
+      destination.spreadsheetUrl;
+
+
+    /*
+     * The spreadsheet is already loaded.
+     *
+     * Therefore this button becomes:
+     *
+     * CHANGE SHEET LINK
+     */
+
+    loadSheetsButton.textContent =
+      'CHANGE SHEET LINK';
+
+    loadSheetsButton.dataset.sheetLoaded =
+      'true';
+
+    loadSheetsButton.style.display =
+      'block';
+
+
+    spreadsheetField
+      .classList
+      .remove(
+        'hidden'
+      );
+
+
+    try {
+
+      /*
+       * Reload Sheet Tabs.
+       *
+       * This uses the EXISTING sheets endpoint.
+       */
+
+      const response =
+        await jsonp(
+
+          APPS_SCRIPT_URL +
+          '?action=sheets' +
+          '&spreadsheetUrl=' +
+          encodeURIComponent(
+            destination.spreadsheetUrl
+          )
+
+        );
+
+
+      if (
+        !response ||
+        response.success !== true
+      ) {
+
+        throw new Error(
+
+          response &&
+          response.error
+
+            ? response.error
+
+            : 'Unable to reload the saved sheet.'
+
+        );
+
+      }
+
+
+      sheetName.innerHTML =
+        '<option value="">Select sheet tab</option>';
+
+
+      if (
+        !Array.isArray(
+          response.sheets
+        )
+      ) {
+
+        throw new Error(
+          'No sheet tabs were returned.'
+        );
+
+      }
+
+
+      response.sheets.forEach(
+        function(sheet) {
+
+          const option =
+            document.createElement(
+              'option'
+            );
+
+          option.value =
+            sheet.name;
+
+          option.textContent =
+            sheet.name;
+
+          sheetName.appendChild(
+            option
+          );
+
+        }
+      );
+
+
+      /*
+       * Restore Sheet Tab.
+       */
+
+      sheetName.value =
+        destination.sheetName;
+
+
+      sheetField
+        .classList
+        .remove(
+          'hidden'
+        );
+
+
+      /*
+       * Reload columns for the saved Sheet Tab.
+       */
+
+      const columnResponse =
+        await jsonp(
+
+          APPS_SCRIPT_URL +
+          '?action=columns' +
+          '&spreadsheetUrl=' +
+          encodeURIComponent(
+            destination.spreadsheetUrl
+          ) +
+          '&sheetName=' +
+          encodeURIComponent(
+            destination.sheetName
+          )
+
+        );
+
+
+      if (
+        !columnResponse ||
+        columnResponse.success !== true
+      ) {
+
+        throw new Error(
+
+          columnResponse &&
+          columnResponse.error
+
+            ? columnResponse.error
+
+            : 'Unable to reload columns.'
+
+        );
+
+      }
+
+
+      populateColumns(
+        columnResponse.columns
+      );
+
+
+      /*
+       * Restore Item Code.
+       */
+
+      itemCodeColumn.value =
+        String(
+          destination.itemCodeColumn
+        );
+
+
+      /*
+       * Restore Timestamp state.
+       */
+
+      timestampEnabled.checked =
+        Boolean(
+          destination.timestampEnabled
+        );
+
+
+      if (
+        destination.timestampEnabled
+      ) {
+
+        timestampField
+          .classList
+          .remove(
+            'hidden'
+          );
+
+
+        timestampColumn.value =
+          String(
+            destination.timestampColumn || ''
+          );
+
+      }
+
+      else {
+
+        timestampField
+          .classList
+          .add(
+            'hidden'
+          );
+
+
+        timestampColumn.value =
+          '';
+
+      }
+
+
+      columnField
+        .classList
+        .remove(
+          'hidden'
+        );
+
+
+      status.className =
+        'status success';
+
+
+      statusTitle.textContent =
+        'EDIT DESTINATION';
+
+
+      statusDetails.textContent =
+        'Your current destination is loaded. Change only the settings you need, then select SAVE DESTINATION.';
+
+    }
+
+    catch(error) {
+
+      console.error(
+        'CHANGE DESTINATION ERROR:',
+        error
+      );
+
+
+      showError(
+        error.message
+      );
+
+    }
+
+  }
+);
+
+
+/************************************************************
+ * ==========================================================
+ * LOAD SHEETS / CHANGE SHEET LINK
  * ==========================================================
  */
 
 loadSheetsButton.addEventListener(
   'click',
   async function() {
+
+
+    /*
+     * If the spreadsheet is already loaded,
+     * this button means CHANGE SHEET LINK.
+     *
+     * IMPORTANT:
+     *
+     * The verified qrScannerDestination is NOT
+     * deleted here.
+     */
+
+    if (
+      loadSheetsButton.dataset.sheetLoaded ===
+      'true'
+    ) {
+
+      spreadsheetUrl.value =
+        '';
+
+
+      sheetName.innerHTML =
+        '<option value="">Select sheet tab</option>';
+
+
+      itemCodeColumn.innerHTML =
+        '<option value="">Select Item Code column</option>';
+
+
+      timestampColumn.innerHTML =
+        '<option value="">Select Timestamp column</option>';
+
+
+      sheetField
+        .classList
+        .add(
+          'hidden'
+        );
+
+
+      columnField
+        .classList
+        .add(
+          'hidden'
+        );
+
+
+      loadSheetsButton.textContent =
+        'LOAD SHEETS';
+
+      loadSheetsButton.dataset.sheetLoaded =
+        'false';
+
+
+      timestampEnabled.checked =
+        true;
+
+
+      timestampField
+        .classList
+        .remove(
+          'hidden'
+        );
+
+
+      hideStatus();
+
+
+      spreadsheetUrl.focus();
+
+
+      return;
+
+    }
+
 
     const url =
       spreadsheetUrl.value.trim();
@@ -685,6 +1271,12 @@ loadSheetsButton.addEventListener(
 
 
     try {
+
+      /*
+       * EXISTING APPS SCRIPT REQUEST.
+       *
+       * No backend change.
+       */
 
       const response =
         await jsonp(
@@ -757,6 +1349,19 @@ loadSheetsButton.addEventListener(
       );
 
 
+      /*
+       * The Sheet Link successfully loaded.
+       *
+       * The button now means CHANGE SHEET LINK.
+       */
+
+      loadSheetsButton.textContent =
+        'CHANGE SHEET LINK';
+
+      loadSheetsButton.dataset.sheetLoaded =
+        'true';
+
+
       sheetField
         .classList
         .remove(
@@ -785,10 +1390,28 @@ loadSheetsButton.addEventListener(
 
     finally {
 
-      resetButton(
-        loadSheetsButton,
-        'LOAD SHEETS'
-      );
+      if (
+        loadSheetsButton.dataset.sheetLoaded !==
+        'true'
+      ) {
+
+        resetButton(
+          loadSheetsButton,
+          'LOAD SHEETS'
+        );
+
+      }
+
+      else {
+
+        loadSheetsButton.disabled =
+          false;
+
+        loadSheetsButton.classList.remove(
+          'loading'
+        );
+
+      }
 
     }
 
@@ -838,6 +1461,12 @@ sheetName.addEventListener(
 
     try {
 
+      /*
+       * EXISTING APPS SCRIPT REQUEST.
+       *
+       * No backend change.
+       */
+
       const response =
         await jsonp(
 
@@ -884,6 +1513,20 @@ sheetName.addEventListener(
         .remove(
           'hidden'
         );
+
+
+      /*
+       * The Sheet Tab changed.
+       *
+       * Column choices must be selected again
+       * because they belong to the selected tab.
+       */
+
+      itemCodeColumn.value =
+        '';
+
+      timestampColumn.value =
+        '';
 
 
       hideStatus();
@@ -1120,6 +1763,12 @@ saveDestinationButton.addEventListener(
 
     try {
 
+      /*
+       * EXISTING VERIFY DESTINATION REQUEST.
+       *
+       * Do not change the endpoint or parameters.
+       */
+
       const query =
 
         APPS_SCRIPT_URL +
@@ -1192,10 +1841,10 @@ saveDestinationButton.addEventListener(
 
 
       /*
-       * Save the verified destination locally.
+       * IMPORTANT:
        *
-       * This lets the scanner page use the same
-       * configuration later.
+       * Preserve the existing destination
+       * storage structure.
        */
 
       localStorage.setItem(
@@ -1233,6 +1882,10 @@ saveDestinationButton.addEventListener(
       );
 
 
+      /*
+       * Show the Destination Ready state.
+       */
+
       showSuccess(
         response
       );
@@ -1265,13 +1918,7 @@ saveDestinationButton.addEventListener(
  * START SCANNING
  * ==========================================================
  *
- * IMPORTANT:
- *
- * For now we are sending the user to index.html.
- *
- * We will later connect this to the proven scanner
- * and make sure the saved destination configuration
- * is used by the scanner.
+ * Keep the existing scanner handoff.
  *
  ************************************************************/
 
@@ -1295,6 +1942,33 @@ startScanningButton.addEventListener(
 function showSuccess(
   response
 ) {
+
+  /*
+   * Once the destination is verified,
+   * switch to the clean Destination Ready state.
+   */
+
+  spreadsheetField
+    .classList
+    .add(
+      'hidden'
+    );
+
+  loadSheetsButton.style.display =
+    'none';
+
+  sheetField
+    .classList
+    .add(
+      'hidden'
+    );
+
+  columnField
+    .classList
+    .add(
+      'hidden'
+    );
+
 
   status.className =
     'status success';
@@ -1352,7 +2026,14 @@ function showSuccess(
     html;
 
 
+  /*
+   * Both actions are now available.
+   */
+
   startScanningButton.style.display =
+    'block';
+
+  changeDestinationButton.style.display =
     'block';
 
 }
@@ -1383,6 +2064,9 @@ function showError(
   startScanningButton.style.display =
     'none';
 
+  changeDestinationButton.style.display =
+    'none';
+
 }
 
 
@@ -1408,6 +2092,77 @@ function hideStatus() {
 
   startScanningButton.style.display =
     'none';
+
+  changeDestinationButton.style.display =
+    'none';
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * COLUMN NUMBER → LETTER
+ * ==========================================================
+ *
+ * Used only to display the saved column in a readable form.
+ *
+ * 1  → A
+ * 2  → B
+ * 26 → Z
+ * 27 → AA
+ *
+ ************************************************************/
+
+function columnNumberToLetter(
+  columnNumber
+) {
+
+  let number =
+    Number(
+      columnNumber
+    );
+
+
+  if (
+    !Number.isInteger(
+      number
+    ) ||
+    number < 1
+  ) {
+
+    return '?';
+
+  }
+
+
+  let result =
+    '';
+
+
+  while (
+    number > 0
+  ) {
+
+    const remainder =
+      (number - 1) % 26;
+
+
+    result =
+      String.fromCharCode(
+        65 + remainder
+      ) +
+      result;
+
+
+    number =
+      Math.floor(
+        (number - 1) / 26
+      );
+
+  }
+
+
+  return result;
 
 }
 
