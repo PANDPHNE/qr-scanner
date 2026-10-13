@@ -872,7 +872,7 @@ body {
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.10.14-4";
+const SCANNER_VERSION = "2026.10.14-5";
 
 
 /* ==========================================================
@@ -2106,6 +2106,10 @@ function loadScannerNavigationDestination() {
       html += ' <span class="timestamp-icon" title="Timestamp enabled">🕒</span>';
     }
 
+    if (destination.nameColumn) {
+      html += ' <span class="timestamp-icon" title="Scanner name saved">👤</span>';
+    }
+
     element.innerHTML = html;
 
   }
@@ -3018,7 +3022,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.10.14-4"></script>
+<script src="scanner-sync.js?v=2026.10.14-5"></script>
 
 <script>
   loadScannerNavigationDestination();

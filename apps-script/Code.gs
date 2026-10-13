@@ -32,6 +32,8 @@
  * ✓ Staff register their own phone with a personal staff
  *   code (kept in an owner-only spreadsheet) + PIN; every
  *   scan records who scanned it
+ * ✓ Optional Scanner Name column, chosen in Destination
+ *   Setup like Item Code / Timestamp
  * ✓ Save every successful scan as a NEW ROW
  * ✓ Save with timestamp
  * ✓ Save without timestamp
@@ -60,7 +62,7 @@ const CONFIG = {
    * Server version — shown on the scanner's settings panel.
    */
   VERSION:
-    '3.1.0',
+    '3.2.0',
 
 
   /*
@@ -434,7 +436,10 @@ function doGet(e) {
             params.timestampEnabled,
 
           timestampColumn:
-            params.timestampColumn
+            params.timestampColumn,
+
+          nameColumn:
+            params.nameColumn
 
         });
 
@@ -491,7 +496,10 @@ if (
         params.deviceId,
 
       sessionKey:
-        params.sessionKey
+        params.sessionKey,
+
+      nameColumn:
+        params.nameColumn
 
     });
 
@@ -543,7 +551,8 @@ if (
             timestampEnabled: params.timestampEnabled,
             timestampColumn: params.timestampColumn,
             deviceId: params.deviceId,
-            sessionKey: params.sessionKey
+            sessionKey: params.sessionKey,
+            nameColumn: params.nameColumn
           },
           (Array.isArray(items) ? items : []).map(
             function(entry) {
@@ -1194,6 +1203,34 @@ function verifyDestinationResponse(
 
 
   /******************************************************
+   * SCANNER NAME COLUMN (optional)
+   ******************************************************/
+
+  const nameColumn =
+    data.nameColumn
+      ? Number(data.nameColumn)
+      : null;
+
+  if (nameColumn !== null) {
+
+    if (
+      !Number.isInteger(nameColumn) ||
+      nameColumn < 1
+    ) {
+      throw new Error('A valid Scanner Name column is required.');
+    }
+
+    if (
+      nameColumn === itemCodeColumn ||
+      (timestampEnabled && nameColumn === timestampColumn)
+    ) {
+      throw new Error('Scanner Name must use its own column (not the Item Code or Timestamp column).');
+    }
+
+  }
+
+
+  /******************************************************
    * SPREADSHEET ID
    ******************************************************/
 
@@ -1279,6 +1316,20 @@ function verifyDestinationResponse(
       ) +
       ' does not exist in this sheet.'
 
+    );
+
+  }
+
+
+  if (
+    nameColumn !== null &&
+    nameColumn > lastColumn
+  ) {
+
+    throw new Error(
+      'Scanner Name column ' +
+      columnNumberToLetter(nameColumn) +
+      ' does not exist in this sheet.'
     );
 
   }
@@ -1404,6 +1455,21 @@ function verifyDestinationResponse(
             enabled:
               false
 
+          },
+
+    scannerName:
+
+      nameColumn !== null
+
+        ? {
+            enabled: true,
+            columnNumber: nameColumn,
+            letter: columnNumberToLetter(nameColumn),
+            header: String(headers[nameColumn - 1] || '').trim()
+          }
+
+        : {
+            enabled: false
           }
 
   });
@@ -2009,6 +2075,24 @@ function saveScansCore(
   const deviceId =
     String(destination.deviceId || '').trim().substring(0, 60);
 
+  /* Optional: column chosen in Destination Setup for the name. */
+  const nameColumn =
+    destination.nameColumn
+      ? Number(destination.nameColumn)
+      : 0;
+
+  if (
+    nameColumn &&
+    (
+      !Number.isInteger(nameColumn) ||
+      nameColumn < 1 ||
+      nameColumn === itemCodeColumn ||
+      (timestampEnabled && nameColumn === timestampColumn)
+    )
+  ) {
+    throw new Error('Invalid Scanner Name column.');
+  }
+
 
   /*
    * WHO IS SCANNING — from the phone's sign-in key.
@@ -2302,6 +2386,33 @@ function saveScansCore(
 
 
       /**************************************************
+       * SCANNER NAME — the column chosen in Setup
+       **************************************************/
+
+      if (
+        nameColumn &&
+        staff
+      ) {
+
+        if (nameColumn > sheet.getMaxColumns()) {
+          throw new Error(
+            'Scanner Name column ' + columnNumberToLetter(nameColumn) +
+            ' does not exist.'
+          );
+        }
+
+        sheet
+          .getRange(firstRow, nameColumn, count, 1)
+          .setValues(
+            toWrite.map(function() {
+              return [staff.name];
+            })
+          );
+
+      }
+
+
+      /**************************************************
        * BY (NAME, GMAIL) — if the tab has that column
        **************************************************/
 
@@ -2313,7 +2424,8 @@ function saveScansCore(
       if (
         byColumn &&
         byColumn !== itemCodeColumn &&
-        byColumn !== timestampColumn
+        byColumn !== timestampColumn &&
+        byColumn !== nameColumn
       ) {
 
         const byText =
@@ -2380,6 +2492,14 @@ function saveScansCore(
           protectColumns.indexOf(byColumn) === -1
         ) {
           protectColumns.push(byColumn);
+        }
+
+        if (
+          nameColumn &&
+          staff &&
+          protectColumns.indexOf(nameColumn) === -1
+        ) {
+          protectColumns.push(nameColumn);
         }
 
         ensureScannerColumnsProtected(

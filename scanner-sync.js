@@ -685,6 +685,9 @@ function getScannerSyncDestination() {
    */
   const preferredKeys = [
 
+    /* What setup.html saves today — always wins. */
+    'qrScannerDestination',
+
     'qrScannerDestinationConfig',
 
     'qrScannerConfig',
@@ -965,6 +968,15 @@ function normalizeScannerSyncDestination(
 
 
   /*
+   * Scanner Name column (optional; older setups don't have it).
+   */
+  const nameColumn =
+    config.nameEnabled === false
+      ? 0
+      : Number(config.nameColumn || 0);
+
+
+  /*
    * Basic validation.
    */
   if (
@@ -1013,6 +1025,14 @@ function normalizeScannerSyncDestination(
     timestampColumn:
       timestampEnabled
         ? timestampColumn
+        : null,
+
+    nameEnabled:
+      Number.isInteger(nameColumn) && nameColumn > 0,
+
+    nameColumn:
+      Number.isInteger(nameColumn) && nameColumn > 0
+        ? nameColumn
         : null
 
   };
@@ -1281,7 +1301,10 @@ function queueVerifiedScan(
         destination.timestampEnabled,
 
       timestampColumn:
-        destination.timestampColumn
+        destination.timestampColumn,
+
+      nameColumn:
+        destination.nameColumn
 
     },
 
@@ -1434,7 +1457,8 @@ function sameScannerSyncDestination(a, b) {
     a.sheetName === b.sheetName &&
     Number(a.itemCodeColumn) === Number(b.itemCodeColumn) &&
     Boolean(a.timestampEnabled) === Boolean(b.timestampEnabled) &&
-    Number(a.timestampColumn || 0) === Number(b.timestampColumn || 0)
+    Number(a.timestampColumn || 0) === Number(b.timestampColumn || 0) &&
+    Number(a.nameColumn || 0) === Number(b.nameColumn || 0)
   );
 
 }
@@ -1882,6 +1906,10 @@ function addScannerSyncDestinationParams(
 
   if (destination.timestampEnabled) {
     params.set('timestampColumn', String(destination.timestampColumn));
+  }
+
+  if (destination.nameColumn) {
+    params.set('nameColumn', String(destination.nameColumn));
   }
 
 }

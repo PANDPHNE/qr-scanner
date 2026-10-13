@@ -383,6 +383,43 @@ button:disabled {
       </div>
 
 
+      <!-- SCANNER NAME (who scanned) -->
+
+      <div class="checkbox-row">
+
+        <input
+          id="nameEnabled"
+          type="checkbox"
+          checked
+        >
+
+        <label for="nameEnabled">
+          Save the name of the staff who scanned
+        </label>
+
+      </div>
+
+
+      <div
+        id="nameField"
+        class="field"
+      >
+
+        <label for="nameColumn">
+          Scanner Name Column
+        </label>
+
+        <select id="nameColumn">
+
+          <option value="">
+            Select Scanner Name column
+          </option>
+
+        </select>
+
+      </div>
+
+
       <!-- SAVE -->
 
       <button
@@ -505,6 +542,21 @@ const timestampField =
 const timestampColumn =
   document.getElementById(
     'timestampColumn'
+  );
+
+const nameEnabled =
+  document.getElementById(
+    'nameEnabled'
+  );
+
+const nameField =
+  document.getElementById(
+    'nameField'
+  );
+
+const nameColumn =
+  document.getElementById(
+    'nameColumn'
   );
 
 const saveDestinationButton =
@@ -809,6 +861,14 @@ function loadExistingDestination() {
         '<br>Timestamp: <strong>OFF</strong>';
 
     }
+
+
+    html +=
+      destination.nameEnabled && destination.nameColumn
+        ? '<br>Scanner Name: <strong>Column ' +
+          escapeHtml(columnNumberToLetter(destination.nameColumn)) +
+          '</strong>'
+        : '<br>Scanner Name: <strong>OFF</strong>';
 
 
     statusDetails.innerHTML =
@@ -1126,6 +1186,26 @@ changeDestinationButton.addEventListener(
       }
 
 
+      /*
+       * Restore Scanner Name state.
+       * (Destinations saved before this option existed
+       * start with it ON and no column picked.)
+       */
+
+      nameEnabled.checked =
+        destination.nameEnabled !== false;
+
+      nameField.classList.toggle(
+        'hidden',
+        !nameEnabled.checked
+      );
+
+      nameColumn.value =
+        nameEnabled.checked && destination.nameColumn
+          ? String(destination.nameColumn)
+          : '';
+
+
       columnField
         .classList
         .remove(
@@ -1206,6 +1286,10 @@ loadSheetsButton.addEventListener(
         '<option value="">Select Timestamp column</option>';
 
 
+      nameColumn.innerHTML =
+        '<option value="">Select Scanner Name column</option>';
+
+
       sheetField
         .classList
         .add(
@@ -1236,6 +1320,14 @@ loadSheetsButton.addEventListener(
         .remove(
           'hidden'
         );
+
+
+      nameEnabled.checked =
+        true;
+
+      nameField.classList.remove(
+        'hidden'
+      );
 
 
       hideStatus();
@@ -1528,6 +1620,9 @@ sheetName.addEventListener(
       timestampColumn.value =
         '';
 
+      nameColumn.value =
+        '';
+
 
       hideStatus();
 
@@ -1560,6 +1655,9 @@ function populateColumns(
 
   timestampColumn.innerHTML =
     '<option value="">Select Timestamp column</option>';
+
+  nameColumn.innerHTML =
+    '<option value="">Select Scanner Name column</option>';
 
 
   if (
@@ -1622,6 +1720,22 @@ function populateColumns(
         timestampOption
       );
 
+
+      const nameOption =
+        document.createElement(
+          'option'
+        );
+
+      nameOption.value =
+        column.columnNumber;
+
+      nameOption.textContent =
+        label;
+
+      nameColumn.appendChild(
+        nameOption
+      );
+
     }
   );
 
@@ -1669,6 +1783,29 @@ timestampEnabled.addEventListener(
 
 /************************************************************
  * ==========================================================
+ * SCANNER NAME CHECKBOX
+ * ==========================================================
+ */
+
+nameEnabled.addEventListener(
+  'change',
+  function() {
+
+    nameField.classList.toggle(
+      'hidden',
+      !nameEnabled.checked
+    );
+
+    if (!nameEnabled.checked) {
+      nameColumn.value = '';
+    }
+
+  }
+);
+
+
+/************************************************************
+ * ==========================================================
  * SAVE / VERIFY DESTINATION
  * ==========================================================
  */
@@ -1691,6 +1828,12 @@ saveDestinationButton.addEventListener(
 
     const selectedTimestampColumn =
       timestampColumn.value;
+
+    const useName =
+      nameEnabled.checked;
+
+    const selectedNameColumn =
+      nameColumn.value;
 
 
     if (!url) {
@@ -1748,6 +1891,37 @@ saveDestinationButton.addEventListener(
 
       showError(
         'Item Code and Timestamp must use different columns.'
+      );
+
+      return;
+
+    }
+
+
+    if (
+      useName &&
+      !selectedNameColumn
+    ) {
+
+      showError(
+        'Please select the Scanner Name column.'
+      );
+
+      return;
+
+    }
+
+
+    if (
+      useName &&
+      (
+        selectedNameColumn === selectedItemColumn ||
+        (useTimestamp && selectedNameColumn === selectedTimestampColumn)
+      )
+    ) {
+
+      showError(
+        'Scanner Name must use its own column (not the Item Code or Timestamp column).'
       );
 
       return;
@@ -1814,6 +1988,20 @@ saveDestinationButton.addEventListener(
       }
 
 
+      if (
+        useName
+      ) {
+
+        finalQuery +=
+
+          '&nameColumn=' +
+          encodeURIComponent(
+            selectedNameColumn
+          );
+
+      }
+
+
       const response =
         await jsonp(
           finalQuery
@@ -1875,6 +2063,14 @@ saveDestinationButton.addEventListener(
                   selectedTimestampColumn
                 )
 
+              : null,
+
+          nameEnabled:
+            useName,
+
+          nameColumn:
+            useName
+              ? Number(selectedNameColumn)
               : null
 
         })
@@ -2018,6 +2214,29 @@ function showSuccess(
 
     html +=
       '<br>Timestamp: <strong>OFF</strong>';
+
+  }
+
+
+  if (
+    response.scannerName &&
+    response.scannerName.enabled
+  ) {
+
+    html +=
+
+      '<br>Scanner Name: <strong>' +
+      escapeHtml(
+        response.scannerName.letter
+      ) +
+      '</strong>';
+
+  }
+
+  else {
+
+    html +=
+      '<br>Scanner Name: <strong>OFF</strong>';
 
   }
 

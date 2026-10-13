@@ -57,6 +57,7 @@ Each staff member registers **their own phone** with a personal **staff code**, 
 - Wrong codes: 5 per phone, then a 15-minute wait; 30 from all phones together pauses registration for 15 minutes.
 - Each phone gets its own random key; only its fingerprint is stored, in the hidden `_STAFF_SESSIONS` tab (set ACTIVE = NO there to sign out one phone).
 - Every scan writes `Name, gmail` into the tab's **BY (NAME, GMAIL)** column and into `_SCAN_LOG`.
+- **Scanner Name column:** in Destination Setup, tick *Save the name of the staff who scanned* and pick the column (e.g. NOTE). Every scan writes the staff name there. It must be different from the Item Code and Timestamp columns, and it is protected like them.
 - PIN asked each time the scanner opens and after the phone was away 2+ minutes. 5 wrong PINs → enter the staff code again.
 - `CONFIG.REQUIRE_SIGN_IN: false` turns registration off again.
 
