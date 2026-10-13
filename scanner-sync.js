@@ -1374,6 +1374,12 @@ async function processScannerSyncQueue() {
             batch
           );
 
+          if (response.serverVersion) {
+            try {
+              localStorage.setItem('qrScannerServerVersionV1', response.serverVersion);
+            } catch (e) { /* ignore */ }
+          }
+
           (response.results || []).forEach(function(result) {
             if (result && result.scanId) {
               perScan[result.scanId] = result;
@@ -1665,10 +1671,51 @@ function scannerSyncJsonp(
 }
 
 
+/*
+ * A short random ID per phone, kept forever, so the
+ * _SCAN_LOG tab shows which phone saved each scan.
+ */
+function getScannerDeviceId() {
+
+  const key = 'qrScannerDeviceIdV1';
+
+  try {
+
+    let id = localStorage.getItem(key);
+
+    if (!id) {
+
+      const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+      id = 'P-';
+
+      for (let i = 0; i < 6; i++) {
+        id += letters.charAt(Math.floor(Math.random() * letters.length));
+      }
+
+      localStorage.setItem(key, id);
+
+    }
+
+    return id;
+
+  }
+
+  catch (error) {
+
+    return 'P-UNKNOWN';
+
+  }
+
+}
+
+
 function addScannerSyncDestinationParams(
   params,
   destination
 ) {
+
+  params.set('deviceId', getScannerDeviceId());
 
   params.set('spreadsheetUrl', destination.spreadsheetUrl);
   params.set('sheetName', destination.sheetName);

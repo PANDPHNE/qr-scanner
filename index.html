@@ -6,7 +6,9 @@
 <meta name="theme-color" content="#08090b">
 <title>Inventory Scanner</title>
 
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<!-- Barcode reader: fixed copy (v2.3.8) kept in this repo so an
+     outside update can never break the scanner. -->
+<script src="vendor/html5-qrcode-2.3.8.min.js" type="text/javascript"></script>
 
 <style>
 /* =========================================================
@@ -37,6 +39,31 @@ body {
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
+}
+
+/* =========================================================
+   NEW VERSION BANNER
+   ========================================================= */
+
+#updateBanner {
+  display: block;
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  padding: 14px 12px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  cursor: pointer;
+}
+
+.versions {
+  margin-top: 10px;
+  color: #6b7079;
+  font-size: 11px;
+  line-height: 1.6;
 }
 
 /* =========================================================
@@ -466,6 +493,11 @@ body {
 
 <div class="app">
 
+  <!-- NEW VERSION AVAILABLE -->
+  <button type="button" id="updateBanner" onclick="refreshToLatestVersion()" hidden>
+    ⟳ NEW SCANNER VERSION — TAP TO UPDATE
+  </button>
+
   <!-- TOP BAR -->
   <nav class="topbar">
     <button type="button" class="back-button" onclick="goBackToSetup()">← SETUP</button>
@@ -533,6 +565,8 @@ body {
 
       <div id="cameraDiagnostics">Camera has not started yet.</div>
 
+      <div id="versionInfo" class="versions"></div>
+
     </div>
   </details>
 
@@ -547,6 +581,17 @@ body {
 
 
 <script>
+
+/* ==========================================================
+   VERSION
+   ==========================================================
+ *
+ * When releasing a change: set the SAME new value here, in
+ * version.json, and in the scanner-sync.js ?v= link below.
+ * Phones running an older copy then show "TAP TO UPDATE".
+ */
+const SCANNER_VERSION = "2026.10.14-1";
+
 
 /* ==========================================================
    SETTINGS
@@ -1788,6 +1833,76 @@ function loadScannerNavigationDestination() {
 
 
 /* ==========================================================
+   VERSION CHECK
+   ========================================================== */
+
+let latestScannerVersion = "";
+
+
+async function checkForNewVersion() {
+
+  try {
+
+    const response = await fetch(
+      "version.json?t=" + Date.now(),
+      { cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      return;
+    }
+
+    const data = await response.json();
+
+    latestScannerVersion = String(data.version || "");
+
+    $("updateBanner").hidden =
+      !latestScannerVersion || latestScannerVersion === SCANNER_VERSION;
+
+  }
+
+  catch (error) {
+
+    /* Offline — try again later. */
+
+  }
+
+}
+
+
+function refreshToLatestVersion() {
+
+  /* Unsaved scans are kept on the phone and keep sending
+     after the reload, so no warning is needed here. */
+  window.scannerSyncLeaveConfirmed = true;
+
+  /* A new address makes the phone fetch fresh files. */
+  window.location.replace(
+    window.location.pathname +
+    "?v=" + encodeURIComponent(latestScannerVersion || Date.now())
+  );
+
+}
+
+
+function showVersionInfo() {
+
+  const server = safeGet("qrScannerServerVersionV1") || "not seen yet";
+
+  const phone = typeof getScannerDeviceId === "function"
+    ? getScannerDeviceId()
+    : "—";
+
+  $("versionInfo").innerHTML =
+    "<strong>Scanner:</strong> " + escapeHtml(SCANNER_VERSION) +
+    " · <strong>Server:</strong> " + escapeHtml(server) + "<br>" +
+    "<strong>This phone:</strong> " + escapeHtml(phone) +
+    " · <strong>Barcode reader:</strong> 2.3.8";
+
+}
+
+
+/* ==========================================================
    BACK TO SETUP
    ========================================================== */
 
@@ -1817,7 +1932,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js"></script>
+<script src="scanner-sync.js?v=2026.10.14-1"></script>
 
 <script>
   loadScannerNavigationDestination();
@@ -1825,6 +1940,19 @@ function goBackToSetup() {
   renderRecentScans();
   $("soundButton").textContent = "Sound: " + (soundEnabled ? "ON" : "OFF");
   setUiState("off");
+  showVersionInfo();
+
+  checkForNewVersion();
+  setInterval(checkForNewVersion, 5 * 60 * 1000);
+
+  document.addEventListener("visibilitychange", function() {
+    if (document.visibilityState === "visible") {
+      checkForNewVersion();
+      showVersionInfo();
+    }
+  });
+
+  window.addEventListener("scansync:saved", showVersionInfo);
 </script>
 
 </body>

@@ -1,6 +1,6 @@
 /************************************************************
  * ==========================================================
- * QR CODE SCANNER — GOOGLE APPS SCRIPT BACKEND V2
+ * QR CODE SCANNER — GOOGLE APPS SCRIPT BACKEND V2.1
  * ==========================================================
  *
  * PURPOSE
@@ -25,6 +25,10 @@
  *   written twice)
  * ✓ Next row found from the Item Code / Timestamp columns
  *   only, so other columns can't push scans far down
+ * ✓ _SCAN_LOG tab: hidden, append-only record of every
+ *   saved scan (code, times, tab, row, scanId, phone)
+ * ✓ Scanner columns protected: only the owner (and this
+ *   script) can edit or delete scanned rows
  * ✓ Save every successful scan as a NEW ROW
  * ✓ Save with timestamp
  * ✓ Save without timestamp
@@ -48,6 +52,32 @@
  ************************************************************/
 
 const CONFIG = {
+
+  /*
+   * Server version — shown on the scanner's settings panel.
+   */
+  VERSION:
+    '2.1.0',
+
+
+  /*
+   * Hidden, append-only log of every saved scan.
+   * Created automatically in each spreadsheet that
+   * receives scans.
+   */
+  SCAN_LOG_SHEET_NAME:
+    '_SCAN_LOG',
+
+
+  /*
+   * Protect the Item Code / Timestamp columns of every tab
+   * the scanner writes to, so staff can view but not type
+   * over or delete scanned rows. The spreadsheet owner can
+   * still edit. Set to false to turn off.
+   */
+  PROTECT_SCANNER_COLUMNS:
+    true,
+
 
   /*
    * Header row in the destination sheet.
@@ -164,7 +194,10 @@ function doGet(e) {
         action: 'ping',
 
         message:
-          'Scanner Backend V1 is online.',
+          'Scanner Backend is online.',
+
+        version:
+          CONFIG.VERSION,
 
         timestamp:
           new Date().toISOString()
@@ -359,7 +392,8 @@ if (
             sheetName: params.sheetName,
             itemCodeColumn: params.itemCodeColumn,
             timestampEnabled: params.timestampEnabled,
-            timestampColumn: params.timestampColumn
+            timestampColumn: params.timestampColumn,
+            deviceId: params.deviceId
           },
           (Array.isArray(items) ? items : []).map(
             function(entry) {
@@ -1822,6 +1856,9 @@ function saveScansCore(
       ? Number(destination.timestampColumn)
       : null;
 
+  const deviceId =
+    String(destination.deviceId || '').trim().substring(0, 60);
+
 
   if (!spreadsheetUrl) {
     throw new Error('spreadsheetUrl is required.');
@@ -2039,6 +2076,28 @@ function saveScansCore(
         toWrite.length;
 
 
+      /* Make room if the tab is full. */
+      const lastNeededRow =
+        firstRow + count - 1;
+
+      if (lastNeededRow > sheet.getMaxRows()) {
+
+        sheet.insertRowsAfter(
+          sheet.getMaxRows(),
+          lastNeededRow - sheet.getMaxRows() + 100
+        );
+
+        /* New rows → re-check the column protection now. */
+        cache.remove(
+          'protected:' + spreadsheetId + ':' + sheet.getSheetId() + ':' +
+          (timestampEnabled
+            ? [itemCodeColumn, timestampColumn]
+            : [itemCodeColumn]).join(',')
+        );
+
+      }
+
+
       /**************************************************
        * WRITE ALL ROWS AT ONCE
        **************************************************/
@@ -2066,6 +2125,62 @@ function saveScansCore(
             return [result.timestamp];
           })
         );
+
+      }
+
+
+      /**************************************************
+       * SCAN LOG + PROTECTION
+       *
+       * Never allowed to fail the save itself — the rows
+       * above are already written.
+       **************************************************/
+
+      const savedAt =
+        new Date();
+
+      try {
+
+        appendToScanLog(
+          spreadsheet,
+          toWrite.map(function(result, index) {
+            return [
+              savedAt,
+              result.timestamp,
+              result.itemCode,
+              sheet.getName(),
+              firstRow + index,
+              result.scanId,
+              deviceId,
+              CONFIG.VERSION
+            ];
+          })
+        );
+
+      }
+
+      catch (logError) {
+
+        console.error('Scan log error: ' + logError);
+
+      }
+
+      try {
+
+        ensureScannerColumnsProtected(
+          spreadsheetId,
+          sheet,
+          timestampEnabled
+            ? [itemCodeColumn, timestampColumn]
+            : [itemCodeColumn],
+          cache
+        );
+
+      }
+
+      catch (protectError) {
+
+        console.error('Protection error: ' + protectError);
 
       }
 
@@ -2145,6 +2260,8 @@ function saveScansCore(
 
     success: true,
 
+    serverVersion: CONFIG.VERSION,
+
     saved: savedCount,
 
     total: results.length,
@@ -2157,6 +2274,207 @@ function saveScansCore(
 
 }
 
+
+
+/************************************************************
+ * ==========================================================
+ * _SCAN_LOG — HIDDEN, APPEND-ONLY RECORD
+ * ==========================================================
+ *
+ * One line per saved scan. Only this script writes here;
+ * the tab is hidden and protected (owner only). If rows in
+ * a display tab are ever deleted or sorted by mistake, this
+ * log still shows every scan: what, when, where, which phone.
+ *
+ ************************************************************/
+
+function appendToScanLog(
+  spreadsheet,
+  rows
+) {
+
+  if (!rows.length) {
+    return;
+  }
+
+  let log =
+    spreadsheet.getSheetByName(CONFIG.SCAN_LOG_SHEET_NAME);
+
+  if (!log) {
+
+    log =
+      spreadsheet.insertSheet(CONFIG.SCAN_LOG_SHEET_NAME);
+
+    log
+      .getRange(1, 1, 1, 8)
+      .setValues([[
+        'SAVED AT',
+        'SCANNED AT',
+        'ITEM CODE',
+        'TAB',
+        'ROW',
+        'SCAN ID',
+        'PHONE',
+        'SERVER VERSION'
+      ]])
+      .setFontWeight('bold');
+
+    log.setFrozenRows(1);
+
+    log.getRange('A:B').setNumberFormat(CONFIG.TIMESTAMP_FORMAT);
+
+    log.getRange('C:C').setNumberFormat('@');
+
+    try {
+
+      const protection =
+        log.protect().setDescription(
+          'Scanner log — written by the scanner only'
+        );
+
+      restrictProtectionToOwner(protection);
+
+    }
+
+    catch (error) {
+
+      console.error('Scan log protection error: ' + error);
+
+    }
+
+    log.hideSheet();
+
+  }
+
+  const start =
+    log.getLastRow() + 1;
+
+  if (start + rows.length - 1 > log.getMaxRows()) {
+    log.insertRowsAfter(
+      log.getMaxRows(),
+      rows.length + 500
+    );
+  }
+
+  log
+    .getRange(start, 1, rows.length, rows[0].length)
+    .setValues(rows);
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * PROTECT THE SCANNER COLUMNS
+ * ==========================================================
+ *
+ * Protects e.g. A2:A and B2:B (open-ended, so new rows are
+ * covered too). Only the spreadsheet owner and this script
+ * can edit them; staff can still view, sort views, filter.
+ *
+ * Checked at most every 6 hours per tab (cached), so it
+ * does not slow scanning down.
+ *
+ ************************************************************/
+
+function ensureScannerColumnsProtected(
+  spreadsheetId,
+  sheet,
+  columns,
+  cache
+) {
+
+  if (!CONFIG.PROTECT_SCANNER_COLUMNS) {
+    return;
+  }
+
+  const cacheKey =
+    'protected:' + spreadsheetId + ':' + sheet.getSheetId() + ':' + columns.join(',');
+
+  if (cache.get(cacheKey)) {
+    return;
+  }
+
+  const description =
+    'Scanner column — written by the scanner only';
+
+  const maxRows =
+    sheet.getMaxRows();
+
+  const ours =
+    sheet
+      .getProtections(SpreadsheetApp.ProtectionType.RANGE)
+      .filter(function(protection) {
+        return protection.getDescription() === description;
+      });
+
+  columns.forEach(function(column) {
+
+    const current =
+      ours.filter(function(protection) {
+        return protection.getRange().getColumn() === column;
+      });
+
+    /* Already protected down to the last row of the tab? */
+    const covered =
+      current.some(function(protection) {
+        return protection.getRange().getLastRow() >= maxRows;
+      });
+
+    if (covered) {
+      return;
+    }
+
+    /* The tab grew — replace the old, shorter protection. */
+    current.forEach(function(protection) {
+      protection.remove();
+    });
+
+    const protection =
+      sheet
+        .getRange(
+          CONFIG.HEADER_ROW + 1,
+          column,
+          maxRows - CONFIG.HEADER_ROW,
+          1
+        )
+        .protect()
+        .setDescription(description);
+
+    restrictProtectionToOwner(protection);
+
+  });
+
+  cache.put(cacheKey, '1', CONFIG.DUPLICATE_GUARD_SECONDS);
+
+}
+
+
+function restrictProtectionToOwner(
+  protection
+) {
+
+  /*
+   * Google's documented pattern: keep the account running
+   * this script as an editor, remove everyone else. The
+   * spreadsheet owner can always edit.
+   */
+  protection.addEditor(
+    Session.getEffectiveUser()
+  );
+
+  const editors =
+    protection.getEditors();
+
+  if (editors.length) {
+    protection.removeEditors(editors);
+  }
+
+  if (protection.canDomainEdit()) {
+    protection.setDomainEdit(false);
+  }
+
+}
 
 /************************************************************
  * ==========================================================
