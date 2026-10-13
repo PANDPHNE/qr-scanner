@@ -590,7 +590,7 @@ body {
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.10.14-1";
+const SCANNER_VERSION = "2026.10.14-2";
 
 
 /* ==========================================================
@@ -1885,9 +1885,44 @@ function refreshToLatestVersion() {
 }
 
 
+/*
+ * Ask the server which version it runs, right when the
+ * scanner opens (no scan needed).
+ */
+function checkServerVersion() {
+
+  if (typeof scannerSyncJsonp !== "function") {
+    return;
+  }
+
+  const params = new URLSearchParams();
+  params.set("action", "ping");
+
+  scannerSyncJsonp(params)
+    .then(function(response) {
+
+      /* Old server (V1) answers ping without a version. */
+      safeSet(
+        "qrScannerServerVersionV1",
+        response.version ? response.version : "OLD — please deploy the new Code.gs"
+      );
+
+      showVersionInfo();
+
+    })
+    .catch(function() {
+
+      safeSet("qrScannerServerVersionV1", "can't reach server");
+      showVersionInfo();
+
+    });
+
+}
+
+
 function showVersionInfo() {
 
-  const server = safeGet("qrScannerServerVersionV1") || "not seen yet";
+  const server = safeGet("qrScannerServerVersionV1") || "checking…";
 
   const phone = typeof getScannerDeviceId === "function"
     ? getScannerDeviceId()
@@ -1932,7 +1967,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.10.14-1"></script>
+<script src="scanner-sync.js?v=2026.10.14-2"></script>
 
 <script>
   loadScannerNavigationDestination();
@@ -1941,6 +1976,7 @@ function goBackToSetup() {
   $("soundButton").textContent = "Sound: " + (soundEnabled ? "ON" : "OFF");
   setUiState("off");
   showVersionInfo();
+  checkServerVersion();
 
   checkForNewVersion();
   setInterval(checkForNewVersion, 5 * 60 * 1000);
