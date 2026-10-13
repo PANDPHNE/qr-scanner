@@ -10,9 +10,6 @@
      outside update can never break the scanner. -->
 <script src="vendor/html5-qrcode-2.3.8.min.js" type="text/javascript"></script>
 
-<!-- Google sign-in for staff -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-
 <style>
 /* =========================================================
    BASE
@@ -91,10 +88,58 @@ body {
   font-weight: 800;
 }
 
-#googleButton {
-  display: flex;
-  justify-content: center;
-  min-height: 48px;
+#codeInput {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid #363a40;
+  border-radius: 14px;
+  background: #0d0f12;
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+#codeInput:focus {
+  outline: none;
+  border-color: #10b981;
+}
+
+.auth-button {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  min-height: 60px;
+  border: none;
+  border-radius: 16px;
+  background: #10b981;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.auth-button.secondary {
+  background: #34373d;
+  font-size: 16px;
+  min-height: 50px;
+}
+
+.auth-button:disabled { opacity: .5; }
+
+.confirm-name {
+  margin: 4px 0 6px;
+  font-size: 24px;
+  font-weight: 900;
+  color: #34d399;
+}
+
+.confirm-gmail {
+  margin-bottom: 22px;
+  color: #9ca1a8;
+  font-size: 14px;
 }
 
 .auth-error {
@@ -658,15 +703,31 @@ body {
       <p class="auth-sub">Starting…</p>
     </section>
 
-    <!-- sign in -->
+    <!-- register with staff code -->
     <section id="authSignIn" hidden>
-      <h1 class="auth-title">Sign in to scan</h1>
-      <p class="auth-sub">Use your own Gmail. Every item you scan on this phone is recorded under your name.</p>
-      <div id="googleButton"></div>
+
+      <div id="codeStep">
+        <h1 class="auth-title">Register this phone</h1>
+        <p id="codeSub" class="auth-sub">Enter your staff code. Keep it secret, like a password — every item scanned on this phone is recorded under your name.</p>
+        <input id="codeInput" type="text" inputmode="text" autocomplete="off"
+               autocapitalize="characters" spellcheck="false" maxlength="12"
+               placeholder="XXXX-XXXX" onkeydown="if(event.key==='Enter')submitStaffCode()">
+        <button type="button" id="codeButton" class="auth-button" onclick="submitStaffCode()">Continue</button>
+      </div>
+
+      <div id="confirmStep" hidden>
+        <h1 class="auth-title">Is this you?</h1>
+        <p class="auth-sub">This phone will be registered to:</p>
+        <div id="confirmName" class="confirm-name"></div>
+        <div id="confirmGmail" class="confirm-gmail"></div>
+        <button type="button" id="confirmButton" class="auth-button" onclick="confirmRegistration()">Yes, register to me</button>
+        <button type="button" class="auth-button secondary" onclick="cancelRegistration()">No, go back</button>
+      </div>
+
       <div id="signInError" class="auth-error" hidden></div>
+
       <p class="auth-hint">
-        Only Gmails on the STAFF list can sign in.<br>
-        If the button doesn't appear, open this page in Chrome (not inside Messenger or Facebook).
+        Don't have a code, or think someone else knows yours?<br>Ask the owner for a new one.
       </p>
     </section>
 
@@ -693,7 +754,7 @@ body {
         <button type="button" class="key-muted" onclick="pinBackspace()">⌫</button>
       </div>
       <button type="button" id="forgotPinButton" class="link-button" onclick="forgotPin()">
-        Forgot PIN? Sign in with Gmail again
+        Forgot PIN? Enter your staff code again
       </button>
     </section>
 
@@ -811,7 +872,7 @@ body {
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.10.14-3";
+const SCANNER_VERSION = "2026.10.14-4";
 
 
 /* ==========================================================
@@ -2066,16 +2127,15 @@ function loadScannerNavigationDestination() {
    STAFF SIGN-IN + PIN LOCK
    ==========================================================
  *
- * 1. Not signed in → "Sign in with Google" (staff Gmail).
+ * 1. Not registered → enter staff code (from the owner).
  * 2. First time on this phone → set a 4-digit PIN.
  * 3. Every time the scanner opens, or after the phone was
  *    away/locked for LOCK_AFTER_MS → enter PIN.
- * 4. 5 wrong PINs → must sign in with Gmail again.
+ * 4. 5 wrong PINs → enter staff code again, new PIN.
  */
 
 const PIN_STORAGE_KEY = "qrScannerPinV1";
 const PIN_FAILS_KEY = "qrScannerPinFailsV1";
-const CLIENT_ID_KEY = "qrScannerGoogleClientIdV1";
 const LOCK_AFTER_MS = 2 * 60 * 1000;
 const MAX_PIN_FAILS = 5;
 
@@ -2095,7 +2155,6 @@ let authState = "loading";      // loading | signin | setpin | confirmpin | pin 
 let pinEntry = "";
 let pinFirstEntry = "";
 let hiddenSince = 0;
-let googleButtonReady = false;
 
 
 function showAuthSection(name) {
@@ -2121,7 +2180,7 @@ function openGate(state) {
   showAuthSection(state);
 
   if (state === "signin") {
-    renderGoogleButton();
+    showCodeStep();
   }
 
   if (state === "setpin" || state === "confirmpin" || state === "pin") {
@@ -2175,64 +2234,20 @@ function decideAuthScreen() {
 }
 
 
-/* ---------- Google sign-in ---------- */
+/* ---------- Register with staff code ---------- */
 
-function renderGoogleButton() {
+let pendingCode = "";
 
-  const clientId = safeGet(CLIENT_ID_KEY);
 
-  const container = $("googleButton");
+function showCodeStep() {
 
-  if (!clientId) {
-    /* Waiting for the server to send the Client ID. */
-    container.textContent = "Connecting to server…";
-    return;
-  }
+  $("codeStep").hidden = false;
+  $("confirmStep").hidden = true;
+  $("codeButton").disabled = false;
 
-  if (/PASTE-YOUR-CLIENT-ID/.test(clientId)) {
-    container.textContent = "";
-    showSignInError("Sign-in is not set up on the server yet. Ask the owner to add the Google Client ID.");
-    return;
-  }
-
-  if (!window.google || !google.accounts || !google.accounts.id) {
-
-    /* Script still loading — try again shortly. */
-    container.textContent = "Loading Google sign-in…";
-
-    setTimeout(function() {
-      if (authState === "signin") {
-        renderGoogleButton();
-      }
-    }, 700);
-
-    return;
-
-  }
-
-  if (googleButtonReady) {
-    return;
-  }
-
-  container.textContent = "";
-
-  google.accounts.id.initialize({
-    client_id: clientId,
-    callback: onGoogleCredential,
-    auto_select: false,
-    cancel_on_tap_outside: true,
-    ux_mode: "popup"
-  });
-
-  google.accounts.id.renderButton(container, {
-    theme: "filled_blue",
-    size: "large",
-    shape: "pill",
-    text: "signin_with",
-    width: 300
-  });
-
-  googleButtonReady = true;
+  setTimeout(function() {
+    try { $("codeInput").focus(); } catch (e) { /* ignore */ }
+  }, 150);
 
 }
 
@@ -2247,32 +2262,84 @@ function showSignInError(message) {
 }
 
 
-function onGoogleCredential(response) {
+function submitStaffCode() {
+
+  const code = String($("codeInput").value || "").trim();
+
+  if (code.replace(/[^A-Za-z0-9]/g, "").length < 8) {
+    showSignInError("The code has 8 letters/numbers, like K7QM-4XPA.");
+    return;
+  }
 
   showSignInError("");
 
-  $("googleButton").style.opacity = ".4";
+  $("codeButton").disabled = true;
+  $("codeButton").textContent = "Checking…";
 
   const params = new URLSearchParams();
 
-  params.set("action", "signIn");
-  params.set("idToken", response.credential);
+  params.set("action", "checkCode");
+  params.set("code", code);
   params.set("deviceId", getScannerDeviceId());
 
   scannerSyncJsonp(params)
     .then(function(result) {
 
-      $("googleButton").style.opacity = "1";
+      pendingCode = code;
 
-      const previous = getScannerSession();
+      $("confirmName").textContent = result.name;
+      $("confirmGmail").textContent = result.gmail;
+
+      $("codeStep").hidden = true;
+      $("confirmStep").hidden = false;
+
+    })
+    .catch(function(error) {
+
+      showSignInError(error && error.message ? error.message : "Could not check the code. Try again.");
+
+    })
+    .finally(function() {
+
+      $("codeButton").disabled = false;
+      $("codeButton").textContent = "Continue";
+
+    });
+
+}
+
+
+function cancelRegistration() {
+
+  pendingCode = "";
+  $("codeInput").value = "";
+  showSignInError("");
+  showCodeStep();
+
+}
+
+
+function confirmRegistration() {
+
+  $("confirmButton").disabled = true;
+  $("confirmButton").textContent = "Registering…";
+
+  const params = new URLSearchParams();
+
+  params.set("action", "registerPhone");
+  params.set("code", pendingCode);
+  params.set("deviceId", getScannerDeviceId());
+
+  scannerSyncJsonp(params)
+    .then(function(result) {
+
+      pendingCode = "";
+      $("codeInput").value = "";
 
       setScannerSession(result);
 
-      /* Same person signing in again keeps their PIN. */
-      if (!previous || previous.gmail !== result.gmail) {
-        clearStoredPin();
-      }
-
+      /* New registration → new PIN. */
+      clearStoredPin();
       safeSet(PIN_FAILS_KEY, "0");
 
       attachSessionToPendingScans(getScannerSession());
@@ -2282,9 +2349,14 @@ function onGoogleCredential(response) {
     })
     .catch(function(error) {
 
-      $("googleButton").style.opacity = "1";
+      showCodeStep();
+      showSignInError(error && error.message ? error.message : "Registration failed. Try again.");
 
-      showSignInError(error && error.message ? error.message : "Sign-in failed. Try again.");
+    })
+    .finally(function() {
+
+      $("confirmButton").disabled = false;
+      $("confirmButton").textContent = "Yes, register to me";
 
     });
 
@@ -2584,12 +2656,12 @@ async function pinComplete() {
 
   if (fails >= MAX_PIN_FAILS) {
 
-    /* Too many tries: this phone must sign in with Gmail again. */
+    /* Too many tries: enter the staff code again. */
     clearStoredPin();
     safeSet(PIN_FAILS_KEY, "0");
     forgetSessionOnPhone();
     openGate("signin");
-    showSignInError("Too many wrong PINs. Sign in with your Gmail to continue.");
+    showSignInError("Too many wrong PINs. Enter your staff code to set a new PIN.");
     return;
 
   }
@@ -2615,13 +2687,6 @@ function forgotPin() {
 function forgetSessionOnPhone() {
 
   clearScannerSession();
-  googleButtonReady = false;
-
-  try {
-    if (window.google && google.accounts && google.accounts.id) {
-      google.accounts.id.disableAutoSelect();
-    }
-  } catch (e) { /* ignore */ }
 
 }
 
@@ -2653,7 +2718,7 @@ function signOutStaff() {
 
   }
 
-  if (!confirm("Sign out of this phone? You will need your Gmail to sign in again.")) {
+  if (!confirm("Sign out of this phone? You will need your staff code to use it again.")) {
     return;
   }
 
@@ -2782,7 +2847,7 @@ document.addEventListener("visibilitychange", function() {
 });
 
 
-/* Server tells us the Client ID and whether sign-in is required. */
+/* Server tells us whether staff registration is required. */
 function applyServerAuthSettings(response) {
 
   /* Old servers (before 3.0) don't send this → no sign-in. */
@@ -2791,18 +2856,6 @@ function applyServerAuthSettings(response) {
   window.scannerSignInRequired = required;
 
   safeSet(SIGNIN_REQUIRED_KEY, required ? "yes" : "no");
-
-  if (response.googleClientId) {
-
-    const changed = safeGet(CLIENT_ID_KEY) !== response.googleClientId;
-
-    safeSet(CLIENT_ID_KEY, response.googleClientId);
-
-    if (changed) {
-      googleButtonReady = false;
-    }
-
-  }
 
   if (authState === "loading") {
     decideAuthScreen();
@@ -2819,10 +2872,6 @@ function applyServerAuthSettings(response) {
     return;
   }
 
-  if (authState === "signin") {
-    showSignInError("");
-    renderGoogleButton();
-  }
 
 }
 
@@ -2969,7 +3018,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.10.14-3"></script>
+<script src="scanner-sync.js?v=2026.10.14-4"></script>
 
 <script>
   loadScannerNavigationDestination();

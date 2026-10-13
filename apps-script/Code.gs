@@ -29,8 +29,9 @@
  *   saved scan (code, times, tab, row, scanId, phone)
  * ✓ Scanner columns protected: only the owner (and this
  *   script) can edit or delete scanned rows
- * ✓ Staff sign in with Gmail (checked against the STAFF
- *   tab); every scan records who scanned it
+ * ✓ Staff register their own phone with a personal staff
+ *   code (kept in an owner-only spreadsheet) + PIN; every
+ *   scan records who scanned it
  * ✓ Save every successful scan as a NEW ROW
  * ✓ Save with timestamp
  * ✓ Save without timestamp
@@ -59,23 +60,36 @@ const CONFIG = {
    * Server version — shown on the scanner's settings panel.
    */
   VERSION:
-    '3.0.0',
+    '3.1.0',
 
 
   /*
-   * ── STAFF SIGN-IN ───────────────────────────────────────
+   * ── STAFF REGISTRATION ──────────────────────────────────
    *
-   * GOOGLE_CLIENT_ID: paste the "Client ID" from Google Cloud
-   * (ends with .apps.googleusercontent.com). The scanner
-   * reads it from here — it is not a secret.
+   * Each staff member has one secret code (like a password)
+   * to register their own phone. Codes live ONLY in a private
+   * spreadsheet in the owner's Drive, created by running
+   * setupStaffCodes() once. Never in the shared logbook.
    */
-  GOOGLE_CLIENT_ID:
-    'PASTE-YOUR-CLIENT-ID-HERE.apps.googleusercontent.com',
+  CODES_SPREADSHEET_NAME:
+    'SCANNER STAFF CODES (PRIVATE)',
+
+  CODES_SHEET_NAME:
+    'CODES',
+
+  /* Wrong codes allowed per phone before a 15-minute wait. */
+  MAX_CODE_TRIES_PER_PHONE:
+    5,
+
+  /* Wrong codes allowed from ALL phones together per 15 min. */
+  MAX_CODE_TRIES_TOTAL:
+    30,
 
 
   /*
-   * Only Gmails listed in this tab with ACTIVE = YES can sign
-   * in. Columns: A STAFF NAME, B GMAIL, C ACTIVE (YES/NO).
+   * Only staff listed in this tab with ACTIVE = YES can
+   * register a phone and scan.
+   * Columns: A STAFF NAME, B GMAIL, C ACTIVE (YES/NO).
    */
   STAFF_SPREADSHEET_ID:
     '1YW50gqsr5eEQu5ouhn-tU_5SjqJJga4Enq_GQSIcgbk',
@@ -85,7 +99,7 @@ const CONFIG = {
 
 
   /*
-   * Hidden tab listing every signed-in phone. Set a row's
+   * Hidden tab listing every registered phone. Set a row's
    * ACTIVE to NO to sign that one phone out.
    */
   SESSIONS_SHEET_NAME:
@@ -93,8 +107,8 @@ const CONFIG = {
 
 
   /*
-   * true  = scans are only saved from a signed-in staff phone
-   * false = scans without sign-in are still accepted
+   * true  = scans are only saved from a registered staff phone
+   * false = scans from unregistered phones are still accepted
    */
   REQUIRE_SIGN_IN:
     true,
@@ -248,9 +262,6 @@ function doGet(e) {
         version:
           CONFIG.VERSION,
 
-        googleClientId:
-          CONFIG.GOOGLE_CLIENT_ID,
-
         signInRequired:
           CONFIG.REQUIRE_SIGN_IN,
 
@@ -269,16 +280,35 @@ function doGet(e) {
 
 
     /******************************************************
-     * STAFF SIGN-IN (Google ID token → phone key)
+     * STAFF CODE — check (shows whose code it is)
      ******************************************************/
 
     if (
-      action === 'signin'
+      action === 'checkcode'
     ) {
 
       return responseForRequest(
-        signInResponse(
-          params.idToken,
+        checkCodeResponse(
+          params.code,
+          params.deviceId
+        ),
+        callback
+      );
+
+    }
+
+
+    /******************************************************
+     * STAFF CODE — register this phone
+     ******************************************************/
+
+    if (
+      action === 'registerphone'
+    ) {
+
+      return responseForRequest(
+        registerPhoneResponse(
+          params.code,
           params.deviceId
         ),
         callback
@@ -1996,7 +2026,7 @@ function saveScansCore(
   else if (CONFIG.REQUIRE_SIGN_IN) {
 
     throw new Error(
-      'NOT_SIGNED_IN: This phone is not signed in. Sign in with your Gmail.'
+      'NOT_SIGNED_IN: This phone is not registered. Enter your staff code.'
     );
 
   }
@@ -2464,104 +2494,64 @@ function saveScansCore(
 
 /************************************************************
  * ==========================================================
- * STAFF SIGN-IN
+ * STAFF CODES — REGISTER A PHONE
  * ==========================================================
  *
- * 1. The phone signs in with Google and sends us Google's
- *    ID token.
- * 2. We ask Google to confirm the token is genuine, was made
- *    for OUR app (Client ID), and the Gmail is verified.
- * 3. The Gmail must be in the STAFF tab with ACTIVE = YES.
- * 4. We create a long random key for that phone, store only
- *    its fingerprint (hash) in _STAFF_SESSIONS, and give the
- *    key to the phone. Every scan sends that key.
+ * 1. Each staff member has one secret code, kept ONLY in the
+ *    owner's private spreadsheet (setupStaffCodes creates it).
+ * 2. On their phone they enter the code once. The server
+ *    finds whose code it is (must be ACTIVE = YES in STAFF),
+ *    creates a long random key for that phone, stores only its
+ *    fingerprint in _STAFF_SESSIONS, and gives the key to the
+ *    phone. Every scan sends that key.
+ * 3. One phone per staff member: registering a phone signs
+ *    out their previous phone.
+ * 4. Owner ticks MAKE NEW CODE → new code, and the phone
+ *    registered with the old code is signed out.
  *
- * Remove access: set ACTIVE = NO in STAFF (all their phones)
- * or ACTIVE (column F) = NO on a row in _STAFF_SESSIONS
- * (one phone).
+ * Remove access: ACTIVE = NO in STAFF (their phone stops
+ * within 5 minutes), or ACTIVE (column F) = NO on one row of
+ * _STAFF_SESSIONS (that phone only).
  *
  ************************************************************/
 
-function signInResponse(
-  idToken,
+function checkCodeResponse(
+  code,
   deviceId
 ) {
 
-  if (/PASTE-YOUR-CLIENT-ID/.test(CONFIG.GOOGLE_CLIENT_ID)) {
-    throw new Error(
-      'Sign-in is not set up yet: paste the Google Client ID into CONFIG.GOOGLE_CLIENT_ID.'
-    );
-  }
-
-  const token =
-    String(idToken || '').trim();
-
-  if (!token) {
-    throw new Error('No Google sign-in was received.');
-  }
-
-  /*
-   * Ask Google to verify the token.
-   */
-  const response =
-    UrlFetchApp.fetch(
-      'https://oauth2.googleapis.com/tokeninfo?id_token=' +
-        encodeURIComponent(token),
-      { muteHttpExceptions: true }
-    );
-
-  if (response.getResponseCode() !== 200) {
-    throw new Error('Google could not confirm this sign-in. Please try again.');
-  }
-
-  const info =
-    JSON.parse(response.getContentText());
-
-  if (info.aud !== CONFIG.GOOGLE_CLIENT_ID) {
-    throw new Error('This sign-in was not made for the scanner.');
-  }
-
-  if (
-    info.iss !== 'accounts.google.com' &&
-    info.iss !== 'https://accounts.google.com'
-  ) {
-    throw new Error('Sign-in did not come from Google.');
-  }
-
-  if (String(info.email_verified) !== 'true') {
-    throw new Error('This Gmail address is not verified by Google.');
-  }
-
-  if (Number(info.exp) * 1000 < Date.now()) {
-    throw new Error('Sign-in expired. Please sign in again.');
-  }
-
-  const gmail =
-    String(info.email || '').trim().toLowerCase();
-
-
-  /*
-   * Must be active staff.
-   */
   const member =
-    getStaffByGmail(gmail, true);
+    findStaffByCode(code, deviceId);
 
-  if (!member) {
-    throw new Error(
-      gmail + ' is not on the STAFF list (or ACTIVE is not YES). Ask the owner to add you.'
-    );
-  }
+  return {
+    success: true,
+    name: member.name,
+    gmail: member.gmail
+  };
+
+}
 
 
-  /*
-   * New key for this phone.
-   */
+function registerPhoneResponse(
+  code,
+  deviceId
+) {
+
+  const member =
+    findStaffByCode(code, deviceId);
+
+  const phone =
+    String(deviceId || '').substring(0, 60);
+
   const sessionKey =
     Utilities.getUuid().replace(/-/g, '') +
     Utilities.getUuid().replace(/-/g, '');
 
   const sessions =
     getSessionsSheet();
+
+  const cache =
+    CacheService.getScriptCache();
 
   const lock =
     LockService.getScriptLock();
@@ -2570,15 +2560,42 @@ function signInResponse(
 
   try {
 
+    /* One phone per staff member: sign out their other phones. */
+    revokeSessionsForGmail(
+      member.gmail,
+      'Replaced by phone ' + phone,
+      cache
+    );
+
     sessions.appendRow([
       hashSessionKey(sessionKey),
-      gmail,
+      member.gmail,
       member.name,
-      String(deviceId || '').substring(0, 60),
+      phone,
       new Date(),
       'YES',
-      ''
+      'Registered with staff code'
     ]);
+
+    /* Show the phone in the private codes sheet. */
+    try {
+
+      const row =
+        member.codesRow;
+
+      if (row) {
+        getCodesSheet()
+          .getRange(row, 6, 1, 2)
+          .setValues([[phone, new Date()]]);
+      }
+
+    }
+
+    catch (error) {
+
+      console.error('Codes sheet update error: ' + error);
+
+    }
 
   }
 
@@ -2596,9 +2613,551 @@ function signInResponse(
 
     name: member.name,
 
-    gmail: gmail
+    gmail: member.gmail
 
   };
+
+}
+
+
+/*
+ * Code → active staff member. Counts wrong codes per phone
+ * and in total, and pauses after too many (stops guessing).
+ */
+function findStaffByCode(
+  code,
+  deviceId
+) {
+
+  const cache =
+    CacheService.getScriptCache();
+
+  const phone =
+    String(deviceId || 'unknown').substring(0, 60);
+
+  const phoneKey =
+    'codefail:' + phone;
+
+  const totalKey =
+    'codefail:all';
+
+  const phoneFails =
+    Number(cache.get(phoneKey) || 0);
+
+  const totalFails =
+    Number(cache.get(totalKey) || 0);
+
+  if (phoneFails >= CONFIG.MAX_CODE_TRIES_PER_PHONE) {
+    throw new Error('Too many wrong codes. Wait 15 minutes, then try again.');
+  }
+
+  if (totalFails >= CONFIG.MAX_CODE_TRIES_TOTAL) {
+    throw new Error('Registration is paused for 15 minutes because of too many wrong codes. Tell the owner.');
+  }
+
+  const cleaned =
+    normalizeStaffCode(code);
+
+  const entry =
+    cleaned
+      ? getCodesMap()[cleaned]
+      : null;
+
+  const member =
+    entry
+      ? getStaffByGmail(entry.gmail, true)
+      : null;
+
+  if (!member) {
+
+    cache.put(phoneKey, String(phoneFails + 1), 900);
+    cache.put(totalKey, String(totalFails + 1), 900);
+
+    const left =
+      CONFIG.MAX_CODE_TRIES_PER_PHONE - phoneFails - 1;
+
+    if (entry && !member) {
+      throw new Error('This staff member is not ACTIVE on the STAFF list. Ask the owner.');
+    }
+
+    throw new Error(
+      'Wrong code.' + (left > 0 ? ' ' + left + ' tries left.' : ' Wait 15 minutes.')
+    );
+
+  }
+
+  cache.remove(phoneKey);
+
+  return {
+    name: member.name,
+    gmail: member.gmail,
+    codesRow: entry.row
+  };
+
+}
+
+
+function normalizeStaffCode(
+  code
+) {
+
+  return String(code || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+
+}
+
+
+/*
+ * code (no dash) → { gmail, row }  — cached 5 minutes,
+ * cleared when a code is refreshed.
+ */
+function getCodesMap() {
+
+  const cache =
+    CacheService.getScriptCache();
+
+  const cached =
+    cache.get('codes-map');
+
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const sheet =
+    getCodesSheet();
+
+  const lastRow =
+    sheet.getLastRow();
+
+  const map = {};
+
+  if (lastRow >= 2) {
+
+    sheet
+      .getRange(2, 1, lastRow - 1, 3)
+      .getDisplayValues()
+      .forEach(function(row, index) {
+
+        const cleaned =
+          normalizeStaffCode(row[2]);
+
+        if (cleaned) {
+          map[cleaned] = {
+            gmail: String(row[1]).trim().toLowerCase(),
+            row: index + 2
+          };
+        }
+
+      });
+
+  }
+
+  cache.put('codes-map', JSON.stringify(map), 300);
+
+  return map;
+
+}
+
+
+function revokeSessionsForGmail(
+  gmail,
+  note,
+  cache
+) {
+
+  const sheet =
+    getSessionsSheet();
+
+  const lastRow =
+    sheet.getLastRow();
+
+  if (lastRow < 2) {
+    return;
+  }
+
+  const rows =
+    sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+
+  const target =
+    String(gmail).toLowerCase();
+
+  rows.forEach(function(row, index) {
+
+    if (
+      String(row[1]).toLowerCase() === target &&
+      String(row[5]).trim().toUpperCase() === 'YES'
+    ) {
+
+      sheet
+        .getRange(index + 2, 6, 1, 2)
+        .setValues([['NO', note]]);
+
+      cache.remove('session:' + row[0]);
+
+    }
+
+  });
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * PRIVATE CODES SPREADSHEET
+ * ==========================================================
+ ************************************************************/
+
+/*
+ * RUN THIS ONCE from the Apps Script editor:
+ * choose "setupStaffCodes" in the function list → Run.
+ *
+ * Creates "SCANNER STAFF CODES (PRIVATE)" in your Drive
+ * (never shared), fills it with a code for every staff
+ * member, and turns on the MAKE NEW CODE checkbox.
+ * Safe to run again — it won't duplicate anything.
+ */
+function setupStaffCodes() {
+
+  const properties =
+    PropertiesService.getScriptProperties();
+
+  let spreadsheet =
+    null;
+
+  const existingId =
+    properties.getProperty('CODES_SPREADSHEET_ID');
+
+  if (existingId) {
+
+    try {
+      spreadsheet = SpreadsheetApp.openById(existingId);
+    }
+
+    catch (error) {
+      spreadsheet = null;
+    }
+
+  }
+
+  if (!spreadsheet) {
+
+    spreadsheet =
+      SpreadsheetApp.create(CONFIG.CODES_SPREADSHEET_NAME);
+
+    properties.setProperty(
+      'CODES_SPREADSHEET_ID',
+      spreadsheet.getId()
+    );
+
+    const sheet =
+      spreadsheet.getSheets()[0];
+
+    sheet.setName(CONFIG.CODES_SHEET_NAME);
+
+    sheet
+      .getRange(1, 1, 1, 7)
+      .setValues([[
+        'STAFF NAME',
+        'GMAIL',
+        'CODE',
+        'MAKE NEW CODE',
+        'CODE CHANGED',
+        'REGISTERED PHONE',
+        'PHONE REGISTERED AT'
+      ]])
+      .setFontWeight('bold');
+
+    sheet.setFrozenRows(1);
+
+    sheet.getRange('C:C').setNumberFormat('@');
+
+    sheet.getRange('E:E').setNumberFormat(CONFIG.TIMESTAMP_FORMAT);
+
+    sheet.getRange('G:G').setNumberFormat(CONFIG.TIMESTAMP_FORMAT);
+
+    sheet.setColumnWidth(1, 220);
+    sheet.setColumnWidth(2, 260);
+    sheet.setColumnWidth(3, 130);
+
+  }
+
+  /* Triggers: checkbox edits + sync new staff on open. */
+  const id =
+    spreadsheet.getId();
+
+  const handlers =
+    ScriptApp
+      .getProjectTriggers()
+      .filter(function(trigger) {
+        return trigger.getTriggerSourceId() === id;
+      })
+      .map(function(trigger) {
+        return trigger.getHandlerFunction();
+      });
+
+  if (handlers.indexOf('onCodesEdit') === -1) {
+    ScriptApp.newTrigger('onCodesEdit').forSpreadsheet(id).onEdit().create();
+  }
+
+  if (handlers.indexOf('onCodesOpen') === -1) {
+    ScriptApp.newTrigger('onCodesOpen').forSpreadsheet(id).onOpen().create();
+  }
+
+  syncStaffCodes();
+
+  console.log('Private codes sheet ready: ' + spreadsheet.getUrl());
+
+  return spreadsheet.getUrl();
+
+}
+
+
+function getCodesSheet() {
+
+  const id =
+    PropertiesService
+      .getScriptProperties()
+      .getProperty('CODES_SPREADSHEET_ID');
+
+  if (!id) {
+    throw new Error(
+      'Staff codes are not set up yet. The owner must run setupStaffCodes once.'
+    );
+  }
+
+  const sheet =
+    SpreadsheetApp
+      .openById(id)
+      .getSheetByName(CONFIG.CODES_SHEET_NAME);
+
+  if (!sheet) {
+    throw new Error('The CODES tab is missing from the private codes sheet.');
+  }
+
+  return sheet;
+
+}
+
+
+/*
+ * Add every STAFF member who has no code yet; keep names in
+ * step with the STAFF tab. Never removes anyone.
+ */
+function syncStaffCodes() {
+
+  const sheet =
+    getCodesSheet();
+
+  CacheService.getScriptCache().remove('staff-list');
+
+  const staff =
+    readStaffList();
+
+  const lastRow =
+    sheet.getLastRow();
+
+  const existing =
+    lastRow >= 2
+      ? sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues()
+      : [];
+
+  const byGmail = {};
+
+  const usedCodes = {};
+
+  existing.forEach(function(row, index) {
+
+    byGmail[String(row[1]).trim().toLowerCase()] = index + 2;
+
+    usedCodes[normalizeStaffCode(row[2])] = true;
+
+  });
+
+  const newRows = [];
+
+  staff.forEach(function(member) {
+
+    const row =
+      byGmail[member.gmail];
+
+    if (row) {
+
+      if (existing[row - 2][0] !== member.name) {
+        sheet.getRange(row, 1).setValue(member.name);
+      }
+
+      return;
+
+    }
+
+    const code =
+      generateStaffCode(usedCodes);
+
+    newRows.push([member.name, member.gmail, code, false, new Date(), '', '']);
+
+  });
+
+  if (newRows.length) {
+
+    const start =
+      sheet.getLastRow() + 1;
+
+    sheet
+      .getRange(start, 1, newRows.length, 7)
+      .setValues(newRows);
+
+  }
+
+  /* Checkbox in MAKE NEW CODE for every staff row. */
+  const total =
+    sheet.getLastRow() - 1;
+
+  if (total > 0) {
+    sheet.getRange(2, 4, total, 1).insertCheckboxes();
+  }
+
+  CacheService.getScriptCache().remove('codes-map');
+
+}
+
+
+/* Opening the private sheet adds any new staff. */
+function onCodesOpen() {
+
+  syncStaffCodes();
+
+}
+
+
+/*
+ * Ticking MAKE NEW CODE: new code, untick, date, and sign
+ * out the phone registered with the old code.
+ */
+function onCodesEdit(e) {
+
+  if (!e || !e.range) {
+    return;
+  }
+
+  const sheet =
+    e.range.getSheet();
+
+  if (sheet.getName() !== CONFIG.CODES_SHEET_NAME) {
+    return;
+  }
+
+  if (
+    e.range.getColumn() !== 4 ||
+    e.range.getRow() < 2
+  ) {
+    return;
+  }
+
+  const lock =
+    LockService.getScriptLock();
+
+  lock.waitLock(30000);
+
+  try {
+
+    const cache =
+      CacheService.getScriptCache();
+
+    const height =
+      e.range.getNumRows();
+
+    const rows =
+      sheet
+        .getRange(e.range.getRow(), 1, height, 4)
+        .getValues();
+
+    const lastRow =
+      sheet.getLastRow();
+
+    const usedCodes = {};
+
+    sheet
+      .getRange(2, 3, Math.max(lastRow - 1, 1), 1)
+      .getDisplayValues()
+      .forEach(function(row) {
+        usedCodes[normalizeStaffCode(row[0])] = true;
+      });
+
+    rows.forEach(function(row, index) {
+
+      if (row[3] !== true) {
+        return;
+      }
+
+      const rowNumber =
+        e.range.getRow() + index;
+
+      const gmail =
+        String(row[1]).trim().toLowerCase();
+
+      sheet
+        .getRange(rowNumber, 3, 1, 5)
+        .setValues([[
+          generateStaffCode(usedCodes),
+          false,
+          new Date(),
+          '',
+          ''
+        ]]);
+
+      if (gmail) {
+        revokeSessionsForGmail(gmail, 'Code refreshed by owner', cache);
+      }
+
+    });
+
+    cache.remove('codes-map');
+
+  }
+
+  finally {
+
+    lock.releaseLock();
+
+  }
+
+}
+
+
+/*
+ * 8 characters, shown as XXXX-XXXX. No 0/O, 1/I/L to avoid
+ * mix-ups when reading it out. ~850 billion combinations.
+ */
+function generateStaffCode(
+  usedCodes
+) {
+
+  const letters =
+    'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+
+    const hex =
+      Utilities.getUuid().replace(/-/g, '') +
+      Utilities.getUuid().replace(/-/g, '');
+
+    let code = '';
+
+    for (let i = 0; i < 8; i++) {
+      code += letters.charAt(
+        parseInt(hex.substr(i * 4, 4), 16) % letters.length
+      );
+    }
+
+    if (!usedCodes[code]) {
+      usedCodes[code] = true;
+      return code.substring(0, 4) + '-' + code.substring(4);
+    }
+
+  }
+
+  throw new Error('Could not create a unique code.');
 
 }
 
@@ -2676,7 +3235,7 @@ function resolveSession(
     String(sessionKey || '').trim();
 
   if (!key) {
-    throw new Error('NOT_SIGNED_IN: This phone is not signed in.');
+    throw new Error('NOT_SIGNED_IN: This phone is not registered.');
   }
 
   const hash =
@@ -2739,7 +3298,7 @@ function resolveSession(
 
   if (!session || !session.active) {
     throw new Error(
-      'NOT_SIGNED_IN: This phone was signed out. Sign in with your Gmail again.'
+      'NOT_SIGNED_IN: This phone was signed out. Enter your staff code again.'
     );
   }
 
@@ -2785,35 +3344,7 @@ function getStaffByGmail(
 
   else {
 
-    const sheet =
-      SpreadsheetApp
-        .openById(CONFIG.STAFF_SPREADSHEET_ID)
-        .getSheetByName(CONFIG.STAFF_SHEET_NAME);
-
-    if (!sheet) {
-      throw new Error('The STAFF tab was not found.');
-    }
-
-    const lastRow =
-      sheet.getLastRow();
-
-    const rows =
-      lastRow >= 2
-        ? sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues()
-        : [];
-
-    list =
-      rows
-        .filter(function(row) {
-          return String(row[1]).trim() !== '';
-        })
-        .map(function(row) {
-          return {
-            name: String(row[0]).trim(),
-            gmail: String(row[1]).trim().toLowerCase(),
-            active: String(row[2]).trim().toUpperCase() === 'YES'
-          };
-        });
+    list = readStaffList();
 
     cache.put('staff-list', JSON.stringify(list), 300);
 
@@ -2836,6 +3367,43 @@ function getStaffByGmail(
   }
 
   return member;
+
+}
+
+
+/*
+ * All rows of the STAFF tab: { name, gmail, active }.
+ */
+function readStaffList() {
+
+  const sheet =
+    SpreadsheetApp
+      .openById(CONFIG.STAFF_SPREADSHEET_ID)
+      .getSheetByName(CONFIG.STAFF_SHEET_NAME);
+
+  if (!sheet) {
+    throw new Error('The STAFF tab was not found.');
+  }
+
+  const lastRow =
+    sheet.getLastRow();
+
+  const rows =
+    lastRow >= 2
+      ? sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues()
+      : [];
+
+  return rows
+    .filter(function(row) {
+      return String(row[1]).trim() !== '';
+    })
+    .map(function(row) {
+      return {
+        name: String(row[0]).trim(),
+        gmail: String(row[1]).trim().toLowerCase(),
+        active: String(row[2]).trim().toUpperCase() === 'YES'
+      };
+    });
 
 }
 
@@ -2878,7 +3446,7 @@ function getSessionsSheet() {
         'GMAIL',
         'STAFF NAME',
         'PHONE',
-        'SIGNED IN',
+        'REGISTERED',
         'ACTIVE (YES/NO)',
         'NOTE'
       ]])
@@ -2889,7 +3457,7 @@ function getSessionsSheet() {
     try {
 
       restrictProtectionToOwner(
-        sheet.protect().setDescription('Staff phone sign-ins — owner only')
+        sheet.protect().setDescription('Registered staff phones — owner only')
       );
 
     }

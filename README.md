@@ -43,17 +43,22 @@ Phones show **TAP TO UPDATE** within 5 minutes.
 3. Never use **New deployment** — it changes the web address and the scanner loses its connection.
 4. Bump `CONFIG.VERSION` in Code.gs so the scanner's settings panel shows the new server version.
 
-## Staff sign-in (server 3.0+)
+## Staff registration (server 3.1+)
 
-- Staff sign in on their own phone with their Gmail, then set a 4-digit PIN.
-- Only Gmails in the logbook's **STAFF** tab with **ACTIVE (YES/NO) = YES** can sign in.
-- Each phone gets its own key; only its fingerprint is stored, in the hidden `_STAFF_SESSIONS` tab.
+Each staff member registers **their own phone** with a personal **staff code**, then sets a 4-digit PIN.
+
+- **Codes live only in a private spreadsheet** in the owner's Drive: **SCANNER STAFF CODES (PRIVATE)**, never shared. They are never written into the logbook (staff can open the logbook).
+- Created once by running **`setupStaffCodes`** in the Apps Script editor. It also adds a code for every staff member and turns on the MAKE NEW CODE checkbox. Safe to run again.
+- **Codes don't expire.** Staff keep theirs like a password and use it again if they forget their PIN.
+- **Code leaked?** Tick **MAKE NEW CODE** on that row → a new code appears, and the phone registered with the old code is signed out. Hand them the new code.
+- **One phone per staff member:** registering a phone signs out their previous phone.
+- **New staff** in the logbook's STAFF tab get a code automatically the next time the private sheet is opened.
+- Only staff with **ACTIVE (YES/NO) = YES** in STAFF can register or scan. Set NO → their phone stops within 5 minutes.
+- Wrong codes: 5 per phone, then a 15-minute wait; 30 from all phones together pauses registration for 15 minutes.
+- Each phone gets its own random key; only its fingerprint is stored, in the hidden `_STAFF_SESSIONS` tab (set ACTIVE = NO there to sign out one phone).
 - Every scan writes `Name, gmail` into the tab's **BY (NAME, GMAIL)** column and into `_SCAN_LOG`.
-- The PIN is asked each time the scanner opens and after the phone was away 2+ minutes. 5 wrong PINs → sign in with Gmail again.
-- **Remove someone:** set ACTIVE = NO in STAFF (all their phones stop within 5 minutes).
-- **Remove one phone:** set ACTIVE = NO on its row in `_STAFF_SESSIONS`.
-- `CONFIG.GOOGLE_CLIENT_ID` in Code.gs must hold the OAuth Client ID (Web application, authorized JavaScript origin `https://pandphne.github.io`).
-- `CONFIG.REQUIRE_SIGN_IN: false` turns sign-in off again.
+- PIN asked each time the scanner opens and after the phone was away 2+ minutes. 5 wrong PINs → enter the staff code again.
+- `CONFIG.REQUIRE_SIGN_IN: false` turns registration off again.
 
 ## Safety features in the sheet
 
