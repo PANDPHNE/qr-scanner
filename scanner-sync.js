@@ -102,7 +102,22 @@ const SCANNER_SYNC_CONFIG = {
    * This keeps the queue orderly.
    */
   MAX_SIMULTANEOUS_UPLOADS:
-    1
+    1,
+
+
+  /*
+   * Most scans sent in one request.
+   */
+  MAX_BATCH_SIZE:
+    20,
+
+
+  /*
+   * Give up waiting for one request after this long
+   * (it is then retried; the server ignores duplicates).
+   */
+  REQUEST_TIMEOUT_MS:
+    30000
 
 };
 
@@ -1261,119 +1276,121 @@ function queueVerifiedScan(
 
 /************************************************************
  * ==========================================================
- * PROCESS QUEUE
+ * PROCESS QUEUE — BATCHES
  * ==========================================================
+ *
+ * Sends up to MAX_BATCH_SIZE scans per request (all going to
+ * the same sheet tab/columns). The server writes them in one
+ * go and answers per scan.
+ *
+ * IMPORTANT: after waiting for Google we NEVER save an old
+ * copy of the queue. Every update re-reads storage and only
+ * changes the scans in this batch, by scanId. (Saving an old
+ * copy erased scans made during the upload — the original
+ * "scanned but not saved" bug.)
+ *
  ************************************************************/
+
+let scannerSyncBatchSupported =
+  true;
+
+
+function sameScannerSyncDestination(a, b) {
+
+  return (
+    a.spreadsheetUrl === b.spreadsheetUrl &&
+    a.sheetName === b.sheetName &&
+    Number(a.itemCodeColumn) === Number(b.itemCodeColumn) &&
+    Boolean(a.timestampEnabled) === Boolean(b.timestampEnabled) &&
+    Number(a.timestampColumn || 0) === Number(b.timestampColumn || 0)
+  );
+
+}
+
 
 async function processScannerSyncQueue() {
 
-  /*
-   * Only one uploader is allowed.
-   */
-  if (
-    scannerSyncUploading
-  ) {
-
+  if (scannerSyncUploading) {
     return;
-
   }
 
-
-  scannerSyncUploading =
-    true;
-
+  scannerSyncUploading = true;
 
   try {
 
-    while (
-      true
-    ) {
+    while (true) {
 
-      const queue =
-        getScannerSyncQueue();
+      const queue = getScannerSyncQueue();
 
+      const first = queue.find(function(item) {
+        return item && item.status === 'queued';
+      });
 
-      /*
-       * Find the first pending item.
-       */
-      const index =
-        queue.findIndex(
-
-          function(item) {
-
-            return (
-              item &&
-              item.status ===
-                'queued'
-            );
-
-          }
-
-        );
-
-
-      /*
-       * Nothing left to upload.
-       */
-      if (
-        index === -1
-      ) {
-
+      if (!first) {
         break;
-
       }
 
-
-      const item =
-        queue[index];
-
-
       /*
-       * Mark as uploading.
+       * Pick this batch: queued scans with the same
+       * destination as the oldest one, in scan order.
        */
-      item.status =
-        'uploading';
+      const limit = scannerSyncBatchSupported
+        ? SCANNER_SYNC_CONFIG.MAX_BATCH_SIZE
+        : 1;
 
+      const batch = queue.filter(function(item) {
+        return (
+          item &&
+          item.status === 'queued' &&
+          sameScannerSyncDestination(item.destination, first.destination)
+        );
+      }).slice(0, limit);
 
-      saveScannerSyncQueue(
-        queue
-      );
+      const batchIds = {};
 
+      batch.forEach(function(item) {
+        item.status = 'uploading';
+        batchIds[item.scanId] = true;
+      });
+
+      /* Safe: no waiting between reading and saving here. */
+      saveScannerSyncQueue(queue);
 
       refreshScannerSyncStatus();
 
 
       /*
-       * IMPORTANT: from here on we NEVER save the old
-       * 'queue' copy. While we wait for Google, new scans
-       * are added to storage. Saving the old copy would
-       * erase them (this was the "scanned but not saved"
-       * bug). Every update re-reads the queue fresh and
-       * changes only this one scan, found by its scanId.
+       * SEND
        */
-      const scanId =
-        item.scanId;
-
-      let uploadError =
-        null;
+      let perScan = {};      // scanId → server result
+      let requestError = null;
 
       try {
 
-        const result =
-          await uploadScannerSyncItem(
-            item
+        if (scannerSyncBatchSupported) {
+
+          const response = await uploadScannerSyncBatch(
+            first.destination,
+            batch
           );
 
-        if (
-          !result ||
-          !result.success
-        ) {
+          (response.results || []).forEach(function(result) {
+            if (result && result.scanId) {
+              perScan[result.scanId] = result;
+            }
+          });
 
-          throw new Error(
-            result && result.error
-              ? result.error
-              : 'Google Sheets save failed.'
-          );
+        }
+
+        else {
+
+          const response = await uploadScannerSyncItem(batch[0]);
+
+          perScan[batch[0].scanId] = {
+            scanId: batch[0].scanId,
+            success: true,
+            row: response.row
+          };
 
         }
 
@@ -1381,125 +1398,154 @@ async function processScannerSyncQueue() {
 
       catch (error) {
 
-        uploadError =
-          String(
-            error && error.message
-              ? error.message
-              : error
+        requestError = String(
+          error && error.message ? error.message : error
+        );
+
+        /*
+         * Server not updated yet → it doesn't know the batch
+         * action. Switch to one-by-one and try again at once.
+         */
+        if (
+          scannerSyncBatchSupported &&
+          /unknown get action/i.test(requestError)
+        ) {
+
+          console.warn(
+            'SCANNER SYNC: server has no batch save yet — sending one by one.'
           );
+
+          scannerSyncBatchSupported = false;
+
+          const resetQueue = getScannerSyncQueue();
+
+          resetQueue.forEach(function(item) {
+            if (item && batchIds[item.scanId]) {
+              item.status = 'queued';
+            }
+          });
+
+          saveScannerSyncQueue(resetQueue);
+
+          continue;
+
+        }
 
       }
 
 
-      const freshQueue =
-        getScannerSyncQueue();
+      /*
+       * APPLY RESULTS to a FRESH copy of the queue.
+       */
+      const freshQueue = getScannerSyncQueue();
 
-      const freshIndex =
-        freshQueue.findIndex(
-          function(entry) {
-            return entry && entry.scanId === scanId;
-          }
-        );
+      const savedNow = [];
+      const failedNow = [];
 
+      const keep = freshQueue.filter(function(item) {
 
-      if (uploadError === null) {
-
-        /*
-         * SUCCESS — remove only this scan.
-         */
-        if (freshIndex !== -1) {
-          freshQueue.splice(freshIndex, 1);
+        if (!item || !batchIds[item.scanId]) {
+          return true;  // not in this batch — untouched
         }
 
-        saveScannerSyncQueue(
-          freshQueue
-        );
+        const result = perScan[item.scanId];
+
+        if (!requestError && result && result.success) {
+
+          savedNow.push(item);
+          return false; // saved → leave the queue
+
+        }
+
+        item.status = 'queued';
+        item.retries = Number(item.retries || 0) + 1;
+        item.lastError = requestError ||
+          (result && result.error) ||
+          'No answer for this scan.';
+
+        failedNow.push(item);
+
+        return true;
+
+      });
+
+      saveScannerSyncQueue(keep);
+
+
+      savedNow.forEach(function(item) {
 
         incrementScannerSyncSavedCount();
 
+        /*
+         * Fired ONLY after Apps Script confirmed the row is
+         * written. The scanner plays the success sound on this.
+         */
+        emitScannerSyncEvent('saved', {
+          scanId: item.scanId,
+          itemCode: item.itemCode
+        });
+
+      });
+
+      if (savedNow.length) {
+
         setScannerSyncMessage(
-          item.itemCode + ' — Saved ✓',
+          savedNow.length === 1
+            ? savedNow[0].itemCode + ' — Saved ✓'
+            : savedNow.length + ' scans saved ✓',
           'saved'
         );
 
-        /*
-         * Fired ONLY after Apps Script answered success.
-         * The scanner plays the success sound on this.
-         */
-        emitScannerSyncEvent(
-          'saved',
-          { scanId: scanId, itemCode: item.itemCode }
-        );
-
-        refreshScannerSyncStatus();
-
       }
 
-      else {
 
-        /*
-         * FAILURE — keep it, mark for retry.
-         */
-        let retries =
-          Number(item.retries || 0) + 1;
-
-        if (freshIndex !== -1) {
-
-          freshQueue[freshIndex].status = 'queued';
-          freshQueue[freshIndex].retries = retries;
-          freshQueue[freshIndex].lastError = uploadError;
-
-        }
-
-        saveScannerSyncQueue(
-          freshQueue
-        );
+      failedNow.forEach(function(item) {
 
         console.error(
           'SCANNER SYNC UPLOAD ERROR:',
-          uploadError
+          item.itemCode,
+          item.lastError
         );
+
+        emitScannerSyncEvent('retry', {
+          scanId: item.scanId,
+          itemCode: item.itemCode,
+          retries: item.retries,
+          error: item.lastError
+        });
+
+      });
+
+      refreshScannerSyncStatus();
+
+
+      if (failedNow.length) {
 
         setScannerSyncMessage(
-          item.itemCode + ' — Not saved yet, retrying…',
+          failedNow.length === 1
+            ? failedNow[0].itemCode + ' — Not saved yet, retrying…'
+            : failedNow.length + ' scans not saved yet, retrying…',
           'error'
         );
-
-        emitScannerSyncEvent(
-          'retry',
-          {
-            scanId: scanId,
-            itemCode: item.itemCode,
-            retries: retries,
-            error: uploadError
-          }
-        );
-
-        refreshScannerSyncStatus();
 
         /*
          * Retry by itself: 2s, 4s, 8s ... up to 30s.
          */
+        const retries = Math.max.apply(
+          null,
+          failedNow.map(function(item) { return item.retries; })
+        );
+
         scheduleScannerSyncRetry(
-          Math.min(
-            30000,
-            2000 * Math.pow(2, Math.min(retries - 1, 4))
-          )
+          Math.min(30000, 2000 * Math.pow(2, Math.min(retries - 1, 4)))
         );
 
         break;
 
       }
 
-
-      /*
-       * Small pause between uploads.
-       */
       await scannerSyncDelay(
-
-        SCANNER_SYNC_CONFIG
-          .UPLOAD_DELAY_MS
-
+        SCANNER_SYNC_CONFIG.UPLOAD_DELAY_MS
       );
 
     }
@@ -1508,9 +1554,7 @@ async function processScannerSyncQueue() {
 
   finally {
 
-    scannerSyncUploading =
-      false;
-
+    scannerSyncUploading = false;
 
     refreshScannerSyncStatus();
 
@@ -1521,344 +1565,167 @@ async function processScannerSyncQueue() {
 
 /************************************************************
  * ==========================================================
- * UPLOAD ONE QUEUED ITEM
+ * JSONP REQUEST
  * ==========================================================
- *
- * NOTE:
- *
- * The Apps Script JSONP save endpoint will be connected
- * in the next backend step.
- *
  ************************************************************/
 
+function scannerSyncJsonp(
+  params
+) {
+
+  return new Promise(function(resolve, reject) {
+
+    const callbackName =
+      'scannerSyncCallback_' +
+      Date.now() + '_' +
+      Math.floor(Math.random() * 100000);
+
+    const script =
+      document.createElement('script');
+
+    let finished = false;
+
+    function cleanup() {
+
+      if (script && script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+
+      try {
+        delete window[callbackName];
+      }
+
+      catch (error) {
+        window[callbackName] = undefined;
+      }
+
+    }
+
+    /*
+     * A slow request never blocks the scanner, and thanks to
+     * the server's duplicate guard a retry after a timeout
+     * can't write the same scan twice.
+     */
+    const timeout = setTimeout(function() {
+
+      if (finished) return;
+
+      finished = true;
+      cleanup();
+
+      reject(new Error('Apps Script request timed out.'));
+
+    }, SCANNER_SYNC_CONFIG.REQUEST_TIMEOUT_MS);
+
+    window[callbackName] = function(response) {
+
+      if (finished) return;
+
+      finished = true;
+      clearTimeout(timeout);
+      cleanup();
+
+      if (response && response.success) {
+        resolve(response);
+      }
+
+      else {
+        reject(new Error(
+          response && response.error
+            ? response.error
+            : 'Unknown save error.'
+        ));
+      }
+
+    };
+
+    params.set('callback', callbackName);
+
+    script.src =
+      SCANNER_SYNC_CONFIG.APPS_SCRIPT_URL + '?' + params.toString();
+
+    script.async = true;
+
+    script.onerror = function() {
+
+      if (finished) return;
+
+      finished = true;
+      clearTimeout(timeout);
+      cleanup();
+
+      reject(new Error('Could not contact Apps Script.'));
+
+    };
+
+    document.head.appendChild(script);
+
+  });
+
+}
+
+
+function addScannerSyncDestinationParams(
+  params,
+  destination
+) {
+
+  params.set('spreadsheetUrl', destination.spreadsheetUrl);
+  params.set('sheetName', destination.sheetName);
+  params.set('itemCodeColumn', String(destination.itemCodeColumn));
+  params.set('timestampEnabled', String(destination.timestampEnabled));
+
+  if (destination.timestampEnabled) {
+    params.set('timestampColumn', String(destination.timestampColumn));
+  }
+
+}
+
+
+/*
+ * Many scans, one request.
+ * items = [[scanId, itemCode, scannedAt], ...]
+ */
+function uploadScannerSyncBatch(
+  destination,
+  items
+) {
+
+  const params = new URLSearchParams();
+
+  params.set('action', 'saveQueuedScans');
+
+  addScannerSyncDestinationParams(params, destination);
+
+  params.set(
+    'items',
+    JSON.stringify(items.map(function(item) {
+      return [item.scanId, item.itemCode, item.queuedAt];
+    }))
+  );
+
+  return scannerSyncJsonp(params);
+
+}
+
+
+/*
+ * One scan (used if the server has no batch save yet).
+ */
 function uploadScannerSyncItem(
   item
 ) {
 
-  return new Promise(
+  const params = new URLSearchParams();
 
-    function(resolve, reject) {
+  params.set('action', 'saveQueuedScan');
+  params.set('scanId', item.scanId);
+  params.set('itemCode', item.itemCode);
+  params.set('scannedAt', item.queuedAt);
 
-      const callbackName =
+  addScannerSyncDestinationParams(params, item.destination);
 
-        'scannerSyncCallback_' +
-
-        Date.now() +
-
-        '_' +
-
-        Math.floor(
-          Math.random() * 100000
-        );
-
-
-      let script =
-        document.createElement(
-          'script'
-        );
-
-
-      let finished =
-        false;
-
-
-      /*
-       * Cleanup.
-       */
-      function cleanup() {
-
-        if (
-          script &&
-          script.parentNode
-        ) {
-
-          script.parentNode.removeChild(
-            script
-          );
-
-        }
-
-
-        try {
-
-          delete window[
-            callbackName
-          ];
-
-        }
-
-        catch (error) {
-
-          window[
-            callbackName
-          ] =
-            undefined;
-
-        }
-
-      }
-
-
-      /*
-       * Timeout.
-       *
-       * A slow request should NEVER block the scanner.
-       */
-      const timeout =
-        setTimeout(
-
-          function() {
-
-            if (
-              finished
-            ) {
-
-              return;
-
-            }
-
-
-            finished =
-              true;
-
-
-            cleanup();
-
-
-            reject(
-
-              new Error(
-                'Apps Script request timed out.'
-              )
-
-            );
-
-          },
-
-          15000
-
-        );
-
-
-      /*
-       * JSONP callback.
-       */
-      window[
-        callbackName
-      ] =
-
-        function(response) {
-
-          if (
-            finished
-          ) {
-
-            return;
-
-          }
-
-
-          finished =
-            true;
-
-
-          clearTimeout(
-            timeout
-          );
-
-
-          cleanup();
-
-
-          if (
-            response &&
-            response.success
-          ) {
-
-            resolve(
-              response
-            );
-
-          }
-
-          else {
-
-            reject(
-
-              new Error(
-
-                response &&
-                response.error
-
-                  ? response.error
-
-                  : 'Unknown save error.'
-
-              )
-
-            );
-
-          }
-
-        };
-
-
-      /*
-       * Build request.
-       */
-      const params =
-        new URLSearchParams();
-
-
-      params.set(
-        'action',
-        'saveQueuedScan'
-      );
-
-
-      params.set(
-        'callback',
-        callbackName
-      );
-
-
-      params.set(
-        'scanId',
-        item.scanId
-      );
-
-
-      params.set(
-        'itemCode',
-        item.itemCode
-      );
-
-
-      params.set(
-
-        'spreadsheetUrl',
-
-        item.destination
-          .spreadsheetUrl
-
-      );
-
-
-      params.set(
-
-        'sheetName',
-
-        item.destination
-          .sheetName
-
-      );
-
-
-      params.set(
-
-        'itemCodeColumn',
-
-        String(
-          item.destination
-            .itemCodeColumn
-        )
-
-      );
-
-
-      params.set(
-
-        'timestampEnabled',
-
-        String(
-          item.destination
-            .timestampEnabled
-        )
-
-      );
-
-
-      if (
-        item.destination
-          .timestampEnabled
-      ) {
-
-        params.set(
-
-          'timestampColumn',
-
-          String(
-            item.destination
-              .timestampColumn
-          )
-
-        );
-
-      }
-
-
-      /*
-       * Create JSONP request.
-       */
-      script.src =
-
-        SCANNER_SYNC_CONFIG
-          .APPS_SCRIPT_URL +
-
-        '?' +
-
-        params.toString();
-
-
-      script.async =
-        true;
-
-
-      script.onerror =
-
-        function() {
-
-          if (
-            finished
-          ) {
-
-            return;
-
-          }
-
-
-          finished =
-            true;
-
-
-          clearTimeout(
-            timeout
-          );
-
-
-          cleanup();
-
-
-          reject(
-
-            new Error(
-              'Could not contact Apps Script.'
-            )
-
-          );
-
-        };
-
-
-      document
-        .head
-        .appendChild(
-          script
-        );
-
-    }
-
-  );
+  return scannerSyncJsonp(params);
 
 }
 
