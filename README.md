@@ -43,6 +43,18 @@ Phones show **TAP TO UPDATE** within 5 minutes.
 3. Never use **New deployment** — it changes the web address and the scanner loses its connection.
 4. Bump `CONFIG.VERSION` in Code.gs so the scanner's settings panel shows the new server version.
 
+## Staff sign-in (server 3.0+)
+
+- Staff sign in on their own phone with their Gmail, then set a 4-digit PIN.
+- Only Gmails in the logbook's **STAFF** tab with **ACTIVE (YES/NO) = YES** can sign in.
+- Each phone gets its own key; only its fingerprint is stored, in the hidden `_STAFF_SESSIONS` tab.
+- Every scan writes `Name, gmail` into the tab's **BY (NAME, GMAIL)** column and into `_SCAN_LOG`.
+- The PIN is asked each time the scanner opens and after the phone was away 2+ minutes. 5 wrong PINs → sign in with Gmail again.
+- **Remove someone:** set ACTIVE = NO in STAFF (all their phones stop within 5 minutes).
+- **Remove one phone:** set ACTIVE = NO on its row in `_STAFF_SESSIONS`.
+- `CONFIG.GOOGLE_CLIENT_ID` in Code.gs must hold the OAuth Client ID (Web application, authorized JavaScript origin `https://pandphne.github.io`).
+- `CONFIG.REQUIRE_SIGN_IN: false` turns sign-in off again.
+
 ## Safety features in the sheet
 
 - `_SCAN_LOG` tab (hidden, protected): one line per saved scan — saved time, scan time, code, tab, row, scan ID, phone ID.

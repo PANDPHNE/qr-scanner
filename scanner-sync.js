@@ -1022,6 +1022,100 @@ function normalizeScannerSyncDestination(
 
 /************************************************************
  * ==========================================================
+ * STAFF SESSION (signed-in Gmail on this phone)
+ * ==========================================================
+ ************************************************************/
+
+const SCANNER_SESSION_KEY =
+  'qrScannerSessionV1';
+
+
+function getScannerSession() {
+
+  try {
+
+    const session =
+      JSON.parse(localStorage.getItem(SCANNER_SESSION_KEY) || 'null');
+
+    return session && session.sessionKey ? session : null;
+
+  }
+
+  catch (error) {
+
+    return null;
+
+  }
+
+}
+
+
+function setScannerSession(session) {
+
+  localStorage.setItem(
+    SCANNER_SESSION_KEY,
+    JSON.stringify({
+      sessionKey: session.sessionKey,
+      name: session.name,
+      gmail: session.gmail,
+      signedInAt: new Date().toISOString()
+    })
+  );
+
+}
+
+
+function clearScannerSession() {
+
+  try {
+    localStorage.removeItem(SCANNER_SESSION_KEY);
+  } catch (error) { /* ignore */ }
+
+}
+
+
+/*
+ * After signing in again (new key), unsaved scans waiting on
+ * this phone are sent with the new key so they don't get
+ * stuck. Only this phone's own queue is touched.
+ */
+function attachSessionToPendingScans(session) {
+
+  const queue =
+    getScannerSyncQueue();
+
+  let changed =
+    false;
+
+  queue.forEach(function(item) {
+
+    if (
+      item &&
+      (item.status === 'queued' || item.status === 'uploading') &&
+      (!item.staffGmail || item.staffGmail === session.gmail)
+    ) {
+
+      item.sessionKey = session.sessionKey;
+      item.staffName = session.name;
+      item.staffGmail = session.gmail;
+      item.status = 'queued';
+      changed = true;
+
+    }
+
+  });
+
+  if (changed) {
+    saveScannerSyncQueue(queue);
+  }
+
+  scheduleScannerSyncRetry(0);
+
+}
+
+
+/************************************************************
+ * ==========================================================
  * QUEUE VERIFIED SCAN
  * ==========================================================
  *
@@ -1124,6 +1218,35 @@ function queueVerifiedScan(
 
 
   /*
+   * Who is scanning. (The scanner page blocks scanning when
+   * no one is signed in; this is a second safety check.)
+   */
+  const session =
+    getScannerSession();
+
+  if (
+    !session &&
+    window.scannerSignInRequired === true
+  ) {
+
+    setScannerSyncMessage(
+      '⚠ Not signed in',
+      'error'
+    );
+
+    return {
+
+      success: false,
+
+      error:
+        'This phone is not signed in.'
+
+    };
+
+  }
+
+
+  /*
    * Create unique ID.
    */
   const scanId =
@@ -1164,6 +1287,15 @@ function queueVerifiedScan(
 
     queuedAt:
       new Date().toISOString(),
+
+    sessionKey:
+      session ? session.sessionKey : '',
+
+    staffName:
+      session ? session.name : '',
+
+    staffGmail:
+      session ? session.gmail : '',
 
     status:
       'queued',
@@ -1342,7 +1474,8 @@ async function processScannerSyncQueue() {
         return (
           item &&
           item.status === 'queued' &&
-          sameScannerSyncDestination(item.destination, first.destination)
+          sameScannerSyncDestination(item.destination, first.destination) &&
+          (item.sessionKey || '') === (first.sessionKey || '')
         );
       }).slice(0, limit);
 
@@ -1371,7 +1504,8 @@ async function processScannerSyncQueue() {
 
           const response = await uploadScannerSyncBatch(
             first.destination,
-            batch
+            batch,
+            first.sessionKey
           );
 
           if (response.serverVersion) {
@@ -1523,6 +1657,30 @@ async function processScannerSyncQueue() {
       });
 
       refreshScannerSyncStatus();
+
+
+      /*
+       * The server says this phone's sign-in is no longer
+       * valid → ask the person to sign in again. The scans
+       * stay on the phone and are sent after sign-in.
+       */
+      if (
+        requestError &&
+        /NOT_SIGNED_IN/.test(requestError)
+      ) {
+
+        emitScannerSyncEvent('signedout', {
+          error: requestError.replace(/^.*NOT_SIGNED_IN:\s*/, '')
+        });
+
+        setScannerSyncMessage(
+          'Sign in again to save ' + failedNow.length + ' scan(s)',
+          'error'
+        );
+
+        break;
+
+      }
 
 
       if (failedNow.length) {
@@ -1735,12 +1893,17 @@ function addScannerSyncDestinationParams(
  */
 function uploadScannerSyncBatch(
   destination,
-  items
+  items,
+  sessionKey
 ) {
 
   const params = new URLSearchParams();
 
   params.set('action', 'saveQueuedScans');
+
+  if (sessionKey) {
+    params.set('sessionKey', sessionKey);
+  }
 
   addScannerSyncDestinationParams(params, destination);
 
@@ -1766,6 +1929,11 @@ function uploadScannerSyncItem(
   const params = new URLSearchParams();
 
   params.set('action', 'saveQueuedScan');
+
+  if (item.sessionKey) {
+    params.set('sessionKey', item.sessionKey);
+  }
+
   params.set('scanId', item.scanId);
   params.set('itemCode', item.itemCode);
   params.set('scannedAt', item.queuedAt);

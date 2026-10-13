@@ -1,6 +1,6 @@
 /************************************************************
  * ==========================================================
- * QR CODE SCANNER — GOOGLE APPS SCRIPT BACKEND V2.1
+ * QR CODE SCANNER — GOOGLE APPS SCRIPT BACKEND V3
  * ==========================================================
  *
  * PURPOSE
@@ -29,6 +29,8 @@
  *   saved scan (code, times, tab, row, scanId, phone)
  * ✓ Scanner columns protected: only the owner (and this
  *   script) can edit or delete scanned rows
+ * ✓ Staff sign in with Gmail (checked against the STAFF
+ *   tab); every scan records who scanned it
  * ✓ Save every successful scan as a NEW ROW
  * ✓ Save with timestamp
  * ✓ Save without timestamp
@@ -57,7 +59,54 @@ const CONFIG = {
    * Server version — shown on the scanner's settings panel.
    */
   VERSION:
-    '2.1.0',
+    '3.0.0',
+
+
+  /*
+   * ── STAFF SIGN-IN ───────────────────────────────────────
+   *
+   * GOOGLE_CLIENT_ID: paste the "Client ID" from Google Cloud
+   * (ends with .apps.googleusercontent.com). The scanner
+   * reads it from here — it is not a secret.
+   */
+  GOOGLE_CLIENT_ID:
+    'PASTE-YOUR-CLIENT-ID-HERE.apps.googleusercontent.com',
+
+
+  /*
+   * Only Gmails listed in this tab with ACTIVE = YES can sign
+   * in. Columns: A STAFF NAME, B GMAIL, C ACTIVE (YES/NO).
+   */
+  STAFF_SPREADSHEET_ID:
+    '1YW50gqsr5eEQu5ouhn-tU_5SjqJJga4Enq_GQSIcgbk',
+
+  STAFF_SHEET_NAME:
+    'STAFF',
+
+
+  /*
+   * Hidden tab listing every signed-in phone. Set a row's
+   * ACTIVE to NO to sign that one phone out.
+   */
+  SESSIONS_SHEET_NAME:
+    '_STAFF_SESSIONS',
+
+
+  /*
+   * true  = scans are only saved from a signed-in staff phone
+   * false = scans without sign-in are still accepted
+   */
+  REQUIRE_SIGN_IN:
+    true,
+
+
+  /*
+   * The scanner writes "Name, gmail" into the column whose
+   * header starts with this text (e.g. "BY (NAME, GMAIL)"),
+   * if the tab has one.
+   */
+  BY_HEADER_PREFIX:
+    'BY',
 
 
   /*
@@ -199,6 +248,12 @@ function doGet(e) {
         version:
           CONFIG.VERSION,
 
+        googleClientId:
+          CONFIG.GOOGLE_CLIENT_ID,
+
+        signInRequired:
+          CONFIG.REQUIRE_SIGN_IN,
+
         timestamp:
           new Date().toISOString()
 
@@ -207,6 +262,64 @@ function doGet(e) {
 
       return responseForRequest(
         result,
+        callback
+      );
+
+    }
+
+
+    /******************************************************
+     * STAFF SIGN-IN (Google ID token → phone key)
+     ******************************************************/
+
+    if (
+      action === 'signin'
+    ) {
+
+      return responseForRequest(
+        signInResponse(
+          params.idToken,
+          params.deviceId
+        ),
+        callback
+      );
+
+    }
+
+
+    /******************************************************
+     * SIGN OUT (switch off this phone's key)
+     ******************************************************/
+
+    if (
+      action === 'signout'
+    ) {
+
+      return responseForRequest(
+        signOutResponse(params.sessionKey),
+        callback
+      );
+
+    }
+
+
+    /******************************************************
+     * WHO AM I (is this phone key still valid?)
+     ******************************************************/
+
+    if (
+      action === 'whoami'
+    ) {
+
+      const staff =
+        resolveSession(params.sessionKey);
+
+      return responseForRequest(
+        {
+          success: true,
+          name: staff.name,
+          gmail: staff.gmail
+        },
         callback
       );
 
@@ -342,7 +455,13 @@ if (
         params.timestampEnabled,
 
       timestampColumn:
-        params.timestampColumn
+        params.timestampColumn,
+
+      deviceId:
+        params.deviceId,
+
+      sessionKey:
+        params.sessionKey
 
     });
 
@@ -393,7 +512,8 @@ if (
             itemCodeColumn: params.itemCodeColumn,
             timestampEnabled: params.timestampEnabled,
             timestampColumn: params.timestampColumn,
-            deviceId: params.deviceId
+            deviceId: params.deviceId,
+            sessionKey: params.sessionKey
           },
           (Array.isArray(items) ? items : []).map(
             function(entry) {
@@ -1860,6 +1980,28 @@ function saveScansCore(
     String(destination.deviceId || '').trim().substring(0, 60);
 
 
+  /*
+   * WHO IS SCANNING — from the phone's sign-in key.
+   */
+  let staff =
+    null;
+
+  if (destination.sessionKey) {
+
+    staff =
+      resolveSession(destination.sessionKey, deviceId);
+
+  }
+
+  else if (CONFIG.REQUIRE_SIGN_IN) {
+
+    throw new Error(
+      'NOT_SIGNED_IN: This phone is not signed in. Sign in with your Gmail.'
+    );
+
+  }
+
+
   if (!spreadsheetUrl) {
     throw new Error('spreadsheetUrl is required.');
   }
@@ -2130,6 +2272,35 @@ function saveScansCore(
 
 
       /**************************************************
+       * BY (NAME, GMAIL) — if the tab has that column
+       **************************************************/
+
+      const byColumn =
+        staff
+          ? findByColumn(sheet)
+          : 0;
+
+      if (
+        byColumn &&
+        byColumn !== itemCodeColumn &&
+        byColumn !== timestampColumn
+      ) {
+
+        const byText =
+          staff.name + ', ' + staff.gmail;
+
+        sheet
+          .getRange(firstRow, byColumn, count, 1)
+          .setValues(
+            toWrite.map(function() {
+              return [byText];
+            })
+          );
+
+      }
+
+
+      /**************************************************
        * SCAN LOG + PROTECTION
        *
        * Never allowed to fail the save itself — the rows
@@ -2152,7 +2323,9 @@ function saveScansCore(
               firstRow + index,
               result.scanId,
               deviceId,
-              CONFIG.VERSION
+              CONFIG.VERSION,
+              staff ? staff.name : '',
+              staff ? staff.gmail : ''
             ];
           })
         );
@@ -2167,12 +2340,22 @@ function saveScansCore(
 
       try {
 
+        const protectColumns =
+          timestampEnabled
+            ? [itemCodeColumn, timestampColumn]
+            : [itemCodeColumn];
+
+        if (
+          byColumn &&
+          protectColumns.indexOf(byColumn) === -1
+        ) {
+          protectColumns.push(byColumn);
+        }
+
         ensureScannerColumnsProtected(
           spreadsheetId,
           sheet,
-          timestampEnabled
-            ? [itemCodeColumn, timestampColumn]
-            : [itemCodeColumn],
+          protectColumns,
           cache
         );
 
@@ -2268,6 +2451,8 @@ function saveScansCore(
 
     sheetName: sheet.getName(),
 
+    staffName: staff ? staff.name : '',
+
     results: results
 
   };
@@ -2275,6 +2460,492 @@ function saveScansCore(
 }
 
 
+
+
+/************************************************************
+ * ==========================================================
+ * STAFF SIGN-IN
+ * ==========================================================
+ *
+ * 1. The phone signs in with Google and sends us Google's
+ *    ID token.
+ * 2. We ask Google to confirm the token is genuine, was made
+ *    for OUR app (Client ID), and the Gmail is verified.
+ * 3. The Gmail must be in the STAFF tab with ACTIVE = YES.
+ * 4. We create a long random key for that phone, store only
+ *    its fingerprint (hash) in _STAFF_SESSIONS, and give the
+ *    key to the phone. Every scan sends that key.
+ *
+ * Remove access: set ACTIVE = NO in STAFF (all their phones)
+ * or ACTIVE (column F) = NO on a row in _STAFF_SESSIONS
+ * (one phone).
+ *
+ ************************************************************/
+
+function signInResponse(
+  idToken,
+  deviceId
+) {
+
+  if (/PASTE-YOUR-CLIENT-ID/.test(CONFIG.GOOGLE_CLIENT_ID)) {
+    throw new Error(
+      'Sign-in is not set up yet: paste the Google Client ID into CONFIG.GOOGLE_CLIENT_ID.'
+    );
+  }
+
+  const token =
+    String(idToken || '').trim();
+
+  if (!token) {
+    throw new Error('No Google sign-in was received.');
+  }
+
+  /*
+   * Ask Google to verify the token.
+   */
+  const response =
+    UrlFetchApp.fetch(
+      'https://oauth2.googleapis.com/tokeninfo?id_token=' +
+        encodeURIComponent(token),
+      { muteHttpExceptions: true }
+    );
+
+  if (response.getResponseCode() !== 200) {
+    throw new Error('Google could not confirm this sign-in. Please try again.');
+  }
+
+  const info =
+    JSON.parse(response.getContentText());
+
+  if (info.aud !== CONFIG.GOOGLE_CLIENT_ID) {
+    throw new Error('This sign-in was not made for the scanner.');
+  }
+
+  if (
+    info.iss !== 'accounts.google.com' &&
+    info.iss !== 'https://accounts.google.com'
+  ) {
+    throw new Error('Sign-in did not come from Google.');
+  }
+
+  if (String(info.email_verified) !== 'true') {
+    throw new Error('This Gmail address is not verified by Google.');
+  }
+
+  if (Number(info.exp) * 1000 < Date.now()) {
+    throw new Error('Sign-in expired. Please sign in again.');
+  }
+
+  const gmail =
+    String(info.email || '').trim().toLowerCase();
+
+
+  /*
+   * Must be active staff.
+   */
+  const member =
+    getStaffByGmail(gmail, true);
+
+  if (!member) {
+    throw new Error(
+      gmail + ' is not on the STAFF list (or ACTIVE is not YES). Ask the owner to add you.'
+    );
+  }
+
+
+  /*
+   * New key for this phone.
+   */
+  const sessionKey =
+    Utilities.getUuid().replace(/-/g, '') +
+    Utilities.getUuid().replace(/-/g, '');
+
+  const sessions =
+    getSessionsSheet();
+
+  const lock =
+    LockService.getScriptLock();
+
+  lock.waitLock(30000);
+
+  try {
+
+    sessions.appendRow([
+      hashSessionKey(sessionKey),
+      gmail,
+      member.name,
+      String(deviceId || '').substring(0, 60),
+      new Date(),
+      'YES',
+      ''
+    ]);
+
+  }
+
+  finally {
+
+    lock.releaseLock();
+
+  }
+
+  return {
+
+    success: true,
+
+    sessionKey: sessionKey,
+
+    name: member.name,
+
+    gmail: gmail
+
+  };
+
+}
+
+
+function signOutResponse(
+  sessionKey
+) {
+
+  const key =
+    String(sessionKey || '').trim();
+
+  if (!key) {
+    return { success: true };
+  }
+
+  const hash =
+    hashSessionKey(key);
+
+  const sheet =
+    getSessionsSheet();
+
+  const lock =
+    LockService.getScriptLock();
+
+  lock.waitLock(30000);
+
+  try {
+
+    const lastRow =
+      sheet.getLastRow();
+
+    if (lastRow >= 2) {
+
+      const hashes =
+        sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+
+      for (let i = 0; i < hashes.length; i++) {
+
+        if (hashes[i][0] === hash) {
+
+          sheet.getRange(i + 2, 6, 1, 2).setValues([['NO', 'Signed out on the phone']]);
+
+        }
+
+      }
+
+    }
+
+  }
+
+  finally {
+
+    lock.releaseLock();
+
+  }
+
+  CacheService.getScriptCache().remove('session:' + hash);
+
+  return { success: true };
+
+}
+
+
+/*
+ * Phone key → { name, gmail }. Throws NOT_SIGNED_IN if the
+ * key is unknown, switched off, or the staff member is no
+ * longer active.
+ */
+function resolveSession(
+  sessionKey,
+  deviceId
+) {
+
+  const key =
+    String(sessionKey || '').trim();
+
+  if (!key) {
+    throw new Error('NOT_SIGNED_IN: This phone is not signed in.');
+  }
+
+  const hash =
+    hashSessionKey(key);
+
+  const cache =
+    CacheService.getScriptCache();
+
+  const cacheKey =
+    'session:' + hash;
+
+  let session =
+    null;
+
+  const cached =
+    cache.get(cacheKey);
+
+  if (cached) {
+
+    session = JSON.parse(cached);
+
+  }
+
+  else {
+
+    const sheet =
+      getSessionsSheet();
+
+    const lastRow =
+      sheet.getLastRow();
+
+    if (lastRow >= 2) {
+
+      const rows =
+        sheet.getRange(2, 1, lastRow - 1, 7).getValues();
+
+      for (let i = rows.length - 1; i >= 0; i--) {
+
+        if (rows[i][0] === hash) {
+
+          session = {
+            gmail: String(rows[i][1]).toLowerCase(),
+            active: String(rows[i][5]).trim().toUpperCase() === 'YES'
+          };
+
+          break;
+
+        }
+
+      }
+
+    }
+
+    if (session) {
+      /* Short cache, so switching a phone off works within 5 min. */
+      cache.put(cacheKey, JSON.stringify(session), 300);
+    }
+
+  }
+
+  if (!session || !session.active) {
+    throw new Error(
+      'NOT_SIGNED_IN: This phone was signed out. Sign in with your Gmail again.'
+    );
+  }
+
+  const member =
+    getStaffByGmail(session.gmail, true);
+
+  if (!member) {
+    throw new Error(
+      'NOT_SIGNED_IN: ' + session.gmail + ' is no longer active on the STAFF list.'
+    );
+  }
+
+  return {
+    name: member.name,
+    gmail: session.gmail
+  };
+
+}
+
+
+/*
+ * Read the STAFF tab (cached 5 minutes).
+ */
+function getStaffByGmail(
+  gmail,
+  activeOnly
+) {
+
+  const cache =
+    CacheService.getScriptCache();
+
+  let list =
+    null;
+
+  const cached =
+    cache.get('staff-list');
+
+  if (cached) {
+
+    list = JSON.parse(cached);
+
+  }
+
+  else {
+
+    const sheet =
+      SpreadsheetApp
+        .openById(CONFIG.STAFF_SPREADSHEET_ID)
+        .getSheetByName(CONFIG.STAFF_SHEET_NAME);
+
+    if (!sheet) {
+      throw new Error('The STAFF tab was not found.');
+    }
+
+    const lastRow =
+      sheet.getLastRow();
+
+    const rows =
+      lastRow >= 2
+        ? sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues()
+        : [];
+
+    list =
+      rows
+        .filter(function(row) {
+          return String(row[1]).trim() !== '';
+        })
+        .map(function(row) {
+          return {
+            name: String(row[0]).trim(),
+            gmail: String(row[1]).trim().toLowerCase(),
+            active: String(row[2]).trim().toUpperCase() === 'YES'
+          };
+        });
+
+    cache.put('staff-list', JSON.stringify(list), 300);
+
+  }
+
+  const target =
+    String(gmail || '').trim().toLowerCase();
+
+  const member =
+    list.find(function(item) {
+      return item.gmail === target;
+    });
+
+  if (!member) {
+    return null;
+  }
+
+  if (activeOnly && !member.active) {
+    return null;
+  }
+
+  return member;
+
+}
+
+
+function hashSessionKey(
+  key
+) {
+
+  return Utilities
+    .computeDigest(
+      Utilities.DigestAlgorithm.SHA_256,
+      String(key),
+      Utilities.Charset.UTF_8
+    )
+    .map(function(byte) {
+      return ('0' + (byte & 0xff).toString(16)).slice(-2);
+    })
+    .join('');
+
+}
+
+
+function getSessionsSheet() {
+
+  const spreadsheet =
+    SpreadsheetApp.openById(CONFIG.STAFF_SPREADSHEET_ID);
+
+  let sheet =
+    spreadsheet.getSheetByName(CONFIG.SESSIONS_SHEET_NAME);
+
+  if (!sheet) {
+
+    sheet =
+      spreadsheet.insertSheet(CONFIG.SESSIONS_SHEET_NAME);
+
+    sheet
+      .getRange(1, 1, 1, 7)
+      .setValues([[
+        'KEY FINGERPRINT (not the key)',
+        'GMAIL',
+        'STAFF NAME',
+        'PHONE',
+        'SIGNED IN',
+        'ACTIVE (YES/NO)',
+        'NOTE'
+      ]])
+      .setFontWeight('bold');
+
+    sheet.setFrozenRows(1);
+
+    try {
+
+      restrictProtectionToOwner(
+        sheet.protect().setDescription('Staff phone sign-ins — owner only')
+      );
+
+    }
+
+    catch (error) {
+
+      console.error('Sessions protection error: ' + error);
+
+    }
+
+    sheet.hideSheet();
+
+  }
+
+  return sheet;
+
+}
+
+
+/*
+ * Column whose header starts with "BY" (e.g. "BY (NAME, GMAIL)").
+ * Returns 0 if the tab has none.
+ */
+function findByColumn(
+  sheet
+) {
+
+  const lastColumn =
+    Math.max(sheet.getLastColumn(), 1);
+
+  const headers =
+    sheet
+      .getRange(CONFIG.HEADER_ROW, 1, 1, lastColumn)
+      .getDisplayValues()[0];
+
+  const prefix =
+    CONFIG.BY_HEADER_PREFIX.toUpperCase();
+
+  for (let i = 0; i < headers.length; i++) {
+
+    const header =
+      String(headers[i]).trim().toUpperCase();
+
+    if (
+      header === prefix ||
+      header.indexOf(prefix + ' ') === 0 ||
+      header.indexOf(prefix + '(') === 0
+    ) {
+      return i + 1;
+    }
+
+  }
+
+  return 0;
+
+}
 
 /************************************************************
  * ==========================================================
@@ -2287,6 +2958,20 @@ function saveScansCore(
  * log still shows every scan: what, when, where, which phone.
  *
  ************************************************************/
+
+const SCAN_LOG_HEADERS = [
+  'SAVED AT',
+  'SCANNED AT',
+  'ITEM CODE',
+  'TAB',
+  'ROW',
+  'SCAN ID',
+  'PHONE',
+  'SERVER VERSION',
+  'STAFF NAME',
+  'STAFF GMAIL'
+];
+
 
 function appendToScanLog(
   spreadsheet,
@@ -2306,17 +2991,8 @@ function appendToScanLog(
       spreadsheet.insertSheet(CONFIG.SCAN_LOG_SHEET_NAME);
 
     log
-      .getRange(1, 1, 1, 8)
-      .setValues([[
-        'SAVED AT',
-        'SCANNED AT',
-        'ITEM CODE',
-        'TAB',
-        'ROW',
-        'SCAN ID',
-        'PHONE',
-        'SERVER VERSION'
-      ]])
+      .getRange(1, 1, 1, SCAN_LOG_HEADERS.length)
+      .setValues([SCAN_LOG_HEADERS])
       .setFontWeight('bold');
 
     log.setFrozenRows(1);
@@ -2343,6 +3019,23 @@ function appendToScanLog(
     }
 
     log.hideSheet();
+
+  }
+
+  /* Logs made by version 2.1 have 8 columns — add the rest. */
+  if (log.getRange(1, SCAN_LOG_HEADERS.length).getValue() === '') {
+
+    if (log.getMaxColumns() < SCAN_LOG_HEADERS.length) {
+      log.insertColumnsAfter(
+        log.getMaxColumns(),
+        SCAN_LOG_HEADERS.length - log.getMaxColumns()
+      );
+    }
+
+    log
+      .getRange(1, 1, 1, SCAN_LOG_HEADERS.length)
+      .setValues([SCAN_LOG_HEADERS])
+      .setFontWeight('bold');
 
   }
 
