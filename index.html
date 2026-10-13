@@ -3267,6 +3267,12 @@ function handleInventoryItem(
     );
 
 
+    showNotQueuedError(
+      itemCode,
+      result && result.error
+    );
+
+
   }
 
   catch(error) {
@@ -3289,6 +3295,54 @@ function handleInventoryItem(
     );
 
 
+    showNotQueuedError(
+      itemCode,
+      error && error.message
+    );
+
+
+  }
+
+}
+
+
+/* ==========================================================
+   NOT QUEUED — MAKE IT OBVIOUS
+   ========================================================== */
+
+function showNotQueuedError(
+  itemCode,
+  reason
+) {
+
+  const badge =
+    document.getElementById("resultBadge");
+
+  badge.textContent =
+    "✗ NOT SAVED";
+
+  badge.classList.remove("detected");
+
+  badge.style.background =
+    "#4a1212";
+
+  badge.style.color =
+    "#ff7070";
+
+  document
+    .getElementById("verification")
+    .textContent =
+    "✗ " + itemCode + " was NOT saved. " +
+    (reason || "") +
+    " Scan it again.";
+
+  setCameraStatus(
+    "✗ NOT SAVED — " + itemCode,
+    "error"
+  );
+
+  if (navigator.vibrate) {
+    navigator.vibrate([200, 100, 200]);
   }
 
 }
@@ -3572,6 +3626,25 @@ function loadScannerNavigationDestination() {
    ========================================================== */
 
 function goBackToSetup() {
+
+  const pending =
+    typeof getScannerSyncPendingCount === "function"
+      ? getScannerSyncPendingCount()
+      : 0;
+
+  if (
+    pending > 0 &&
+    !confirm(
+      pending +
+      " scan(s) are not saved yet. They will keep trying " +
+      "when you come back to the scanner. Leave anyway?"
+    )
+  ) {
+    return;
+  }
+
+  /* Already confirmed — skip the browser's second prompt. */
+  window.scannerSyncLeaveConfirmed = true;
 
   window.location.href =
     "setup.html";

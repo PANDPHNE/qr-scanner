@@ -127,7 +127,52 @@ function initializeScannerSync() {
 
   createScannerSyncStatusBar();
 
+  /*
+   * RECOVER STUCK SCANS.
+   *
+   * If the page was closed, refreshed, or left (BACK TO SETUP)
+   * while a scan was uploading, it stayed marked 'uploading'
+   * forever and was never sent again. Put those back in line.
+   */
+  recoverStuckScannerSyncItems();
+
   refreshScannerSyncStatus();
+
+  /*
+   * Retry automatically when the connection comes back or
+   * when the phone screen / tab becomes active again.
+   */
+  window.addEventListener(
+    'online',
+    function() {
+      scheduleScannerSyncRetry(0);
+    }
+  );
+
+  document.addEventListener(
+    'visibilitychange',
+    function() {
+      if (document.visibilityState === 'visible') {
+        scheduleScannerSyncRetry(0);
+      }
+    }
+  );
+
+  /*
+   * Warn before leaving the page while scans are unsaved.
+   */
+  window.addEventListener(
+    'beforeunload',
+    function(event) {
+      if (
+        !window.scannerSyncLeaveConfirmed &&
+        getScannerSyncPendingCount() > 0
+      ) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    }
+  );
 
   /*
    * Begin background processing.
@@ -396,15 +441,106 @@ function saveScannerSyncQueue(
   queue
 ) {
 
-  localStorage.setItem(
+  try {
 
-    SCANNER_SYNC_CONFIG.QUEUE_STORAGE_KEY,
+    localStorage.setItem(
 
-    JSON.stringify(
-      queue
-    )
+      SCANNER_SYNC_CONFIG.QUEUE_STORAGE_KEY,
 
+      JSON.stringify(
+        queue
+      )
+
+    );
+
+    return true;
+
+  }
+
+  catch (error) {
+
+    console.error(
+      'SCANNER SYNC QUEUE WRITE ERROR:',
+      error
+    );
+
+    setScannerSyncMessage(
+      '⚠ PHONE STORAGE ERROR — scan not kept',
+      'error'
+    );
+
+    return false;
+
+  }
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * RECOVERY + RETRY HELPERS
+ * ==========================================================
+ ************************************************************/
+
+let scannerSyncRetryTimer =
+  null;
+
+
+function recoverStuckScannerSyncItems() {
+
+  const queue =
+    getScannerSyncQueue();
+
+  let changed =
+    false;
+
+  queue.forEach(
+    function(item) {
+      if (item && item.status === 'uploading') {
+        item.status = 'queued';
+        changed = true;
+      }
+    }
   );
+
+  if (changed) {
+    console.warn('SCANNER SYNC: recovered stuck uploads.');
+    saveScannerSyncQueue(queue);
+  }
+
+}
+
+
+function scheduleScannerSyncRetry(
+  delayMs
+) {
+
+  if (scannerSyncRetryTimer) {
+    clearTimeout(scannerSyncRetryTimer);
+  }
+
+  scannerSyncRetryTimer =
+    setTimeout(
+      function() {
+        scannerSyncRetryTimer = null;
+        processScannerSyncQueue();
+      },
+      delayMs
+    );
+
+}
+
+
+function getScannerSyncPendingCount() {
+
+  return getScannerSyncQueue().filter(
+    function(item) {
+      return (
+        item &&
+        (item.status === 'queued' || item.status === 'uploading')
+      );
+    }
+  ).length;
 
 }
 
@@ -1004,11 +1140,25 @@ function queueVerifiedScan(
 
 
   /*
-   * Save immediately.
+   * Save immediately. If the phone could not store it,
+   * tell the scanner so it does NOT look like a success.
    */
-  saveScannerSyncQueue(
-    queue
-  );
+  if (
+    !saveScannerSyncQueue(
+      queue
+    )
+  ) {
+
+    return {
+
+      success: false,
+
+      error:
+        'Could not store the scan on this phone.'
+
+    };
+
+  }
 
 
   /*
@@ -1149,64 +1299,36 @@ async function processScannerSyncQueue() {
       refreshScannerSyncStatus();
 
 
+      /*
+       * IMPORTANT: from here on we NEVER save the old
+       * 'queue' copy. While we wait for Google, new scans
+       * are added to storage. Saving the old copy would
+       * erase them (this was the "scanned but not saved"
+       * bug). Every update re-reads the queue fresh and
+       * changes only this one scan, found by its scanId.
+       */
+      const scanId =
+        item.scanId;
+
+      let uploadError =
+        null;
+
       try {
 
-        /*
-         * Upload ONE item.
-         *
-         * This function currently uses the Apps Script
-         * JSONP bridge.
-         */
         const result =
           await uploadScannerSyncItem(
             item
           );
 
-
-        /*
-         * SUCCESS
-         */
         if (
-          result &&
-          result.success
+          !result ||
+          !result.success
         ) {
 
-          item.status =
-            'saved';
-
-          incrementScannerSyncSavedCount();
-
-
-          item.savedAt =
-            new Date().toISOString();
-
-
-          item.serverResult =
-            result;
-
-
-          setScannerSyncMessage(
-
-            item.itemCode +
-            ' — Saved',
-
-            'saved'
-
-          );
-
-        }
-
-        else {
-
           throw new Error(
-
-            result &&
-            result.error
-
+            result && result.error
               ? result.error
-
               : 'Google Sheets save failed.'
-
           );
 
         }
@@ -1215,93 +1337,96 @@ async function processScannerSyncQueue() {
 
       catch (error) {
 
-        item.status =
-          'queued';
-
-
-        item.retries =
-          Number(
-            item.retries || 0
-          ) + 1;
-
-
-        item.lastError =
+        uploadError =
           String(
-            error &&
-            error.message
+            error && error.message
               ? error.message
               : error
           );
 
+      }
 
-        console.error(
-          'SCANNER SYNC UPLOAD ERROR:',
-          item.lastError
+
+      const freshQueue =
+        getScannerSyncQueue();
+
+      const freshIndex =
+        freshQueue.findIndex(
+          function(entry) {
+            return entry && entry.scanId === scanId;
+          }
         );
 
 
-        /*
-         * Don't delete it.
-         *
-         * It remains in the queue and can retry later.
-         */
-        setScannerSyncMessage(
-
-          item.itemCode +
-          ' — Waiting to retry',
-
-          'error'
-
-        );
-
+      if (uploadError === null) {
 
         /*
-         * Save the failed state.
+         * SUCCESS — remove only this scan.
          */
+        if (freshIndex !== -1) {
+          freshQueue.splice(freshIndex, 1);
+        }
+
         saveScannerSyncQueue(
-          queue
+          freshQueue
         );
 
+        incrementScannerSyncSavedCount();
+
+        setScannerSyncMessage(
+          item.itemCode + ' — Saved ✓',
+          'saved'
+        );
 
         refreshScannerSyncStatus();
 
+      }
+
+      else {
 
         /*
-         * Stop this cycle.
-         *
-         * This prevents a temporary network/backend
-         * problem from creating a tight retry loop.
+         * FAILURE — keep it, mark for retry.
          */
+        let retries =
+          Number(item.retries || 0) + 1;
+
+        if (freshIndex !== -1) {
+
+          freshQueue[freshIndex].status = 'queued';
+          freshQueue[freshIndex].retries = retries;
+          freshQueue[freshIndex].lastError = uploadError;
+
+        }
+
+        saveScannerSyncQueue(
+          freshQueue
+        );
+
+        console.error(
+          'SCANNER SYNC UPLOAD ERROR:',
+          uploadError
+        );
+
+        setScannerSyncMessage(
+          item.itemCode + ' — Not saved yet, retrying…',
+          'error'
+        );
+
+        refreshScannerSyncStatus();
+
+        /*
+         * Retry by itself: 2s, 4s, 8s ... up to 30s.
+         */
+        scheduleScannerSyncRetry(
+          Math.min(
+            30000,
+            2000 * Math.pow(2, Math.min(retries - 1, 4))
+          )
+        );
+
         break;
 
       }
-
-
-      /*
-       * Remove successfully saved item from the
-       * active queue.
-       *
-       * We keep the queue small.
-       */
-      if (
-        item.status ===
-        'saved'
-      ) {
-
-        queue.splice(
-          index,
-          1
-        );
-
-      }
-
-
-      saveScannerSyncQueue(
-        queue
-      );
-
-
-      refreshScannerSyncStatus();
 
 
       /*
@@ -1754,8 +1879,34 @@ function refreshScannerSyncStatus() {
       'Saved ' +
       savedCount +
 
-      ' · Queued ' +
+      ' · Unsaved ' +
       queuedCount;
+
+    /*
+     * Make unsaved scans impossible to miss.
+     */
+    element.style.color =
+      queuedCount > 0 ? '#facc15' : '#4ade80';
+
+  }
+
+
+  const bar =
+    document.getElementById(
+      'scannerSyncStatusBar'
+    );
+
+  if (bar) {
+
+    const waitingTooLong =
+      queue.some(
+        function(item) {
+          return item && Number(item.retries || 0) >= 3;
+        }
+      );
+
+    bar.style.background =
+      waitingTooLong ? '#7f1d1d' : '#111827';
 
   }
 
