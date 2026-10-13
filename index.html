@@ -1,1341 +1,579 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#08090b">
 <title>Inventory Scanner</title>
 
-<script
-  src="https://unpkg.com/html5-qrcode"
-  type="text/javascript">
-</script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
 <style>
-
 /* =========================================================
    BASE
    ========================================================= */
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-html,
-body {
+[hidden] { display: none !important; }
 
+html, body {
   margin: 0;
   padding: 0;
-
   width: 100%;
   min-height: 100%;
-
   background: #08090b;
-
   color: #ffffff;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 body {
-
-  padding:
-    env(safe-area-inset-top)
-    0
-    env(safe-area-inset-bottom)
-    0;
-
+  padding-top: env(safe-area-inset-top);
+  /* room for the fixed SCAN bar */
+  padding-bottom: calc(118px + env(safe-area-inset-bottom));
 }
 
 .app {
-
   width: 100%;
-
   max-width: 720px;
-
-  min-height: 100vh;
-
   margin: 0 auto;
-
-  background: #08090b;
-
 }
 
 /* =========================================================
-   SCANNER NAVIGATION BAR
+   TOP BAR — back + destination
    ========================================================= */
 
-.scanner-navigation-bar {
-
-  width:
-    100%;
-
-  min-height:
-    46px;
-
-  padding:
-    7px 12px;
-
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    space-between;
-
-  gap:
-    10px;
-
-  background:
-    #111317;
-
-  border-bottom:
-    1px solid
-    rgba(255,255,255,.08);
-
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 12px;
+  background: #111317;
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
-
-/* =========================================================
-   BACK TO SETUP
-   ========================================================= */
-
-.scanner-back-button {
-
-  width:
-    auto;
-
-  margin:
-    0;
-
-  padding:
-    7px 4px;
-
-  border:
-    none;
-
-  background:
-    transparent;
-
-  color:
-    #ffffff;
-
-  font-size:
-    12px;
-
-  font-weight:
-    800;
-
-  letter-spacing:
-    .2px;
-
-  cursor:
-    pointer;
-
-  white-space:
-    nowrap;
-
-}
-
-
-.scanner-back-button:hover {
-
-  color:
-    #34d399;
-
-}
-
-
-/* =========================================================
-   CURRENT DESTINATION
-   ========================================================= */
-
-.scanner-current-destination {
-
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    flex-end;
-
-  gap:
-    5px;
-
-  color:
-    #ffffff;
-
-  font-size:
-    13px;
-
-  font-weight:
-    800;
-
-  white-space:
-    nowrap;
-
-}
-
-
-/* =========================================================
-   TIMESTAMP ICON
-   ========================================================= */
-
-.scanner-timestamp-icon {
-
-  color:
-    #34d399;
-
-  font-size:
-    14px;
-
-  line-height:
-    1;
-
-}
-/* =========================================================
-   HEADER
-   ========================================================= */
-
-.header {
-
-  padding:
-    18px
-    16px
-    12px;
-
-  text-align: center;
-
-}
-
-.header h1 {
-
-  margin: 0;
-
-  font-size: 23px;
-
-  font-weight: 800;
-
-}
-
-.header p {
-
-  margin:
-    5px
-    0
-    0;
-
-  color: #8f949c;
-
+.back-button {
+  border: none;
+  background: transparent;
+  color: #ffffff;
   font-size: 13px;
-
+  font-weight: 800;
+  padding: 10px 4px;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
+.destination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timestamp-icon { color: #34d399; font-size: 14px; }
 
 /* =========================================================
-   CAMERA SELECTION
-   ========================================================= */
-
-.camera-selector {
-
-  margin:
-    0
-    10px
-    10px;
-
-  padding:
-    14px;
-
-  border-radius:
-    14px;
-
-  background:
-    #15171b;
-
-  border:
-    1px solid
-    rgba(255,255,255,.08);
-
-}
-
-.camera-selector-title {
-
-  margin-bottom:
-    8px;
-
-  font-size:
-    13px;
-
-  font-weight:
-    800;
-
-  color:
-    #d8dbe0;
-
-}
-
-#cameraSelect {
-
-  width: 100%;
-
-  padding:
-    13px;
-
-  border:
-    1px solid
-    #363a40;
-
-  border-radius:
-    10px;
-
-  background:
-    #0d0f12;
-
-  color:
-    #ffffff;
-
-  font-size:
-    14px;
-
-}
-
-
-/* =========================================================
-   CAMERA
+   CAMERA — big, tap to scan
    ========================================================= */
 
 .camera-card {
-
   position: relative;
-
-  margin:
-    0
-    10px;
-
+  margin: 10px 10px 0;
   overflow: hidden;
-
-  border-radius:
-    18px;
-
-  background:
-    #000;
-
-  border:
-    1px solid
-    rgba(255,255,255,.08);
-
+  border-radius: 18px;
+  background: #000;
+  border: 3px solid #23262c;
+  min-height: 200px;
+  transition: border-color .15s ease;
 }
 
+.camera-card.state-scanning { border-color: #facc15; }
+.camera-card.state-ready    { border-color: #10b981; }
+
 #reader {
-
-  width:
-    100% !important;
-
-  margin:
-    0 !important;
-
-  padding:
-    0 !important;
-
-  background:
-    #000 !important;
-
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #000 !important;
 }
 
 #reader video {
-
-  display:
-    block !important;
-
-  width:
-    100% !important;
-
-  max-width:
-    100% !important;
-
-  height:
-    auto !important;
-
-  background:
-    #000 !important;
-
-  object-fit:
-    cover !important;
-
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: 46vh !important;
+  object-fit: cover !important;
+  background: #000 !important;
 }
 
-
-/* =========================================================
-   VISUAL SCAN FRAME
-   ========================================================= */
+/* Hide html5-qrcode's own shaded box — we draw our own frame */
+#reader #qr-shaded-region { border-width: 0 !important; background: transparent !important; }
 
 .scan-overlay {
-
-  position:
-    absolute;
-
-  left:
-    50%;
-
-  top:
-    50%;
-
-  width:
-    86%;
-
-  max-width:
-    580px;
-
-  aspect-ratio:
-    400 / 150;
-
-  transform:
-    translate(
-      -50%,
-      -50%
-    );
-
-  pointer-events:
-    none;
-
-  z-index:
-    20;
-
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 86%;
+  max-width: 580px;
+  aspect-ratio: 400 / 150;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 20;
 }
 
 .scan-frame {
-
-  position:
-    absolute;
-
-  inset:
-    0;
-
-  border:
-    3px solid
-    rgba(255,255,255,.80);
-
-  border-radius:
-    16px;
-
-  box-shadow:
-    0 0 0 9999px
-    rgba(0,0,0,.18);
-
-  transition:
-    border-color .12s ease,
-    box-shadow .12s ease;
-
+  position: absolute;
+  inset: 0;
+  border: 4px solid rgba(255,255,255,.85);
+  border-radius: 16px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.22);
+  transition: border-color .12s ease, box-shadow .12s ease;
 }
 
-.scan-overlay.scanning
-.scan-frame {
-
-  border-color:
-    rgba(255,255,255,.82);
-
+.scan-overlay.detected .scan-frame {
+  border-color: #00ff9d;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.08), 0 0 32px rgba(0,255,157,.9);
+  animation: detectedPulse .35s ease;
 }
 
-.scan-overlay.detected
-.scan-frame {
-
-  border-color:
-    #00ff9d;
-
-  box-shadow:
-
-    0 0 0 9999px
-    rgba(0,0,0,.08),
-
-    0 0 32px
-    rgba(0,255,157,.90);
-
-  animation:
-    detectedPulse
-    .35s
-    ease;
-
+.scan-overlay.paused .scan-frame {
+  border-color: rgba(255,255,255,.25);
+  border-style: dashed;
 }
 
 @keyframes detectedPulse {
-
-  0% {
-    transform:
-      scale(1);
-  }
-
-  50% {
-    transform:
-      scale(1.025);
-  }
-
-  100% {
-    transform:
-      scale(1);
-  }
-
+  0% { transform: scale(1); }
+  50% { transform: scale(1.025); }
+  100% { transform: scale(1); }
 }
 
+/* Message shown over the camera while paused / off */
+.camera-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  z-index: 30;
+  text-align: center;
+  pointer-events: none;
+}
+
+.camera-hint span {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.72);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .3px;
+}
+
+.camera-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #6b7079;
+  font-size: 15px;
+  font-weight: 800;
+}
 
 /* =========================================================
-   CAMERA STATUS
+   STATUS LINE
    ========================================================= */
 
-.camera-status {
-
-  margin:
-    10px
-    10px
-    0;
-
-  padding:
-    12px
-    14px;
-
-  border-radius:
-    12px;
-
-  background:
-    #15171b;
-
-  border:
-    1px solid
-    rgba(255,255,255,.07);
-
-  text-align:
-    center;
-
-  font-size:
-    13px;
-
-  font-weight:
-    800;
-
-  color:
-    #b7bbc2;
-
+.status {
+  margin: 10px 10px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #15171b;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  color: #c9ccd1;
 }
 
-.camera-status.active {
-
-  color:
-    #34d399;
-
-}
-
-.camera-status.error {
-
-  color:
-    #ff7070;
-
-}
-
+.status.scanning { color: #facc15; }
+.status.ok       { color: #34d399; }
+.status.error    { color: #ff7070; background: #2a1215; }
 
 /* =========================================================
-   CONTROLS
+   LAST SCAN
    ========================================================= */
 
-.controls {
-
-  display:
-    grid;
-
-  grid-template-columns:
-    1fr
-    1fr;
-
-  gap:
-    10px;
-
-  margin:
-    10px;
-
+.last-scan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 10px 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #14161a;
+  border: 2px solid #23262c;
 }
 
-button {
-
-  width:
-    100%;
-
-  border:
-    none;
-
-  border-radius:
-    13px;
-
-  padding:
-    15px 12px;
-
-  font-size:
-    16px;
-
-  font-weight:
-    800;
-
-  cursor:
-    pointer;
-
-  color:
-    #ffffff;
-
-}
-
-#startButton {
-
-  background:
-    #10b981;
-
-}
-
-#stopButton {
-
-  background:
-    #34373d;
-
-}
-
-button:disabled {
-
-  opacity:
-    .45;
-
-  cursor:
-    not-allowed;
-
-}
-
-
-/* =========================================================
-   RESULT
-   ========================================================= */
-
-.result-card {
-
-  margin:
-    12px
-    10px
-    0;
-
-  padding:
-    18px;
-
-  border-radius:
-    18px;
-
-  background:
-    #14161a;
-
-  border:
-    1px solid
-    rgba(255,255,255,.08);
-
-  transition:
-    border-color .2s ease,
-    box-shadow .2s ease;
-
-}
-
-.result-card.detected {
-
-  border-color:
-    #10b981;
-
-  box-shadow:
-    0 0 28px
-    rgba(16,185,129,.15);
-
-}
-
-.result-header {
-
-  display:
-    flex;
-
-  align-items:
-    center;
-
-  justify-content:
-    space-between;
-
-  margin-bottom:
-    14px;
-
-}
-
-.result-title {
-
-  font-size:
-    18px;
-
-  font-weight:
-    800;
-
-}
-
-#resultBadge {
-
-  padding:
-    6px 10px;
-
-  border-radius:
-    20px;
-
-  background:
-    #25282d;
-
-  color:
-    #969aa2;
-
-  font-size:
-    11px;
-
-  font-weight:
-    800;
-
-}
-
-#resultBadge.detected {
-
-  background:
-    #063d2c;
-
-  color:
-    #34d399;
-
-}
-
-
-/* =========================================================
-   ITEM CODE
-   ========================================================= */
-
-.item-code {
-
-  padding:
-    20px 12px;
-
-  border-radius:
-    14px;
-
-  background:
-    #0d0f12;
-
-  border:
-    1px solid
-    #282b31;
-
-  text-align:
-    center;
-
-}
-
-.item-code-label {
-
-  color:
-    #858991;
-
-  font-size:
-    11px;
-
-  font-weight:
-    800;
-
-  letter-spacing:
-    1px;
-
-  text-transform:
-    uppercase;
-
+.last-scan.saving { border-color: #a17d0a; }
+.last-scan.saved  { border-color: #10b981; }
+.last-scan.failed { border-color: #ef4444; }
+
+.last-scan-label {
+  color: #858991;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 #itemCode {
-
-  margin-top:
-    8px;
-
-  font-size:
-    38px;
-
-  line-height:
-    1.1;
-
-  font-weight:
-    900;
-
-  letter-spacing:
-    2px;
-
-  word-break:
-    break-all;
-
+  margin-top: 4px;
+  font-size: 40px;
+  line-height: 1.05;
+  font-weight: 900;
+  letter-spacing: 2px;
+  word-break: break-all;
 }
-
 
 /* =========================================================
-   DETAILS
+   SAVE STATE CHIPS
    ========================================================= */
 
-.details {
-
-  display:
-    grid;
-
-  grid-template-columns:
-    1fr
-    1fr;
-
-  gap:
-    10px;
-
-  margin-top:
-    12px;
-
+.chip {
+  flex-shrink: 0;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+  background: #25282d;
+  color: #969aa2;
 }
 
-.detail {
-
-  padding:
-    12px;
-
-  border-radius:
-    10px;
-
-  background:
-    #1b1e23;
-
-}
-
-.detail-label {
-
-  color:
-    #858991;
-
-  font-size:
-    10px;
-
-  font-weight:
-    800;
-
-  text-transform:
-    uppercase;
-
-}
-
-.detail-value {
-
-  margin-top:
-    5px;
-
-  color:
-    #ffffff;
-
-  font-size:
-    14px;
-
-  font-weight:
-    800;
-
-}
-
+.chip.saving { background: #3a2e05; color: #facc15; }
+.chip.saved  { background: #063d2c; color: #34d399; }
+.chip.failed { background: #4a1212; color: #ff7070; }
 
 /* =========================================================
-   VERIFICATION
+   RECENT SCANS
    ========================================================= */
 
-#verification {
-
-  margin-top:
-    12px;
-
-  padding:
-    11px;
-
-  border-radius:
-    10px;
-
-  background:
-    #1b1e23;
-
-  text-align:
-    center;
-
-  color:
-    #aeb2b8;
-
-  font-size:
-    13px;
-
-  font-weight:
-    700;
-
+.recent {
+  margin: 12px 10px 0;
+  border-radius: 16px;
+  background: #101216;
+  overflow: hidden;
 }
 
+.recent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px 8px;
+  color: #aeb2b8;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.recent-header button {
+  border: none;
+  background: transparent;
+  color: #6b7079;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+
+#recentList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#recentList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255,255,255,.05);
+}
+
+.recent-code {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.recent-time {
+  margin-left: 8px;
+  color: #6b7079;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.recent-empty {
+  padding: 4px 14px 14px;
+  color: #6b7079;
+  font-size: 13px;
+}
 
 /* =========================================================
-   SCAN AGAIN
+   CAMERA SETTINGS (collapsed)
    ========================================================= */
 
-#scanAgain {
-
-  margin-top:
-    14px;
-
-  background:
-    #10b981;
-
-  box-shadow:
-    0 5px 20px
-    rgba(16,185,129,.20);
-
+.settings {
+  margin: 12px 10px 0;
+  border-radius: 14px;
+  background: #101216;
+  color: #aeb2b8;
 }
 
+.settings summary {
+  padding: 14px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.settings-body {
+  padding: 0 14px 14px;
+}
+
+#cameraSelect {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #363a40;
+  border-radius: 10px;
+  background: #0d0f12;
+  color: #ffffff;
+  font-size: 15px;
+}
+
+.settings-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.small-button {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  background: #34373d;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.small-button:disabled { opacity: .45; }
+
+#cameraDiagnostics {
+  margin-top: 10px;
+  color: #777b83;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+#cameraDiagnostics strong { color: #aeb2b8; }
 
 /* =========================================================
-   DIAGNOSTICS
+   BIG SCAN BUTTON — fixed at thumb reach
    ========================================================= */
 
-.diagnostics {
-
-  margin:
-    12px
-    10px
-    20px;
-
-  padding:
-    12px;
-
-  border-radius:
-    12px;
-
-  background:
-    #101216;
-
-  color:
-    #777b83;
-
-  font-size:
-    11px;
-
-  line-height:
-    1.6;
-
+.scan-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, #08090b 70%, rgba(8,9,11,0));
 }
 
-.diagnostics strong {
-
-  color:
-    #aeb2b8;
-
+#scanButton {
+  display: block;
+  width: 100%;
+  max-width: 696px;
+  margin: 0 auto;
+  min-height: 92px;
+  border: none;
+  border-radius: 20px;
+  background: #10b981;
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(16,185,129,.30);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform .06s ease, background .15s ease;
 }
 
+#scanButton:active { transform: scale(.98); }
+
+#scanButton small {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  opacity: .85;
+}
+
+#scanButton.scanning {
+  background: #3a3d44;
+  box-shadow: none;
+  color: #facc15;
+}
+
+#scanButton.off {
+  background: #2563eb;
+  box-shadow: 0 6px 24px rgba(37,99,235,.30);
+}
 
 /* =========================================================
-   CAMERA TEST MODE
+   LANDSCAPE / SMALL
    ========================================================= */
 
-.test-note {
-
-  margin:
-    0
-    10px
-    10px;
-
-  padding:
-    11px;
-
-  border-radius:
-    10px;
-
-  background:
-    #18202a;
-
-  color:
-    #8fc7ff;
-
-  font-size:
-    11px;
-
-  line-height:
-    1.5;
-
+@media (max-width: 380px) {
+  #itemCode { font-size: 34px; }
+  #scanButton { min-height: 84px; font-size: 23px; }
 }
 
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (
-  max-width: 600px
-) {
-
-  .header h1 {
-
-    font-size:
-      21px;
-
-  }
-
-  #itemCode {
-
-    font-size:
-      34px;
-
-  }
-
-  .scan-overlay {
-
-    width:
-      88%;
-
-  }
-
+@media (orientation: landscape) and (max-height: 600px) {
+  #reader video { max-height: 60vh !important; }
+  #scanButton { min-height: 70px; }
+  body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 }
-
-
-/* =========================================================
-   LANDSCAPE
-   ========================================================= */
-
-@media (
-  orientation: landscape
-) and (
-  max-height: 600px
-) {
-
-  .header {
-
-    padding:
-      8px
-      12px;
-
-  }
-
-  .header h1 {
-
-    font-size:
-      18px;
-
-  }
-
-  .header p {
-
-    display:
-      none;
-
-  }
-
-}
-
 </style>
-
 </head>
-
 
 <body>
 
-
 <div class="app">
 
+  <!-- TOP BAR -->
+  <nav class="topbar">
+    <button type="button" class="back-button" onclick="goBackToSetup()">← SETUP</button>
+    <div id="scannerCurrentDestination" class="destination">Loading…</div>
+  </nav>
 
-<!-- =======================================================
-     SCANNER NAVIGATION BAR
-     ======================================================= -->
+  <!-- CAMERA (tap it to scan next) -->
+  <section id="cameraCard" class="camera-card" onclick="onCameraTap()">
 
-<nav
-  id="scannerNavigationBar"
-  class="scanner-navigation-bar">
+    <div id="reader"></div>
 
-  <button
-    type="button"
-    class="scanner-back-button"
-    onclick="goBackToSetup()">
+    <div id="cameraPlaceholder" class="camera-placeholder">
+      Camera is off
+    </div>
 
-    ← BACK TO SETUP
+    <div id="scanOverlay" class="scan-overlay paused" hidden>
+      <div class="scan-frame"></div>
+    </div>
 
-  </button>
+    <div id="cameraHint" class="camera-hint" hidden>
+      <span id="cameraHintText">Tap to scan next</span>
+    </div>
 
+  </section>
 
-  <div
-    id="scannerCurrentDestination"
-    class="scanner-current-destination">
+  <!-- STATUS -->
+  <div id="cameraStatus" class="status">PRESS START CAMERA</div>
 
-    Loading…
+  <!-- LAST SCAN -->
+  <section id="lastScan" class="last-scan">
+    <div>
+      <div class="last-scan-label">Last item</div>
+      <div id="itemCode">—</div>
+    </div>
+    <div id="lastScanChip" class="chip">—</div>
+  </section>
 
-  </div>
+  <!-- RECENT SCANS -->
+  <section class="recent">
+    <div class="recent-header">
+      <span>Recent scans</span>
+      <button type="button" onclick="clearRecentList()">Clear list</button>
+    </div>
+    <ul id="recentList"></ul>
+    <div id="recentEmpty" class="recent-empty">Nothing scanned yet.</div>
+  </section>
 
-</nav>
+  <!-- CAMERA SETTINGS -->
+  <details class="settings">
+    <summary>⚙ Camera settings</summary>
+    <div class="settings-body">
 
+      <select id="cameraSelect">
+        <option value="">Start camera to list cameras</option>
+      </select>
 
-<!-- =======================================================
-     HEADER
-     ======================================================= -->
+      <div class="settings-row">
+        <button type="button" id="stopButton" class="small-button" onclick="stopCamera()" disabled>
+          Stop camera
+        </button>
+        <button type="button" id="soundButton" class="small-button" onclick="toggleSound()">
+          Sound: ON
+        </button>
+      </div>
 
-<header class="header">
+      <div id="cameraDiagnostics">Camera has not started yet.</div>
 
-  <h1>
-    📷 Inventory Scanner
-  </h1>
-
-  <p>
-    Samsung camera focus test
-  </p>
-
-</header>
-
-
-<!-- =======================================================
-     CAMERA SELECTOR
-     ======================================================= -->
-
-<div class="camera-selector">
-
-  <div class="camera-selector-title">
-
-    CAMERA SELECTION
-
-  </div>
-
-
-  <select
-    id="cameraSelect">
-
-    <option value="">
-
-      Start camera to detect cameras
-
-    </option>
-
-  </select>
-
-</div>
-
-
-<div class="test-note">
-
-  <strong>Focus test:</strong>
-
-  On Flip 5 / Fold 6, try each rear-camera
-  option with the same KA7195 barcode.
-  Choose the camera that gives the sharpest
-  close-up image.
+    </div>
+  </details>
 
 </div>
 
-
-<!-- =======================================================
-     CAMERA
-     ======================================================= -->
-
-<section class="camera-card">
-
-
-  <div id="reader"></div>
-
-
-  <div
-    id="scanOverlay"
-    class="scan-overlay scanning">
-
-    <div class="scan-frame"></div>
-
-  </div>
-
-
-</section>
-
-
-<!-- =======================================================
-     STATUS
-     ======================================================= -->
-
-<div
-  id="cameraStatus"
-  class="camera-status">
-
-  CAMERA READY — PRESS START CAMERA
-
-</div>
-
-
-<!-- =======================================================
-     CONTROLS
-     ======================================================= -->
-
-<div class="controls">
-
-
-  <button
-    id="startButton"
-    onclick="startCamera()">
-
+<!-- BIG SCAN BUTTON -->
+<div class="scan-bar">
+  <button type="button" id="scanButton" class="off" onclick="onScanButton()">
     START CAMERA
-
   </button>
-
-
-  <button
-    id="stopButton"
-    onclick="stopCamera()"
-    disabled>
-
-    STOP CAMERA
-
-  </button>
-
-
 </div>
-
-
-<!-- =======================================================
-     RESULT
-     ======================================================= -->
-
-<section
-  id="resultCard"
-  class="result-card">
-
-
-  <div class="result-header">
-
-    <div class="result-title">
-
-      Scan Result
-
-    </div>
-
-
-    <div id="resultBadge">
-
-      READY
-
-    </div>
-
-  </div>
-
-
-  <div class="item-code">
-
-
-    <div class="item-code-label">
-
-      Verified Item Code
-
-    </div>
-
-
-    <div id="itemCode">
-
-      —
-
-    </div>
-
-
-  </div>
-
-
-  <div class="details">
-
-
-    <div class="detail">
-
-      <div class="detail-label">
-
-        Barcode
-
-      </div>
-
-
-      <div
-        id="barcodeFormat"
-        class="detail-value">
-
-        —
-
-      </div>
-
-    </div>
-
-
-    <div class="detail">
-
-      <div class="detail-label">
-
-        Scanner
-
-      </div>
-
-
-      <div
-        id="scannerState"
-        class="detail-value">
-
-        Waiting
-
-      </div>
-
-    </div>
-
-  </div>
-
-
-  <div id="verification">
-
-    Waiting for a valid KA + 4 digit barcode.
-
-  </div>
-
-
-  <button
-    id="scanAgain"
-    onclick="scanAnother()">
-
-    SCAN ANOTHER
-
-  </button>
-
-
-</section>
-
-
-<!-- =======================================================
-     DIAGNOSTICS
-     ======================================================= -->
-
-<div class="diagnostics">
-
-  <strong>
-    Camera diagnostics
-  </strong>
-
-
-  <div id="cameraDiagnostics">
-
-    Camera has not started yet.
-
-  </div>
-
-</div>
-
-
-</div>
-
 
 
 <script>
+
+/* ==========================================================
+   SETTINGS
+   ========================================================== */
+
+/*
+ * KA + 3, 4 or 5 digits.
+ * (KA123, KA1234, KA12345)
+ */
+const ITEM_CODE_PATTERN = /^KA\d{3,5}$/;
+
+/* Three identical reads required before an item counts. */
+const REQUIRED_SCANS = 3;
+
+const FPS = 15;
+
+const QRBOX = { width: 400, height: 150 };
+
+const FORMATS = [
+  Html5QrcodeSupportedFormats.CODE_128,
+  Html5QrcodeSupportedFormats.QR_CODE
+];
+
+const CAMERA_STORAGE_KEY = "qrScannerSelectedCameraV1";
+const RECENT_STORAGE_KEY = "qrScannerRecentV1";
+const SOUND_STORAGE_KEY  = "qrScannerSoundV1";
+const RECENT_MAX = 15;
 
 
 /* ==========================================================
@@ -1343,240 +581,189 @@ button:disabled {
    ========================================================== */
 
 let html5QrCode = null;
-
 let scannerRunning = false;
-
 let scannerPaused = false;
 
-
-/*
- * Camera list.
- */
-
 let availableCameras = [];
-
-
-/*
- * Currently selected camera.
- */
-
-let selectedCameraId = "";
-
-
-/*
- * Verification.
- */
+let selectedCameraId = safeGet(CAMERA_STORAGE_KEY) || "";
 
 let lastReadValue = "";
-
 let confirmationCount = 0;
-
 let confirmedItemCode = "";
-
 let resultLocked = false;
 
+/* scanId of the item shown in "Last item" */
+let lastScanId = "";
+
+let recentScans = loadRecentScans();
+
+let soundEnabled = safeGet(SOUND_STORAGE_KEY) !== "off";
+
+let audioContext = null;
+
 
 /* ==========================================================
-   ITEM CODE RULE
+   SMALL HELPERS
    ========================================================== */
 
-const ITEM_CODE_PATTERN =
-  /^KA\d{4}$/;
+function safeGet(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
 
+function safeSet(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { /* ignore */ }
+}
 
-/*
- * Three identical reads required.
- */
-
-const REQUIRED_SCANS = 3;
+function $(id) {
+  return document.getElementById(id);
+}
 
 
 /* ==========================================================
-   SCANNER SETTINGS
+   ONE BUTTON — START / SCAN NEXT
    ========================================================== */
 
-const FPS = 15;
-
-
 /*
- * Keep the current wide barcode region.
+ * One scan per tap.
+ *
+ * - Camera off      → start camera and scan one item
+ * - Waiting for tap → scan one item
+ * - Already scanning → nothing (keep holding steady)
+ *
+ * After an item is verified, decoding pauses, so no
+ * random barcode can be picked up between taps.
  */
+function onScanButton() {
 
-const QRBOX = {
+  unlockAudio();
 
-  width: 400,
+  if (!scannerRunning) {
+    startCamera();
+    return;
+  }
 
-  height: 150
+  if (scannerPaused) {
+    scanAnother();
+  }
 
-};
+}
 
+/* Tapping the camera picture does the same as SCAN NEXT. */
+function onCameraTap() {
 
-/*
- * Actual barcode formats.
- */
+  if (scannerRunning && scannerPaused) {
+    unlockAudio();
+    scanAnother();
+  }
 
-const FORMATS = [
-
-  Html5QrcodeSupportedFormats.CODE_128,
-
-  Html5QrcodeSupportedFormats.QR_CODE
-
-];
+}
 
 
 /* ==========================================================
-   START BUTTON
+   UI STATE
+   ========================================================== */
+
+function setUiState(state) {
+
+  const button = $("scanButton");
+  const card = $("cameraCard");
+  const hint = $("cameraHint");
+  const hintText = $("cameraHintText");
+  const overlay = $("scanOverlay");
+
+  button.classList.remove("off", "scanning");
+  card.classList.remove("state-scanning", "state-ready");
+
+  if (state === "off") {
+
+    button.classList.add("off");
+    button.innerHTML = "START CAMERA";
+    hint.hidden = true;
+    overlay.hidden = true;
+    $("cameraPlaceholder").hidden = false;
+
+  }
+
+  else if (state === "starting") {
+
+    button.classList.add("scanning");
+    button.innerHTML = "STARTING CAMERA…";
+    hint.hidden = true;
+
+  }
+
+  else if (state === "scanning") {
+
+    button.classList.add("scanning");
+    button.innerHTML = "SCANNING…<small>hold the barcode inside the frame</small>";
+    card.classList.add("state-scanning");
+    hint.hidden = true;
+    overlay.hidden = false;
+    $("cameraPlaceholder").hidden = true;
+    setScanVisual("scanning");
+
+  }
+
+  else if (state === "ready") {
+
+    button.innerHTML = "SCAN NEXT<small>or tap the camera</small>";
+    card.classList.add("state-ready");
+    hintText.textContent = "Tap to scan next";
+    hint.hidden = false;
+    overlay.hidden = false;
+
+  }
+
+}
+
+
+/* ==========================================================
+   START CAMERA
    ========================================================== */
 
 async function startCamera() {
 
-
   if (scannerRunning) {
-
     return;
-
   }
-
 
   try {
 
+    setUiState("starting");
+    setCameraStatus("REQUESTING CAMERA…", "");
 
-    setCameraStatus(
-      "REQUESTING CAMERA…",
-      ""
-    );
+    availableCameras = await Html5Qrcode.getCameras();
 
-
-    document
-      .getElementById(
-        "startButton"
-      )
-      .disabled = true;
-
-
-    /*
-     * Get all available cameras.
-     *
-     * This is the important new part for
-     * Fold 6 / Flip 5 testing.
-     */
-
-    availableCameras =
-      await Html5Qrcode.getCameras();
-
-
-    console.log(
-      "AVAILABLE CAMERAS:",
-      availableCameras
-    );
-
-
-    if (
-      !availableCameras ||
-      availableCameras.length === 0
-    ) {
-
-      throw new Error(
-        "No camera was found."
-      );
-
+    if (!availableCameras || availableCameras.length === 0) {
+      throw new Error("No camera was found.");
     }
 
+    populateCameraSelector(availableCameras);
 
-    /*
-     * Populate the selector.
-     */
+    /* Use the remembered camera only if it still exists. */
+    const remembered = availableCameras.some(function(camera) {
+      return camera.id === selectedCameraId;
+    });
 
-    populateCameraSelector(
-      availableCameras
-    );
-
-
-    /*
-     * Choose a camera.
-     *
-     * If we already have a selection,
-     * use it.
-     *
-     * Otherwise choose the best candidate.
-     */
-
-    if (
-      !selectedCameraId
-    ) {
-
-      selectedCameraId =
-        chooseInitialCamera(
-          availableCameras
-        );
-
+    if (!remembered) {
+      selectedCameraId = chooseInitialCamera(availableCameras);
     }
 
+    $("cameraSelect").value = selectedCameraId;
 
-    /*
-     * Reflect selection in UI.
-     */
-
-    const select =
-      document.getElementById(
-        "cameraSelect"
-      );
-
-
-    if (
-      select &&
-      selectedCameraId
-    ) {
-
-      select.value =
-        selectedCameraId;
-
-    }
-
-
-    /*
-     * Start selected camera.
-     */
-
-    await startSelectedCamera(
-      selectedCameraId
-    );
-
+    await startSelectedCamera(selectedCameraId);
 
   }
 
-  catch(error) {
+  catch (error) {
 
+    console.error("START CAMERA ERROR:", error);
 
-    console.error(
-      "START CAMERA ERROR:",
-      error
-    );
+    scannerRunning = false;
+    html5QrCode = null;
 
-
-    scannerRunning =
-      false;
-
-
-    html5QrCode =
-      null;
-
-
-    setCameraStatus(
-
-      "CAMERA ERROR — " +
-      readableCameraError(error),
-
-      "error"
-
-    );
-
-
-    document
-      .getElementById(
-        "startButton"
-      )
-      .disabled = false;
+    setCameraStatus("CAMERA ERROR — " + readableCameraError(error), "error");
+    setUiState("off");
 
   }
 
@@ -1584,971 +771,278 @@ async function startCamera() {
 
 
 /* ==========================================================
-   POPULATE CAMERA SELECTOR
+   CAMERA SELECTOR
    ========================================================== */
 
-function populateCameraSelector(
-  cameras
-) {
+function populateCameraSelector(cameras) {
 
-
-  const select =
-    document.getElementById(
-      "cameraSelect"
-    );
-
-
-  if (!select) {
-
-    return;
-
-  }
-
+  const select = $("cameraSelect");
 
   select.innerHTML = "";
 
+  cameras.forEach(function(camera, index) {
 
-  cameras.forEach(
+    const option = document.createElement("option");
 
-    function(camera, index) {
+    option.value = camera.id;
+    option.textContent = camera.label || ("Camera " + (index + 1));
 
+    select.appendChild(option);
 
-      const option =
-        document.createElement(
-          "option"
-        );
+  });
 
+  select.onchange = async function() {
 
-      option.value =
-        camera.id;
+    const newCameraId = this.value;
 
+    if (!newCameraId) {
+      return;
+    }
 
-      /*
-       * Camera labels may be hidden until
-       * permission is granted.
-       */
+    selectedCameraId = newCameraId;
+    safeSet(CAMERA_STORAGE_KEY, newCameraId);
 
-      let label =
-        camera.label ||
-        ("Camera " + (index + 1));
+    if (scannerRunning) {
 
+      try {
+        await switchCamera(newCameraId);
+      }
 
-      option.textContent =
-        label;
-
-
-      select.appendChild(
-        option
-      );
+      catch (error) {
+        console.error("CAMERA SWITCH ERROR:", error);
+      }
 
     }
 
-  );
-
-
-  /*
-   * When user chooses another camera,
-   * stop current camera and start the new one.
-   */
-
-  select.onchange =
-
-    async function() {
-
-
-      const newCameraId =
-        this.value;
-
-
-      if (
-        !newCameraId
-      ) {
-
-        return;
-
-      }
-
-
-      selectedCameraId =
-        newCameraId;
-
-
-      /*
-       * If camera is currently running,
-       * switch immediately.
-       */
-
-      if (
-        scannerRunning
-      ) {
-
-
-        try {
-
-
-          await switchCamera(
-            newCameraId
-          );
-
-
-        }
-
-        catch(error) {
-
-
-          console.error(
-            "CAMERA SWITCH ERROR:",
-            error
-          );
-
-
-        }
-
-      }
-
-    };
+  };
 
 }
 
 
-/* ==========================================================
-   CHOOSE INITIAL CAMERA
-   ========================================================== */
+function chooseInitialCamera(cameras) {
 
-function chooseInitialCamera(
-  cameras
-) {
+  const rearKeywords = ["back", "rear", "environment", "camera2"];
 
+  for (const camera of cameras) {
 
-  /*
-   * Try to find a rear-facing camera
-   * from its label.
-   *
-   * This is only a preference.
-   *
-   * We still let the user test all cameras.
-   */
+    const label = String(camera.label || "").toLowerCase();
 
-  const rearKeywords = [
+    for (const keyword of rearKeywords) {
 
-    "back",
-    "rear",
-    "environment",
-    "camera2"
-
-  ];
-
-
-  for (
-    const camera of cameras
-  ) {
-
-
-    const label =
-      String(
-        camera.label || ""
-      ).toLowerCase();
-
-
-    for (
-      const keyword of rearKeywords
-    ) {
-
-
-      if (
-        label.includes(
-          keyword
-        )
-      ) {
-
+      if (label.includes(keyword)) {
         return camera.id;
-
       }
 
     }
 
   }
 
-
-  /*
-   * Fallback:
-   *
-   * Use the last camera.
-   *
-   * On many Android phones the rear camera
-   * appears after the front camera.
-   */
-
-  if (
-    cameras.length > 1
-  ) {
-
-    return cameras[
-      cameras.length - 1
-    ].id;
-
-  }
-
-
-  return cameras[0].id;
+  /* On many Android phones the rear camera is listed last. */
+  return cameras.length > 1
+    ? cameras[cameras.length - 1].id
+    : cameras[0].id;
 
 }
 
 
 /* ==========================================================
-   START SPECIFIC CAMERA
+   START A SPECIFIC CAMERA
    ========================================================== */
 
-async function startSelectedCamera(
-  cameraId
-) {
+async function startSelectedCamera(cameraId) {
 
-
-  if (
-    !cameraId
-  ) {
-
-    throw new Error(
-      "No camera selected."
-    );
-
+  if (!cameraId) {
+    throw new Error("No camera selected.");
   }
 
-
-  /*
-   * Make sure there isn't an existing
-   * scanner object.
-   */
-
-  if (
-    html5QrCode
-  ) {
+  if (html5QrCode && scannerRunning) {
 
     try {
-
-      if (
-        scannerRunning
-      ) {
-
-        await html5QrCode.stop();
-
-      }
-
+      await html5QrCode.stop();
     }
 
-    catch(error) {
-
-      console.log(
-        "Previous scanner stop:",
-        error
-      );
-
+    catch (error) {
+      console.log("Previous scanner stop:", error);
     }
 
   }
 
-
-  /*
-   * Create a fresh scanner instance.
-   */
-
-  html5QrCode =
-
-    new Html5Qrcode(
-
-      "reader",
-
-      {
-
-        formatsToSupport:
-          FORMATS,
-
-        /*
-         * Use native BarcodeDetector when available.
-         */
-
-        useBarCodeDetectorIfSupported:
-          true,
-
-        verbose:
-          false
-
-      }
-
-    );
-
+  html5QrCode = new Html5Qrcode("reader", {
+    formatsToSupport: FORMATS,
+    useBarCodeDetectorIfSupported: true,
+    verbose: false
+  });
 
   resetVerification();
 
-
-  setScanVisual(
-    "scanning"
-  );
-
-
-  setCameraStatus(
-    "STARTING SELECTED CAMERA…",
-    ""
-  );
-
-
-  /*
-   * Start with the exact camera ID.
-   *
-   * This is the major difference from our
-   * previous environment-only implementation.
-   */
+  setCameraStatus("STARTING CAMERA…", "");
 
   await html5QrCode.start(
-
     cameraId,
-
     {
-
-      fps:
-        FPS,
-
-      qrbox:
-        QRBOX,
-
-      disableFlip:
-        false
-
+      fps: FPS,
+      qrbox: QRBOX,
+      disableFlip: false
     },
-
-
     onScanSuccess,
-
-
-    function(errorMessage) {
-
-      /*
-       * Ignore normal failed frames.
-       */
-
+    function() {
+      /* Ignore normal failed frames. */
     }
-
   );
 
+  scannerRunning = true;
+  scannerPaused = false;
 
-  scannerRunning =
-    true;
+  safeSet(CAMERA_STORAGE_KEY, cameraId);
 
+  $("stopButton").disabled = false;
 
-  scannerPaused =
-    false;
-
-
-  setCameraStatus(
-    "● CAMERA ACTIVE",
-    "active"
-  );
-
-
-  document
-    .getElementById(
-      "startButton"
-    )
-    .disabled = true;
-
-
-  document
-    .getElementById(
-      "stopButton"
-    )
-    .disabled = false;
-
-
-  document
-    .getElementById(
-      "scannerState"
-    )
-    .textContent =
-    "Scanning";
-
-
-  /*
-   * Inspect actual camera settings.
-   */
+  setUiState("scanning");
+  setCameraStatus("SCANNING — HOLD BARCODE IN FRAME", "scanning");
 
   inspectCamera();
 
-
-  /*
-   * Try continuous focus.
-   */
-
-  setTimeout(
-
-    function() {
-
-      tryEnableContinuousFocus();
-
-    },
-
-    700
-
-  );
+  setTimeout(tryEnableContinuousFocus, 700);
 
 }
 
 
-/* ==========================================================
-   SWITCH CAMERA
-   ========================================================== */
+async function switchCamera(cameraId) {
 
-async function switchCamera(
-  cameraId
-) {
-
-
-  if (
-    !cameraId
-  ) {
-
+  if (!cameraId) {
     return;
-
   }
 
+  setCameraStatus("SWITCHING CAMERA…", "");
 
-  setCameraStatus(
-    "SWITCHING CAMERA…",
-    ""
-  );
-
-
-  /*
-   * Stop current scanner.
-   */
-
-  if (
-    html5QrCode &&
-    scannerRunning
-  ) {
-
+  if (html5QrCode && scannerRunning) {
 
     try {
-
       await html5QrCode.stop();
-
     }
 
-    catch(error) {
-
-      console.log(
-        "Stop before switch:",
-        error
-      );
-
+    catch (error) {
+      console.log("Stop before switch:", error);
     }
 
   }
 
+  scannerRunning = false;
+  scannerPaused = false;
 
-  scannerRunning =
-    false;
-
-  scannerPaused =
-    false;
-
-
-  /*
-   * Start selected camera.
-   */
-
-  await startSelectedCamera(
-    cameraId
-  );
+  await startSelectedCamera(cameraId);
 
 }
 
 
 /* ==========================================================
-   SCAN SUCCESS
+   SCAN SUCCESS (every decoded frame)
    ========================================================== */
 
-function onScanSuccess(
+function onScanSuccess(decodedText, decodedResult) {
 
-  decodedText,
-
-  decodedResult
-
-) {
-
-
-  /*
-   * Ignore new reads after successful
-   * three-read verification.
-   */
-
-  if (
-    resultLocked
-  ) {
-
+  /* Ignore everything once an item is verified, until next tap. */
+  if (resultLocked || scannerPaused) {
     return;
-
   }
 
-
-  const value =
-
-    String(
-      decodedText || ""
-    )
-    .trim()
-    .toUpperCase();
-
+  const value = String(decodedText || "").trim().toUpperCase();
 
   if (!value) {
+    return;
+  }
+
+  /* Not KA + 3/4/5 digits → ignore, keep looking. */
+  if (!ITEM_CODE_PATTERN.test(value)) {
+
+    setCameraStatus("NOT AN ITEM CODE — " + value.substring(0, 20), "scanning");
 
     return;
 
   }
 
-
-  console.log(
-    "RAW SCAN:",
-    value
-  );
-
-
-  /* ========================================================
-     KA + FOUR DIGITS
-     ======================================================== */
-
-  if (
-    !ITEM_CODE_PATTERN.test(
-      value
-    )
-  ) {
-
-
-    console.log(
-      "INVALID:",
-      value
-    );
-
-
-    setCameraStatus(
-
-      "SEARCHING FOR KA + 4 DIGIT CODE",
-
-      ""
-
-    );
-
-
-    document
-      .getElementById(
-        "scannerState"
-      )
-      .textContent =
-      "Waiting";
-
-
-    document
-      .getElementById(
-        "verification"
-      )
-      .textContent =
-      "Barcode detected, but it is not a valid KA + 4 digit code.";
-
-
-    /*
-     * IMPORTANT:
-     *
-     * Invalid scans do not alter the
-     * three-read counter.
-     */
-
-    return;
-
-  }
-
-
-  /* ========================================================
-     MATCHING READ
-     * ======================================================== */
-
-  if (
-    value === lastReadValue
-  ) {
-
+  if (value === lastReadValue) {
     confirmationCount++;
-
   }
 
   else {
-
-    /*
-     * Different valid item resets verification.
-     */
-
-    lastReadValue =
-      value;
-
-    confirmationCount =
-      1;
-
+    lastReadValue = value;
+    confirmationCount = 1;
   }
 
-
-  console.log(
-
-    "VALID ITEM:",
-    value,
-
-    "READ:",
-    confirmationCount,
-    "/",
-    REQUIRED_SCANS
-
-  );
-
-
-  /* ========================================================
-     SHOW PROGRESS
-     * ======================================================== */
-
-  document
-    .getElementById(
-      "itemCode"
-    )
-    .textContent =
-    value;
-
-
-  document
-    .getElementById(
-      "barcodeFormat"
-    )
-    .textContent =
-    "CODE_128";
-
-
-  document
-    .getElementById(
-      "scannerState"
-    )
-    .textContent =
-
-    confirmationCount +
-    " / " +
-    REQUIRED_SCANS;
-
-
-  document
-    .getElementById(
-      "verification"
-    )
-    .textContent =
-
-    "Verifying " +
-    value +
-    " — read " +
-    confirmationCount +
-    " of " +
-    REQUIRED_SCANS;
-
-
   setCameraStatus(
-
-    "🟡 VERIFYING " +
-    value +
-    " — " +
-    confirmationCount +
-    "/3",
-
-    ""
-
-  );
-
-
-  setScanVisual(
+    "READING " + value + " — " + confirmationCount + "/" + REQUIRED_SCANS,
     "scanning"
   );
 
-
-  /* ========================================================
-     CONFIRM AFTER 3 MATCHING READS
-     * ======================================================== */
-
-  if (
-    confirmationCount >=
-    REQUIRED_SCANS
-  ) {
-
-
-    confirmItem(
-      value,
-      decodedResult
-    );
-
+  if (confirmationCount >= REQUIRED_SCANS) {
+    confirmItem(value, decodedResult);
   }
 
 }
 
 
 /* ==========================================================
-   CONFIRM ITEM
+   CONFIRM ITEM — 3 matching reads
    ========================================================== */
 
-function confirmItem(
+function confirmItem(value, decodedResult) {
 
-  value,
+  resultLocked = true;
+  confirmedItemCode = value;
 
-  decodedResult
-
-) {
-
-
-  resultLocked =
-    true;
-
-
-  confirmedItemCode =
-    value;
-
-
-  /*
-   * GREEN SCAN FRAME.
-   */
-
-  setScanVisual(
-    "detected"
-  );
-
-
-  document
-    .getElementById(
-      "resultCard"
-    )
-    .classList
-    .add(
-      "detected"
-    );
-
-
-  document
-    .getElementById(
-      "resultBadge"
-    )
-    .textContent =
-    "✓ VERIFIED";
-
-
-  document
-    .getElementById(
-      "resultBadge"
-    )
-    .classList
-    .add(
-      "detected"
-    );
-
-
-  document
-    .getElementById(
-      "itemCode"
-    )
-    .textContent =
-    value;
-
-
-  document
-    .getElementById(
-      "barcodeFormat"
-    )
-    .textContent =
-    "CODE_128";
-
-
-  document
-    .getElementById(
-      "scannerState"
-    )
-    .textContent =
-    "✓ Verified";
-
-
-  document
-    .getElementById(
-      "verification"
-    )
-    .textContent =
-    "✓ Three matching scans confirmed this item.";
-
-
-  setCameraStatus(
-
-    "🟢 VERIFIED — " +
-    value,
-
-    "active"
-
-  );
-
-
-  /*
-   * Pause decoding but leave the camera
-   * preview alive.
-   */
-
-  if (
-    html5QrCode &&
-    scannerRunning
-  ) {
-
+  /* Stop decoding right away so nothing else is picked up. */
+  if (html5QrCode && scannerRunning) {
 
     try {
-
-      html5QrCode.pause(
-        false
-      );
-
-      scannerPaused =
-        true;
-
+      html5QrCode.pause(false);
+      scannerPaused = true;
     }
 
-    catch(error) {
-
-      console.log(
-        "Pause unavailable:",
-        error
-      );
-
+    catch (error) {
+      console.log("Pause unavailable:", error);
+      scannerPaused = true;
     }
 
   }
 
+  setScanVisual("detected");
+  setUiState("ready");
 
-  /*
-   * Only NOW is the item ready to send
-   * to Google Apps Script.
-   */
+  /* Short buzz = item captured (the save sound comes later). */
+  if (navigator.vibrate) {
+    navigator.vibrate(60);
+  }
 
-  handleInventoryItem(
-
-    value,
-
-    decodedResult
-
-  );
+  handleInventoryItem(value, decodedResult);
 
 }
 
 
 /* ==========================================================
-   SCAN ANOTHER
+   SCAN NEXT
    ========================================================== */
 
 function scanAnother() {
 
-
   resetVerification();
 
-
-  document
-    .getElementById(
-      "itemCode"
-    )
-    .textContent =
-    "—";
-
-
-  document
-    .getElementById(
-      "barcodeFormat"
-    )
-    .textContent =
-    "—";
-
-
-  document
-    .getElementById(
-      "scannerState"
-    )
-    .textContent =
-    "Scanning";
-
-
-  document
-    .getElementById(
-      "resultBadge"
-    )
-    .textContent =
-    "READY";
-
-
-  document
-    .getElementById(
-      "resultBadge"
-    )
-    .classList
-    .remove(
-      "detected"
-    );
-
-
-  document
-    .getElementById(
-      "resultCard"
-    )
-    .classList
-    .remove(
-      "detected"
-    );
-
-
-  document
-    .getElementById(
-      "verification"
-    )
-    .textContent =
-    "Waiting for a valid KA + 4 digit barcode.";
-
-
-  setScanVisual(
-    "scanning"
-  );
-
-
-  /*
-   * Resume existing camera.
-   */
-
-  if (
-    html5QrCode &&
-    scannerRunning &&
-    scannerPaused
-  ) {
-
+  if (html5QrCode && scannerRunning && scannerPaused) {
 
     try {
 
       html5QrCode.resume();
+      scannerPaused = false;
 
-      scannerPaused =
-        false;
-
-
-      setCameraStatus(
-
-        "● CAMERA ACTIVE — READY FOR NEXT ITEM",
-
-        "active"
-
-      );
+      setUiState("scanning");
+      setCameraStatus("SCANNING — HOLD BARCODE IN FRAME", "scanning");
 
     }
 
-    catch(error) {
+    catch (error) {
 
-      console.error(
-        "RESUME ERROR:",
-        error
-      );
+      console.error("RESUME ERROR:", error);
+      setCameraStatus("CAMERA PAUSED — PRESS STOP, THEN START", "error");
 
     }
 
@@ -2557,23 +1051,12 @@ function scanAnother() {
 }
 
 
-/* ==========================================================
-   RESET VERIFICATION
-   ========================================================== */
-
 function resetVerification() {
 
-  lastReadValue =
-    "";
-
-  confirmationCount =
-    0;
-
-  confirmedItemCode =
-    "";
-
-  resultLocked =
-    false;
+  lastReadValue = "";
+  confirmationCount = 0;
+  confirmedItemCode = "";
+  resultLocked = false;
 
 }
 
@@ -2584,78 +1067,454 @@ function resetVerification() {
 
 async function stopCamera() {
 
-
-  if (
-    !html5QrCode ||
-    !scannerRunning
-  ) {
-
+  if (!html5QrCode || !scannerRunning) {
     return;
-
   }
-
 
   try {
 
-
     await html5QrCode.stop();
-
-
-    scannerRunning =
-      false;
-
-
-    scannerPaused =
-      false;
-
-
-    html5QrCode =
-      null;
-
-
-    resetVerification();
-
-
-    setCameraStatus(
-      "CAMERA STOPPED",
-      ""
-    );
-
-
-    document
-      .getElementById(
-        "startButton"
-      )
-      .disabled =
-      false;
-
-
-    document
-      .getElementById(
-        "stopButton"
-      )
-      .disabled =
-      true;
-
-
-    document
-      .getElementById(
-        "scannerState"
-      )
-      .textContent =
-      "Stopped";
-
 
   }
 
-  catch(error) {
+  catch (error) {
+
+    console.error("STOP ERROR:", error);
+
+  }
+
+  scannerRunning = false;
+  scannerPaused = false;
+  html5QrCode = null;
+
+  resetVerification();
+
+  $("stopButton").disabled = true;
+
+  setUiState("off");
+  setCameraStatus("CAMERA STOPPED", "");
+
+}
 
 
-    console.error(
-      "STOP ERROR:",
-      error
+/* ==========================================================
+   HAND OFF TO THE SAVE QUEUE
+   ========================================================== */
+
+function handleInventoryItem(itemCode, decodedResult) {
+
+  try {
+
+    const result = queueVerifiedScan(itemCode);
+
+    if (result && result.success) {
+
+      lastScanId = result.scanId;
+
+      addRecentScan({
+        scanId: result.scanId,
+        itemCode: itemCode,
+        time: Date.now(),
+        status: "saving"
+      });
+
+      showLastScan(itemCode, "saving");
+
+      setCameraStatus("✓ " + itemCode + " CAPTURED — SAVING…", "ok");
+
+      return;
+
+    }
+
+    showNotQueuedError(itemCode, result && result.error);
+
+  }
+
+  catch (error) {
+
+    console.error("SCANNER SYNC ERROR:", error);
+
+    showNotQueuedError(itemCode, error && error.message);
+
+  }
+
+}
+
+
+function showNotQueuedError(itemCode, reason) {
+
+  lastScanId = "";
+
+  showLastScan(itemCode, "failed");
+
+  setCameraStatus(
+    "✗ " + itemCode + " NOT SAVED — " + (reason || "scan it again"),
+    "error"
+  );
+
+  playErrorSound();
+
+  if (navigator.vibrate) {
+    navigator.vibrate([200, 100, 200]);
+  }
+
+}
+
+
+/* ==========================================================
+   SAVE CONFIRMATIONS FROM scanner-sync.js
+   ========================================================== */
+
+/*
+ * The success sound plays ONLY here — after Google Apps
+ * Script answered that the item was written.
+ */
+window.addEventListener("scansync:saved", function(event) {
+
+  const detail = event.detail || {};
+
+  updateRecentStatus(detail.scanId, "saved");
+
+  if (detail.scanId === lastScanId) {
+    showLastScan(detail.itemCode, "saved");
+  }
+
+  /* Don't overwrite the status while the next item is being read. */
+  if (detail.scanId === lastScanId && scannerPaused) {
+    setCameraStatus("✓ " + detail.itemCode + " SAVED — TAP SCAN NEXT", "ok");
+  }
+
+  playSuccessSound();
+
+});
+
+
+window.addEventListener("scansync:retry", function(event) {
+
+  const detail = event.detail || {};
+
+  updateRecentStatus(detail.scanId, "failed");
+
+  if (detail.scanId === lastScanId) {
+    showLastScan(detail.itemCode, "failed");
+  }
+
+  /* Warn once per scan, not on every retry. */
+  if (Number(detail.retries) === 1) {
+
+    setCameraStatus(
+      "⚠ " + detail.itemCode + " NOT SAVED YET — RETRYING, KEEP SCANNING",
+      "error"
     );
 
+    playErrorSound();
+
+  }
+
+});
+
+
+/* ==========================================================
+   LAST SCAN + RECENT LIST
+   ========================================================== */
+
+const CHIP_TEXT = {
+  saving: "SAVING…",
+  saved: "✓ SAVED",
+  failed: "✗ NOT SAVED"
+};
+
+
+function showLastScan(itemCode, status) {
+
+  $("itemCode").textContent = itemCode;
+
+  const box = $("lastScan");
+  box.classList.remove("saving", "saved", "failed");
+  box.classList.add(status);
+
+  const chip = $("lastScanChip");
+  chip.className = "chip " + status;
+  chip.textContent = status === "failed" && lastScanId
+    ? "RETRYING…"
+    : CHIP_TEXT[status];
+
+}
+
+
+function loadRecentScans() {
+
+  try {
+
+    const parsed = JSON.parse(safeGet(RECENT_STORAGE_KEY) || "[]");
+
+    return Array.isArray(parsed) ? parsed : [];
+
+  }
+
+  catch (error) {
+
+    return [];
+
+  }
+
+}
+
+
+function saveRecentScans() {
+
+  safeSet(RECENT_STORAGE_KEY, JSON.stringify(recentScans));
+
+}
+
+
+function addRecentScan(entry) {
+
+  recentScans.unshift(entry);
+  recentScans = recentScans.slice(0, RECENT_MAX);
+
+  saveRecentScans();
+  renderRecentScans();
+
+}
+
+
+function updateRecentStatus(scanId, status) {
+
+  const entry = recentScans.find(function(item) {
+    return item.scanId === scanId;
+  });
+
+  if (!entry) {
+    return;
+  }
+
+  entry.status = status;
+
+  saveRecentScans();
+  renderRecentScans();
+
+}
+
+
+/*
+ * After a reload: a scan is only removed from the save queue
+ * when Google confirmed it, so anything no longer in the queue
+ * is saved. Anything still in the queue is still pending.
+ */
+function reconcileRecentScans() {
+
+  if (typeof getScannerSyncQueue !== "function") {
+    return;
+  }
+
+  const pending = {};
+
+  getScannerSyncQueue().forEach(function(item) {
+    if (item && item.scanId) {
+      pending[item.scanId] = item;
+    }
+  });
+
+  recentScans.forEach(function(entry) {
+
+    if (pending[entry.scanId]) {
+
+      entry.status = Number(pending[entry.scanId].retries || 0) > 0
+        ? "failed"
+        : "saving";
+
+    }
+
+    else if (entry.status !== "saved") {
+
+      entry.status = "saved";
+
+    }
+
+  });
+
+  saveRecentScans();
+
+}
+
+
+function renderRecentScans() {
+
+  const list = $("recentList");
+
+  list.innerHTML = "";
+
+  $("recentEmpty").hidden = recentScans.length > 0;
+
+  recentScans.forEach(function(entry) {
+
+    const li = document.createElement("li");
+
+    const time = new Date(entry.time).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+
+    li.innerHTML =
+      "<div>" +
+        '<span class="recent-code">' + escapeHtml(entry.itemCode) + "</span>" +
+        '<span class="recent-time">' + escapeHtml(time) + "</span>" +
+      "</div>" +
+      '<span class="chip ' + escapeHtml(entry.status) + '">' +
+        escapeHtml(entry.status === "failed" ? "RETRYING…" : CHIP_TEXT[entry.status] || "") +
+      "</span>";
+
+    list.appendChild(li);
+
+  });
+
+}
+
+
+function clearRecentList() {
+
+  /* Only clears what is shown — never touches unsaved scans. */
+  recentScans = recentScans.filter(function(entry) {
+    return entry.status !== "saved";
+  });
+
+  saveRecentScans();
+  renderRecentScans();
+
+}
+
+
+/* ==========================================================
+   SOUND
+   ========================================================== */
+
+/*
+ * Phones only allow sound after a tap, so the context is
+ * created/resumed on the START / SCAN NEXT tap.
+ */
+function unlockAudio() {
+
+  try {
+
+    if (!audioContext) {
+
+      const Context = window.AudioContext || window.webkitAudioContext;
+
+      if (!Context) {
+        return;
+      }
+
+      audioContext = new Context();
+
+    }
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume();
+    }
+
+  }
+
+  catch (error) {
+
+    console.log("Audio unavailable:", error);
+
+  }
+
+}
+
+
+function playTone(frequency, startOffset, duration, type, volume) {
+
+  const ctx = audioContext;
+  const start = ctx.currentTime + startOffset;
+
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, start);
+
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(volume, start + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+  oscillator.connect(gain);
+  gain.connect(ctx.destination);
+
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.02);
+
+}
+
+
+/* Bright rising "ding-ding" — Google confirmed the save. */
+function playSuccessSound() {
+
+  if (!soundEnabled || !audioContext) {
+    return;
+  }
+
+  try {
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume();
+    }
+
+    playTone(1046.5, 0, 0.12, "sine", 0.5);
+    playTone(1568, 0.11, 0.22, "sine", 0.5);
+
+  }
+
+  catch (error) {
+
+    console.log("Sound error:", error);
+
+  }
+
+}
+
+
+/* Low double buzz — not saved. */
+function playErrorSound() {
+
+  if (!soundEnabled || !audioContext) {
+    return;
+  }
+
+  try {
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume();
+    }
+
+    playTone(220, 0, 0.18, "square", 0.25);
+    playTone(180, 0.22, 0.28, "square", 0.25);
+
+  }
+
+  catch (error) {
+
+    console.log("Sound error:", error);
+
+  }
+
+}
+
+
+function toggleSound() {
+
+  unlockAudio();
+
+  soundEnabled = !soundEnabled;
+
+  safeSet(SOUND_STORAGE_KEY, soundEnabled ? "on" : "off");
+
+  $("soundButton").textContent = "Sound: " + (soundEnabled ? "ON" : "OFF");
+
+  if (soundEnabled) {
+    playSuccessSound();
   }
 
 }
@@ -2667,168 +1526,42 @@ async function stopCamera() {
 
 function tryEnableContinuousFocus() {
 
-
-  if (
-    !html5QrCode ||
-    !scannerRunning
-  ) {
-
+  if (!html5QrCode || !scannerRunning) {
     return;
-
   }
-
 
   try {
 
+    const capabilities = html5QrCode.getRunningTrackCapabilities();
+    const focusModes = capabilities && capabilities.focusMode;
 
-    const capabilities =
-
-      html5QrCode
-        .getRunningTrackCapabilities();
-
-
-    console.log(
-      "CAMERA CAPABILITIES:",
-      capabilities
-    );
-
-
-    const focusModes =
-      capabilities &&
-      capabilities.focusMode;
-
-
-    if (
-      !focusModes
-    ) {
-
-
-      updateFocusDiagnostic(
-        "NOT EXPOSED"
-      );
-
-
+    if (!focusModes) {
+      updateFocusDiagnostic("NOT EXPOSED");
       return;
-
     }
 
-
-    const supportsContinuous =
-
-      Array.isArray(
-        focusModes
-      )
-      &&
-      focusModes.includes(
-        "continuous"
-      );
-
-
-    if (
-      !supportsContinuous
-    ) {
-
-
-      updateFocusDiagnostic(
-        "NOT AVAILABLE"
-      );
-
-
+    if (!(Array.isArray(focusModes) && focusModes.includes("continuous"))) {
+      updateFocusDiagnostic("NOT AVAILABLE");
       return;
-
     }
-
-
-    /*
-     * Request continuous autofocus.
-     */
 
     html5QrCode
-
-      .applyVideoConstraints({
-
-        advanced: [
-
-          {
-            focusMode:
-              "continuous"
-          }
-
-        ]
-
+      .applyVideoConstraints({ advanced: [{ focusMode: "continuous" }] })
+      .then(function() {
+        updateFocusDiagnostic("ENABLED");
+        setTimeout(inspectCamera, 250);
       })
-
-
-      .then(
-
-        function() {
-
-
-          console.log(
-            "CONTINUOUS FOCUS ENABLED"
-          );
-
-
-          updateFocusDiagnostic(
-            "ENABLED"
-          );
-
-
-          /*
-           * Re-read settings.
-           */
-
-          setTimeout(
-
-            function() {
-
-              inspectCamera();
-
-            },
-
-            250
-
-          );
-
-        }
-
-      )
-
-
-      .catch(
-
-        function(error) {
-
-
-          console.log(
-            "FOCUS REQUEST REJECTED:",
-            error
-          );
-
-
-          updateFocusDiagnostic(
-            "REJECTED"
-          );
-
-
-        }
-
-      );
+      .catch(function(error) {
+        console.log("FOCUS REQUEST REJECTED:", error);
+        updateFocusDiagnostic("REJECTED");
+      });
 
   }
 
-  catch(error) {
+  catch (error) {
 
-
-    console.log(
-      "FOCUS CHECK ERROR:",
-      error
-    );
-
-
-    updateFocusDiagnostic(
-      "UNAVAILABLE"
-    );
+    console.log("FOCUS CHECK ERROR:", error);
+    updateFocusDiagnostic("UNAVAILABLE");
 
   }
 
@@ -2841,250 +1574,74 @@ function tryEnableContinuousFocus() {
 
 function inspectCamera() {
 
-
-  if (
-    !html5QrCode ||
-    !scannerRunning
-  ) {
-
+  if (!html5QrCode || !scannerRunning) {
     return;
-
   }
-
 
   try {
 
+    const settings = html5QrCode.getRunningTrackSettings();
 
-    const settings =
+    const resolution = settings.width && settings.height
+      ? settings.width + " × " + settings.height
+      : "Unknown";
 
-      html5QrCode
-        .getRunningTrackSettings();
+    const fps = settings.frameRate ? Math.round(settings.frameRate) : "Unknown";
+    const zoom = settings.zoom !== undefined ? settings.zoom : "Native";
+    const focus = settings.focusMode !== undefined ? settings.focusMode : "Browser managed";
 
-
-    const capabilities =
-
-      html5QrCode
-        .getRunningTrackCapabilities();
-
-
-    console.log(
-      "RUNNING CAMERA SETTINGS:",
-      settings
-    );
-
-
-    console.log(
-      "RUNNING CAMERA CAPABILITIES:",
-      capabilities
-    );
-
-
-    const resolution =
-
-      settings.width &&
-      settings.height
-
-      ?
-
-      settings.width +
-      " × " +
-      settings.height
-
-      :
-
-      "Unknown";
-
-
-    const fps =
-
-      settings.frameRate
-
-      ?
-
-      Math.round(
-        settings.frameRate
-      )
-
-      :
-
-      "Unknown";
-
-
-    const zoom =
-
-      settings.zoom !== undefined
-
-      ?
-
-      settings.zoom
-
-      :
-
-      "Native";
-
-
-    const focus =
-
-      settings.focusMode !== undefined
-
-      ?
-
-      settings.focusMode
-
-      :
-
-      "Browser managed";
-
-
-    document
-      .getElementById(
-        "cameraDiagnostics"
-      )
-      .innerHTML =
-
-        "<strong>Camera:</strong> " +
-        escapeHtml(
-          getSelectedCameraLabel()
-        ) +
-
-        "<br>" +
-
-        "<strong>Resolution:</strong> " +
-        escapeHtml(
-          resolution
-        ) +
-
-        "<br>" +
-
-        "<strong>FPS:</strong> " +
-        escapeHtml(
-          fps
-        ) +
-
-        "<br>" +
-
-        "<strong>Zoom:</strong> " +
-        escapeHtml(
-          zoom
-        ) +
-
-        "<br>" +
-
-        "<strong>Focus setting:</strong> " +
-        escapeHtml(
-          focus
-        ) +
-
-        "<br>" +
-
-        "<strong>Focus capability:</strong> checking…";
+    $("cameraDiagnostics").innerHTML =
+      "<strong>Camera:</strong> " + escapeHtml(getSelectedCameraLabel()) + "<br>" +
+      "<strong>Resolution:</strong> " + escapeHtml(resolution) + "<br>" +
+      "<strong>FPS:</strong> " + escapeHtml(fps) + "<br>" +
+      "<strong>Zoom:</strong> " + escapeHtml(zoom) + "<br>" +
+      "<strong>Focus setting:</strong> " + escapeHtml(focus) + "<br>" +
+      "<strong>Focus capability:</strong> checking…";
 
   }
 
-  catch(error) {
+  catch (error) {
 
-
-    document
-      .getElementById(
-        "cameraDiagnostics"
-      )
-      .textContent =
-      "Camera active. Detailed settings unavailable.";
+    $("cameraDiagnostics").textContent = "Camera active. Detailed settings unavailable.";
 
   }
 
 }
 
-
-/* ==========================================================
-   SELECTED CAMERA LABEL
-   ========================================================== */
 
 function getSelectedCameraLabel() {
 
+  const camera = availableCameras.find(function(item) {
+    return item.id === selectedCameraId;
+  });
 
-  const camera =
-    availableCameras.find(
-
-      function(item) {
-
-        return (
-          item.id ===
-          selectedCameraId
-        );
-
-      }
-
-    );
-
-
-  if (
-    camera &&
-    camera.label
-  ) {
-
-    return camera.label;
-
-  }
-
-
-  return "Selected camera";
+  return camera && camera.label ? camera.label : "Selected camera";
 
 }
 
 
-/* ==========================================================
-   FOCUS DIAGNOSTIC
-   ========================================================== */
+function updateFocusDiagnostic(message) {
 
-function updateFocusDiagnostic(
-  message
-) {
-
-
-  const element =
-
-    document.getElementById(
-      "cameraDiagnostics"
-    );
-
+  const element = $("cameraDiagnostics");
 
   if (!element) {
     return;
   }
 
+  const text = escapeHtml(message);
 
-  const text =
-    escapeHtml(message);
+  if (element.innerHTML.includes("Focus capability:")) {
 
-
-  if (
-    element.innerHTML.includes(
-      "Focus capability:"
-    )
-  ) {
-
-
-    element.innerHTML =
-
-      element.innerHTML.replace(
-
-        /<strong>Focus capability:<\/strong>.*$/i,
-
-        "<strong>Focus capability:</strong> " +
-        text
-
-      );
+    element.innerHTML = element.innerHTML.replace(
+      /<strong>Focus capability:<\/strong>.*$/i,
+      "<strong>Focus capability:</strong> " + text
+    );
 
   }
 
   else {
 
-
-    element.innerHTML +=
-
-      "<br><strong>Focus capability:</strong> " +
-      text;
+    element.innerHTML += "<br><strong>Focus capability:</strong> " + text;
 
   }
 
@@ -3092,417 +1649,86 @@ function updateFocusDiagnostic(
 
 
 /* ==========================================================
-   GREEN VISUAL
+   VISUALS + STATUS
    ========================================================== */
 
-function setScanVisual(
-  state
-) {
+function setScanVisual(state) {
 
-
-  const overlay =
-
-    document.getElementById(
-      "scanOverlay"
-    );
-
+  const overlay = $("scanOverlay");
 
   if (!overlay) {
     return;
   }
 
-
-  overlay.classList.remove(
-    "scanning",
-    "detected"
-  );
-
-
-  overlay.classList.add(
-    state
-  );
+  overlay.classList.remove("scanning", "detected", "paused");
+  overlay.classList.add(state);
 
 }
 
 
-/* ==========================================================
-   STATUS
-   ========================================================== */
+function setCameraStatus(message, type) {
 
-function setCameraStatus(
-  message,
-  type
-) {
-
-
-  const element =
-
-    document.getElementById(
-      "cameraStatus"
-    );
-
+  const element = $("cameraStatus");
 
   if (!element) {
     return;
   }
 
-
-  element.textContent =
-    message;
-
-
-  element.className =
-    "camera-status";
-
+  element.textContent = message;
+  element.className = "status";
 
   if (type) {
-
-    element.classList.add(
-      type
-    );
-
+    element.classList.add(type);
   }
 
 }
 
 
-/* ==========================================================
-   BACKEND HOOK — QUEUED GOOGLE SHEETS SAVE
-   ========================================================== */
+function readableCameraError(error) {
 
-function handleInventoryItem(
+  const text = String(error || "");
 
-  itemCode,
+  if (text.includes("NotAllowedError")) return "ALLOW CAMERA PERMISSION";
+  if (text.includes("NotFoundError")) return "NO CAMERA FOUND";
+  if (text.includes("NotReadableError")) return "CAMERA IS BUSY";
+  if (text.includes("OverconstrainedError")) return "CAMERA NOT COMPATIBLE";
 
-  decodedResult
-
-) {
-
-
-  /*
-   * ONLY VERIFIED KA#### CODES REACH HERE.
-   *
-   * The scanner has already completed:
-   *
-   * 1/3
-   * 2/3
-   * 3/3
-   *
-   * Therefore this is the safe handoff point.
-   */
-
-
-  console.log(
-    "VERIFIED ITEM READY FOR SYNC QUEUE:",
-    itemCode
-  );
-
-
-  /*
-   * Send the verified item to scanner-sync.js.
-   *
-   * IMPORTANT:
-   *
-   * queueVerifiedScan() does NOT wait for Google Sheets.
-   *
-   * It saves the item locally first and returns immediately.
-   *
-   * Google Sheets saving happens in the background.
-   */
-
-  try {
-
-
-    const result =
-
-      queueVerifiedScan(
-        itemCode
-      );
-
-
-    console.log(
-      "SCANNER SYNC QUEUE RESULT:",
-      result
-    );
-
-
-    /*
-     * If the item was successfully placed into
-     * the local queue, we are done here.
-     *
-     * The scanner itself remains untouched.
-     */
-
-
-    if (
-      result &&
-      result.success
-    ) {
-
-      console.log(
-
-        "ITEM QUEUED FOR BACKGROUND SAVE:",
-
-        result.itemCode,
-
-        result.scanId
-
-      );
-
-      return;
-
-    }
-
-
-    /*
-     * Queue rejected the item.
-     */
-
-    console.error(
-
-      "ITEM WAS NOT QUEUED:",
-
-      result
-
-    );
-
-
-    showNotQueuedError(
-      itemCode,
-      result && result.error
-    );
-
-
-  }
-
-  catch(error) {
-
-
-    /*
-     * IMPORTANT:
-     *
-     * A sync problem must NOT crash the scanner.
-     *
-     * The camera/scanner remains independent.
-     */
-
-    console.error(
-
-      "SCANNER SYNC ERROR:",
-
-      error
-
-    );
-
-
-    showNotQueuedError(
-      itemCode,
-      error && error.message
-    );
-
-
-  }
+  return text.substring(0, 150);
 
 }
 
 
-/* ==========================================================
-   NOT QUEUED — MAKE IT OBVIOUS
-   ========================================================== */
-
-function showNotQueuedError(
-  itemCode,
-  reason
-) {
-
-  const badge =
-    document.getElementById("resultBadge");
-
-  badge.textContent =
-    "✗ NOT SAVED";
-
-  badge.classList.remove("detected");
-
-  badge.style.background =
-    "#4a1212";
-
-  badge.style.color =
-    "#ff7070";
-
-  document
-    .getElementById("verification")
-    .textContent =
-    "✗ " + itemCode + " was NOT saved. " +
-    (reason || "") +
-    " Scan it again.";
-
-  setCameraStatus(
-    "✗ NOT SAVED — " + itemCode,
-    "error"
-  );
-
-  if (navigator.vibrate) {
-    navigator.vibrate([200, 100, 200]);
-  }
-
-}
-
-/* ==========================================================
-   CAMERA ERROR
-   ========================================================== */
-
-function readableCameraError(
-  error
-) {
-
-
-  const text =
-    String(
-      error || ""
-    );
-
-
-  if (
-    text.includes(
-      "NotAllowedError"
-    )
-  ) {
-
-    return "ALLOW CAMERA PERMISSION";
-
-  }
-
-
-  if (
-    text.includes(
-      "NotFoundError"
-    )
-  ) {
-
-    return "NO CAMERA FOUND";
-
-  }
-
-
-  if (
-    text.includes(
-      "NotReadableError"
-    )
-  ) {
-
-    return "CAMERA IS BUSY";
-
-  }
-
-
-  if (
-    text.includes(
-      "OverconstrainedError"
-    )
-  ) {
-
-    return "CAMERA NOT COMPATIBLE";
-
-  }
-
-
-  return text.substring(
-    0,
-    150
-  );
-
-}
-
-
-/* ==========================================================
-   HTML ESCAPE
-   ========================================================== */
-
-function escapeHtml(
-  value
-) {
-
+function escapeHtml(value) {
 
   return String(value)
-
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-
-    .replace(
-      /</g,
-      "&lt;"
-    )
-
-    .replace(
-      />/g,
-      "&gt;"
-    )
-
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-
-    .replace(
-      /'/g,
-      "&#039;"
-    );
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
 }
 
 
-/* ==========================================================
-   COLUMN NUMBER → LETTER
-   ========================================================== */
+function columnNumberToLetter(columnNumber) {
 
-function columnNumberToLetter(
-  columnNumber
-) {
+  let number = Number(columnNumber);
 
-  let number =
-    Number(columnNumber);
-
-
-  if (
-    !Number.isInteger(number) ||
-    number < 1
-  ) {
-
-    return '?';
-
+  if (!Number.isInteger(number) || number < 1) {
+    return "?";
   }
 
+  let result = "";
 
-  let result =
-    '';
+  while (number > 0) {
 
+    const remainder = (number - 1) % 26;
 
-  while (
-    number > 0
-  ) {
+    result = String.fromCharCode(65 + remainder) + result;
 
-    const remainder =
-      (number - 1) % 26;
-
-
-    result =
-
-      String.fromCharCode(
-        65 + remainder
-      ) +
-
-      result;
-
-
-    number =
-      Math.floor(
-        (number - 1) / 26
-      );
+    number = Math.floor((number - 1) / 26);
 
   }
-
 
   return result;
 
@@ -3510,111 +1736,51 @@ function columnNumberToLetter(
 
 
 /* ==========================================================
-   SCANNER NAVIGATION — CURRENT DESTINATION
+   DESTINATION (top right)
    ========================================================== */
 
 function loadScannerNavigationDestination() {
 
-  const destinationElement =
-    document.getElementById(
-      "scannerCurrentDestination"
-    );
+  const element = $("scannerCurrentDestination");
 
-
-  if (!destinationElement) {
-
+  if (!element) {
     return;
-
   }
-
 
   try {
 
-    /*
-     * Read the SAME saved destination used
-     * by scanner-sync.js.
-     */
-
-    const destination =
-      getScannerSyncDestination();
-
-
-    /*
-     * No saved destination.
-     */
+    const destination = getScannerSyncDestination();
 
     if (!destination) {
 
-      destinationElement.textContent =
-        "NO DESTINATION";
-
-      destinationElement.style.color =
-        "#ff7070";
+      element.textContent = "NO DESTINATION";
+      element.style.color = "#ff7070";
 
       return;
 
     }
 
+    element.style.color = "#ffffff";
 
-    destinationElement.style.color =
-      "#ffffff";
+    let html =
+      escapeHtml(destination.sheetName) +
+      " - " +
+      escapeHtml(columnNumberToLetter(destination.itemCodeColumn));
 
-
-    /*
-     * Show only the selected sheet/tab.
-     */
-
-   let displayHtml =
-
-  escapeHtml(
-    destination.sheetName
-  ) +
-
-  " - " +
-
-  escapeHtml(
-    columnNumberToLetter(
-      destination.itemCodeColumn
-    )
-  );
-
-    /*
-     * Show timestamp icon ONLY when enabled.
-     */
-
-    if (
-      destination.timestampEnabled
-    ) {
-
-      displayHtml +=
-
-        ' <span ' +
-        'class="scanner-timestamp-icon" ' +
-        'title="Timestamp enabled">' +
-        '🕒' +
-        '</span>';
-
+    if (destination.timestampEnabled) {
+      html += ' <span class="timestamp-icon" title="Timestamp enabled">🕒</span>';
     }
 
-
-    destinationElement.innerHTML =
-      displayHtml;
+    element.innerHTML = html;
 
   }
 
   catch (error) {
 
-    console.error(
-      "SCANNER NAVIGATION ERROR:",
-      error
-    );
+    console.error("SCANNER NAVIGATION ERROR:", error);
 
-
-    destinationElement.textContent =
-      "DESTINATION ERROR";
-
-    destinationElement.style.color =
-      "#ff7070";
+    element.textContent = "DESTINATION ERROR";
+    element.style.color = "#ff7070";
 
   }
 
@@ -3627,10 +1793,9 @@ function loadScannerNavigationDestination() {
 
 function goBackToSetup() {
 
-  const pending =
-    typeof getScannerSyncPendingCount === "function"
-      ? getScannerSyncPendingCount()
-      : 0;
+  const pending = typeof getScannerSyncPendingCount === "function"
+    ? getScannerSyncPendingCount()
+    : 0;
 
   if (
     pending > 0 &&
@@ -3646,16 +1811,21 @@ function goBackToSetup() {
   /* Already confirmed — skip the browser's second prompt. */
   window.scannerSyncLeaveConfirmed = true;
 
-  window.location.href =
-    "setup.html";
+  window.location.href = "setup.html";
 
 }
-</script>
-<script src="scanner-sync.js"></script>
-  
-  <script>
-  loadScannerNavigationDestination();
-</script>
-</body>
 
+</script>
+
+<script src="scanner-sync.js"></script>
+
+<script>
+  loadScannerNavigationDestination();
+  reconcileRecentScans();
+  renderRecentScans();
+  $("soundButton").textContent = "Sound: " + (soundEnabled ? "ON" : "OFF");
+  setUiState("off");
+</script>
+
+</body>
 </html>

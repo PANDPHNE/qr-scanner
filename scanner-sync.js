@@ -14,7 +14,7 @@
  * - autofocus
  * - barcode detection
  * - 3-scan verification
- * - KA + 4 digit validation
+ * - KA + 3/4/5 digit validation
  * - scanner UI
  *
  *
@@ -531,6 +531,44 @@ function scheduleScannerSyncRetry(
 }
 
 
+/*
+ * Events the scanner page listens to:
+ *   scansync:queued  — stored on the phone, sending
+ *   scansync:saved   — Apps Script confirmed the save
+ *   scansync:retry   — send failed, will retry by itself
+ */
+function emitScannerSyncEvent(
+  name,
+  detail
+) {
+
+  try {
+
+    if (
+      typeof window.dispatchEvent === 'function' &&
+      typeof CustomEvent === 'function'
+    ) {
+
+      window.dispatchEvent(
+        new CustomEvent(
+          'scansync:' + name,
+          { detail: detail }
+        )
+      );
+
+    }
+
+  }
+
+  catch (error) {
+
+    console.error('SCANNER SYNC EVENT ERROR:', error);
+
+  }
+
+}
+
+
 function getScannerSyncPendingCount() {
 
   return getScannerSyncQueue().filter(
@@ -998,11 +1036,11 @@ function queueVerifiedScan(
   /*
    * Extra frontend protection.
    *
-   * The scanner already validates KA + 4 digits,
+   * The scanner already validates KA + 3 to 5 digits,
    * but we keep this boundary check here too.
    */
   if (
-    !/^KA\d{4}$/.test(
+    !/^KA\d{3,5}$/.test(
       normalizedItemCode
     )
   ) {
@@ -1169,10 +1207,16 @@ function queueVerifiedScan(
   setScannerSyncMessage(
 
     normalizedItemCode +
-    ' — Queued for saving',
+    ' — Saving…',
 
     'queued'
 
+  );
+
+
+  emitScannerSyncEvent(
+    'queued',
+    { scanId: scanId, itemCode: normalizedItemCode }
   );
 
 
@@ -1378,6 +1422,15 @@ async function processScannerSyncQueue() {
           'saved'
         );
 
+        /*
+         * Fired ONLY after Apps Script answered success.
+         * The scanner plays the success sound on this.
+         */
+        emitScannerSyncEvent(
+          'saved',
+          { scanId: scanId, itemCode: item.itemCode }
+        );
+
         refreshScannerSyncStatus();
 
       }
@@ -1410,6 +1463,16 @@ async function processScannerSyncQueue() {
         setScannerSyncMessage(
           item.itemCode + ' — Not saved yet, retrying…',
           'error'
+        );
+
+        emitScannerSyncEvent(
+          'retry',
+          {
+            scanId: scanId,
+            itemCode: item.itemCode,
+            retries: retries,
+            error: uploadError
+          }
         );
 
         refreshScannerSyncStatus();
