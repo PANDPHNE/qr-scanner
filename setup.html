@@ -383,40 +383,17 @@ button:disabled {
       </div>
 
 
-      <!-- SCANNER NAME (who scanned) -->
+      <!-- WHO SCANNED: always the BY (NAME, GMAIL) column, nothing to pick -->
 
-      <div class="checkbox-row">
+      <p class="field" style="margin:4px 0 12px;font-size:14px;line-height:1.4;">
+        👤 <strong>Who scanned</strong> is saved automatically in the tab's
+        <strong>BY (NAME, GMAIL)</strong> column (the signed-in staff member).
+      </p>
 
-        <input
-          id="nameEnabled"
-          type="checkbox"
-          checked
-        >
-
-        <label for="nameEnabled">
-          Save the name of the staff who scanned
-        </label>
-
-      </div>
-
-
-      <div
-        id="nameField"
-        class="field"
-      >
-
-        <label for="nameColumn">
-          Scanner Name Column
-        </label>
-
-        <select id="nameColumn">
-
-          <option value="">
-            Select Scanner Name column
-          </option>
-
-        </select>
-
+      <!-- retired setting, kept hidden so older saved setups load safely -->
+      <div id="nameField" class="hidden">
+        <input id="nameEnabled" type="checkbox">
+        <select id="nameColumn"><option value=""></option></select>
       </div>
 
 
@@ -864,11 +841,7 @@ function loadExistingDestination() {
 
 
     html +=
-      destination.nameEnabled && destination.nameColumn
-        ? '<br>Scanner Name: <strong>Column ' +
-          escapeHtml(columnNumberToLetter(destination.nameColumn)) +
-          '</strong>'
-        : '<br>Scanner Name: <strong>OFF</strong>';
+      '<br>Who scanned: <strong>BY (NAME, GMAIL) column, automatic</strong>';
 
 
     statusDetails.innerHTML =
@@ -1193,7 +1166,7 @@ changeDestinationButton.addEventListener(
        */
 
       nameEnabled.checked =
-        destination.nameEnabled !== false;
+        false; // retired: the name always goes to BY (NAME, GMAIL)
 
       nameField.classList.toggle(
         'hidden',
@@ -1323,9 +1296,9 @@ loadSheetsButton.addEventListener(
 
 
       nameEnabled.checked =
-        true;
+        false;
 
-      nameField.classList.remove(
+      nameField.classList.add(
         'hidden'
       );
 
@@ -1830,7 +1803,7 @@ saveDestinationButton.addEventListener(
       timestampColumn.value;
 
     const useName =
-      nameEnabled.checked;
+      false; // the staff name always goes to BY (NAME, GMAIL)
 
     const selectedNameColumn =
       nameColumn.value;
