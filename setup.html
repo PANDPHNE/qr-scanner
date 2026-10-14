@@ -383,18 +383,22 @@ button:disabled {
       </div>
 
 
-      <!-- WHO SCANNED: always the BY (NAME, GMAIL) column, nothing to pick -->
+      <!-- SCANNER NAME (who scanned). The OWNER decides per tab in the logbook's BOXES tab
+           (column H): REQUIRED / NOT ALLOWED lock this; STAFF CHOOSES lets the phone pick. -->
 
-      <p class="field" style="margin:4px 0 12px;font-size:14px;line-height:1.4;">
-        👤 <strong>Who scanned</strong> is saved automatically in the tab's
-        <strong>BY (NAME, GMAIL)</strong> column (the signed-in staff member).
-      </p>
-
-      <!-- retired setting, kept hidden so older saved setups load safely -->
-      <div id="nameField" class="hidden">
+      <div class="checkbox-row">
         <input id="nameEnabled" type="checkbox">
-        <select id="nameColumn"><option value=""></option></select>
+        <label for="nameEnabled">Save the name of the staff who scanned</label>
       </div>
+
+      <div id="nameField" class="field hidden">
+        <label for="nameColumn">Scanner Name Column</label>
+        <select id="nameColumn">
+          <option value="">Select Scanner Name column</option>
+        </select>
+      </div>
+
+      <p id="nameRuleNote" style="margin:4px 0 12px;font-size:14px;line-height:1.4;"></p>
 
 
       <!-- SAVE -->
@@ -535,6 +539,52 @@ const nameColumn =
   document.getElementById(
     'nameColumn'
   );
+
+const nameRuleNote =
+  document.getElementById(
+    'nameRuleNote'
+  );
+
+/*
+ * The owner's rule for the selected tab (from the server):
+ * { rule: REQUIRED | NOT ALLOWED | STAFF CHOOSES, locked, letter, byLetter }.
+ */
+let nameRule = null;
+
+function applyNameRule(plan) {
+
+  nameRule = plan || null;
+
+  const locked = !!(plan && plan.locked);
+
+  nameEnabled.disabled = locked;
+  nameColumn.disabled = locked;
+
+  if (plan && plan.rule === 'REQUIRED') {
+    nameEnabled.checked = true;
+    nameColumn.value = plan.columnNumber ? String(plan.columnNumber) : '';
+  }
+
+  if (plan && plan.rule === 'NOT ALLOWED') {
+    nameEnabled.checked = false;
+    nameColumn.value = '';
+  }
+
+  nameField.classList.toggle('hidden', !nameEnabled.checked);
+
+  nameRuleNote.innerHTML =
+    !plan ? ''
+    : plan.rule === 'REQUIRED'
+      ? '🔒 Set by the owner: the staff name is <strong>always</strong> saved in column <strong>' +
+        escapeHtml(plan.letter || '?') + '</strong>' +
+        (plan.byLetter && plan.byLetter !== plan.letter ? ' and in BY (column ' + escapeHtml(plan.byLetter) + ')' : '') +
+        '. It cannot be turned off here.'
+    : plan.rule === 'NOT ALLOWED'
+      ? '🔒 Set by the owner: names are <strong>not</strong> saved on this tab.'
+    : 'The owner lets you choose: tick to save the staff name and pick the column.' +
+      (plan.byLetter ? ' BY (column ' + escapeHtml(plan.byLetter) + ') always gets the name.' : '');
+
+}
 
 const saveDestinationButton =
   document.getElementById(
@@ -841,7 +891,13 @@ function loadExistingDestination() {
 
 
     html +=
-      '<br>Who scanned: <strong>BY (NAME, GMAIL) column, automatic</strong>';
+      destination.nameRule === 'REQUIRED'
+        ? '<br>Scanner Name: <strong>REQUIRED by the owner' + (destination.nameLetter ? ' (column ' + escapeHtml(destination.nameLetter) + ')' : '') + '</strong>'
+      : destination.nameRule === 'NOT ALLOWED'
+        ? '<br>Scanner Name: <strong>NOT ALLOWED by the owner</strong>'
+      : destination.nameEnabled && destination.nameColumn
+        ? '<br>Scanner Name: <strong>Column ' + escapeHtml(columnNumberToLetter(destination.nameColumn)) + '</strong>'
+        : '<br>Scanner Name: <strong>OFF</strong>';
 
 
     statusDetails.innerHTML =
@@ -1166,7 +1222,7 @@ changeDestinationButton.addEventListener(
        */
 
       nameEnabled.checked =
-        false; // retired: the name always goes to BY (NAME, GMAIL)
+        destination.nameEnabled === true;
 
       nameField.classList.toggle(
         'hidden',
@@ -1177,6 +1233,8 @@ changeDestinationButton.addEventListener(
         nameEnabled.checked && destination.nameColumn
           ? String(destination.nameColumn)
           : '';
+
+      applyNameRule(columnResponse.scannerName);
 
 
       columnField
@@ -1596,6 +1654,11 @@ sheetName.addEventListener(
       nameColumn.value =
         '';
 
+      nameEnabled.checked =
+        false;
+
+      applyNameRule(response.scannerName);
+
 
       hideStatus();
 
@@ -1803,7 +1866,7 @@ saveDestinationButton.addEventListener(
       timestampColumn.value;
 
     const useName =
-      false; // the staff name always goes to BY (NAME, GMAIL)
+      !(nameRule && nameRule.locked) && nameEnabled.checked; // a locked rule is enforced by the server
 
     const selectedNameColumn =
       nameColumn.value;
@@ -2044,7 +2107,13 @@ saveDestinationButton.addEventListener(
           nameColumn:
             useName
               ? Number(selectedNameColumn)
-              : null
+              : null,
+
+          nameRule:
+            nameRule ? nameRule.rule : '',
+
+          nameLetter:
+            nameRule && nameRule.locked ? (nameRule.letter || '') : ''
 
         })
 

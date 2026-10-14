@@ -57,7 +57,8 @@ Each staff member registers **their own phone** with a personal **staff code**, 
 - Wrong codes: 5 per phone, then a 15-minute wait; 30 from all phones together pauses registration for 15 minutes.
 - Each phone gets its own random key; only its fingerprint is stored, in the hidden `_STAFF_SESSIONS` tab (set ACTIVE = NO there to sign out one phone).
 - Every scan writes `Name, gmail` into the tab's **BY (NAME, GMAIL)** column and into `_SCAN_LOG`.
-- **Who scanned = the BY column, nothing else.** Every scan writes `Name, gmail` of the signed-in staff member into the tab's **BY (NAME, GMAIL)** column. There is no separate name column any more (older setups that had one are ignored). The logbook uses BY as the only source of who did each scan; NOTE is only for a customer name or a reason.
+- **Who scanned (owner's rule, server 3.3+).** The owner sets a rule per tab in the logbook's **BOXES** tab: column H = `REQUIRED` / `NOT ALLOWED` / `STAFF CHOOSES`, column I = the column letter for the name (empty = BY). Empty rule = `REQUIRED` in the tab's **BY (NAME, GMAIL)** column. REQUIRED and NOT ALLOWED are locked on the phone's Destination Setup and enforced by the server; STAFF CHOOSES lets the phone tick it and pick a column (BY still gets the name).
+- The server writes the name **before** the item code, so the logbook never processes a row whose name is still on its way.
 - PIN asked each time the scanner opens and after the phone was away 2+ minutes. 5 wrong PINs → enter the staff code again.
 - `CONFIG.REQUIRE_SIGN_IN: false` turns registration off again.
 

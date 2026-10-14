@@ -62,7 +62,7 @@ const CONFIG = {
    * Server version — shown on the scanner's settings panel.
    */
   VERSION:
-    '3.2.0',
+    '3.3.0',
 
 
   /*
@@ -1039,7 +1039,10 @@ function getColumnsResponse(
       sheetName,
 
     columns:
-      columns
+      columns,
+
+    scannerName:
+      scannerNameInfo(scannerNamePlan(spreadsheet, sheet, 0))
 
   });
 
@@ -1458,19 +1461,7 @@ function verifyDestinationResponse(
           },
 
     scannerName:
-
-      nameColumn !== null
-
-        ? {
-            enabled: true,
-            columnNumber: nameColumn,
-            letter: columnNumberToLetter(nameColumn),
-            header: String(headers[nameColumn - 1] || '').trim()
-          }
-
-        : {
-            enabled: false
-          }
+      scannerNameInfo(scannerNamePlan(spreadsheet, sheet, nameColumn || 0))
 
   });
 
@@ -2355,6 +2346,40 @@ function saveScansCore(
 
 
       /**************************************************
+       * WHO SCANNED — written BEFORE the item codes, so the
+       * logbook never sees an item code without its name.
+       * The owner's rule (BOXES tab) decides; see scannerNamePlan.
+       **************************************************/
+
+      const plan =
+        scannerNamePlan(spreadsheet, sheet, nameColumn);
+
+      if (staff) {
+
+        const own = [itemCodeColumn, timestampEnabled ? timestampColumn : 0];
+
+        if (plan.byColumn && own.indexOf(plan.byColumn) < 0 && plan.byColumn <= sheet.getMaxColumns()) {
+          const byText = staff.name + ', ' + staff.gmail;
+          sheet.getRange(firstRow, plan.byColumn, count, 1)
+            .setValues(toWrite.map(function() { return [byText]; }));
+        }
+
+        if (plan.column && plan.column !== plan.byColumn) {
+          if (own.indexOf(plan.column) >= 0) {
+            throw new Error('Scanner Name column ' + columnNumberToLetter(plan.column) +
+              ' is the Item Code or Timestamp column. Fix it in the BOXES tab (column I).');
+          }
+          if (plan.column > sheet.getMaxColumns()) {
+            throw new Error('Scanner Name column ' + columnNumberToLetter(plan.column) + ' does not exist.');
+          }
+          sheet.getRange(firstRow, plan.column, count, 1)
+            .setValues(toWrite.map(function() { return [staff.name]; }));
+        }
+
+      }
+
+
+      /**************************************************
        * WRITE ALL ROWS AT ONCE
        **************************************************/
 
@@ -2381,63 +2406,6 @@ function saveScansCore(
             return [result.timestamp];
           })
         );
-
-      }
-
-
-      /**************************************************
-       * SCANNER NAME — the column chosen in Setup
-       **************************************************/
-
-      if (
-        nameColumn &&
-        staff
-      ) {
-
-        if (nameColumn > sheet.getMaxColumns()) {
-          throw new Error(
-            'Scanner Name column ' + columnNumberToLetter(nameColumn) +
-            ' does not exist.'
-          );
-        }
-
-        sheet
-          .getRange(firstRow, nameColumn, count, 1)
-          .setValues(
-            toWrite.map(function() {
-              return [staff.name];
-            })
-          );
-
-      }
-
-
-      /**************************************************
-       * BY (NAME, GMAIL) — if the tab has that column
-       **************************************************/
-
-      const byColumn =
-        staff
-          ? findByColumn(sheet)
-          : 0;
-
-      if (
-        byColumn &&
-        byColumn !== itemCodeColumn &&
-        byColumn !== timestampColumn &&
-        byColumn !== nameColumn
-      ) {
-
-        const byText =
-          staff.name + ', ' + staff.gmail;
-
-        sheet
-          .getRange(firstRow, byColumn, count, 1)
-          .setValues(
-            toWrite.map(function() {
-              return [byText];
-            })
-          );
 
       }
 
@@ -2488,18 +2456,19 @@ function saveScansCore(
             : [itemCodeColumn];
 
         if (
-          byColumn &&
-          protectColumns.indexOf(byColumn) === -1
+          staff &&
+          plan.byColumn &&
+          protectColumns.indexOf(plan.byColumn) === -1
         ) {
-          protectColumns.push(byColumn);
+          protectColumns.push(plan.byColumn);
         }
 
         if (
-          nameColumn &&
           staff &&
-          protectColumns.indexOf(nameColumn) === -1
+          plan.column &&
+          protectColumns.indexOf(plan.column) === -1
         ) {
-          protectColumns.push(nameColumn);
+          protectColumns.push(plan.column);
         }
 
         ensureScannerColumnsProtected(
@@ -3601,6 +3570,86 @@ function getSessionsSheet() {
  * Column whose header starts with "BY" (e.g. "BY (NAME, GMAIL)").
  * Returns 0 if the tab has none.
  */
+/**
+ * WHO-SCANNED RULE for one tab, set by the owner in the destination spreadsheet's
+ * BOXES tab (the logbook):
+ *   column H  SCANNER NAME   = REQUIRED / NOT ALLOWED / STAFF CHOOSES
+ *   column I  SCANNER NAME COLUMN = a column letter (optional, e.g. E)
+ * A tab with no rule: REQUIRED in its "BY (NAME, GMAIL)" column when it has one,
+ * otherwise STAFF CHOOSES. The phone cannot change a REQUIRED / NOT ALLOWED rule.
+ *
+ * Returns { rule, locked, column, byColumn, fromOwner }:
+ *   column   = where the staff NAME goes (0 = nowhere)
+ *   byColumn = the BY column that always gets "Name, gmail" (0 when NOT ALLOWED)
+ */
+function scannerNamePlan(spreadsheet, sheet, phoneNameColumn) {
+
+  const byColumn = findByColumn(sheet);
+  let rule = '', ruleColumn = 0, fromOwner = false;
+
+  const boxes = spreadsheet.getSheetByName('BOXES');
+
+  if (boxes && boxes.getLastRow() >= 2 && boxes.getLastColumn() >= 8 &&
+      String(boxes.getRange(1, 8).getDisplayValues()[0][0]).trim().toUpperCase().indexOf('SCANNER NAME') === 0) {
+
+    const name = String(sheet.getName()).trim().toUpperCase();
+    const rows = boxes.getRange(2, 1, boxes.getLastRow() - 1, 9).getDisplayValues();
+
+    for (let i = 0; i < rows.length; i++) {
+      if (String(rows[i][0]).trim().toUpperCase() !== name) continue;
+      rule = String(rows[i][7] || '').trim().toUpperCase();
+      ruleColumn = columnLetterToNumber(rows[i][8]);
+      fromOwner = rule !== '';
+      break;
+    }
+
+  }
+
+  if (['REQUIRED', 'NOT ALLOWED', 'STAFF CHOOSES'].indexOf(rule) < 0) {
+    rule = byColumn ? 'REQUIRED' : 'STAFF CHOOSES';
+    fromOwner = false;
+  }
+
+  const column =
+    rule === 'REQUIRED' ? (ruleColumn || byColumn)
+    : rule === 'STAFF CHOOSES' ? (Number(phoneNameColumn) || 0)
+    : 0;
+
+  return {
+    rule: rule,
+    locked: rule !== 'STAFF CHOOSES',
+    column: column,
+    byColumn: rule === 'NOT ALLOWED' ? 0 : byColumn,
+    fromOwner: fromOwner
+  };
+
+}
+
+
+/** The rule as the setup page shows it. */
+function scannerNameInfo(plan) {
+  return {
+    rule: plan.rule,
+    locked: plan.locked,
+    fromOwner: plan.fromOwner,
+    enabled: plan.rule === 'REQUIRED' || (plan.rule === 'STAFF CHOOSES' && plan.column > 0),
+    columnNumber: plan.column || null,
+    letter: plan.column ? columnNumberToLetter(plan.column) : '',
+    byLetter: plan.byColumn ? columnNumberToLetter(plan.byColumn) : ''
+  };
+}
+
+
+/** "E" -> 5. Anything else -> 0. */
+function columnLetterToNumber(letter) {
+  const t = String(letter || '').trim().toUpperCase();
+  if (!/^[A-Z]{1,3}$/.test(t)) return 0;
+  let n = 0;
+  for (let i = 0; i < t.length; i++) n = n * 26 + (t.charCodeAt(i) - 64);
+  return n;
+}
+
+
 function findByColumn(
   sheet
 ) {

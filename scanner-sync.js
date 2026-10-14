@@ -968,11 +968,13 @@ function normalizeScannerSyncDestination(
 
 
   /*
-   * Scanner Name column: retired. The staff name and Gmail always go to the tab's
-   * BY (NAME, GMAIL) column, the one source of who scanned. Old saved setups that
-   * still have a name column are ignored, so nothing else receives names.
+   * Scanner Name column chosen on the phone (used only when the owner's rule for the
+   * tab is STAFF CHOOSES; REQUIRED / NOT ALLOWED are enforced by the server).
    */
-  const nameColumn = 0;
+  const nameColumn =
+    config.nameEnabled === true
+      ? Number(config.nameColumn || 0)
+      : 0;
 
 
   /*
@@ -1032,7 +1034,14 @@ function normalizeScannerSyncDestination(
     nameColumn:
       Number.isInteger(nameColumn) && nameColumn > 0
         ? nameColumn
-        : null
+        : null,
+
+    /* The owner's rule, shown on the setup page (the server enforces it). */
+    nameRule:
+      String(config.nameRule || ''),
+
+    nameLetter:
+      String(config.nameLetter || '')
 
   };
 
