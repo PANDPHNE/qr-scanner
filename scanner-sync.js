@@ -1798,6 +1798,11 @@ async function processScannerSyncQueue() {
 
 let logbookResultsOffUntil = 0;
 
+/* Why instant results work or not, shown in the scanner's settings panel. */
+function setInstantStatus(text) {
+  try { localStorage.setItem('qrScannerInstantV1', text); } catch (e) { /* ignore */ }
+}
+
 function requestLogbookResults(
   destination,
   sessionKey,
@@ -1832,10 +1837,14 @@ function requestLogbookResults(
     .then(function(response) {
 
       if (!response.configured) {
-        logbookResultsOffUntil = Date.now() + 3600000;
-        emitScannerSyncEvent('resultoff', {});
+        logbookResultsOffUntil = Date.now() + 300000;
+        const why = 'Off: the scanner server has no LOGBOOK_RESULTS_URL / LOGBOOK_RESULTS_KEY yet.';
+        setInstantStatus(why);
+        emitScannerSyncEvent('resultoff', { reason: why });
         return;
       }
+
+      setInstantStatus('On: RESULTs come back from the logbook.');
 
       const byRow = {};
 
@@ -1891,8 +1900,10 @@ function requestLogbookResults(
 
       /* Older server without this action → stop asking. */
       if (/unknown get action/i.test(message)) {
-        logbookResultsOffUntil = Date.now() + 3600000;
-        emitScannerSyncEvent('resultoff', {});
+        logbookResultsOffUntil = Date.now() + 300000;
+        const why = 'Off: the scanner server is older than 3.4.0 (paste the new server code and publish a new version).';
+        setInstantStatus(why);
+        emitScannerSyncEvent('resultoff', { reason: why });
       }
 
       else if (!attempt) {
@@ -1902,8 +1913,10 @@ function requestLogbookResults(
       }
 
       else {
+        setInstantStatus('Problem: ' + message);
         emitScannerSyncEvent('resultlate', {
-          scanIds: entries.map(function(entry) { return entry.scanId; })
+          scanIds: entries.map(function(entry) { return entry.scanId; }),
+          reason: message
         });
       }
 

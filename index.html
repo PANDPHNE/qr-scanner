@@ -1341,7 +1341,7 @@ li.failed .r-dot { background: var(--bad); }  li.failed .r-word { color: var(--b
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.10.16-1";
+const SCANNER_VERSION = "2026.10.16-2";
 
 
 /* ==========================================================
@@ -2042,15 +2042,19 @@ window.addEventListener("scansync:result", function(event) {
 
 
 /* Instant results are not set up (or old server): no waiting line. */
-window.addEventListener("scansync:resultoff", function() {
-  showResultWait("");
+window.addEventListener("scansync:resultoff", function(event) {
+  const why = (event.detail && event.detail.reason) || "";
+  showResultWait(why && !viewingOlder ? "No instant RESULT. " + why + " The RESULT will be in the sheet within a minute." : "");
+  showVersionInfo();
 });
 
 window.addEventListener("scansync:resultlate", function(event) {
   const ids = (event.detail && event.detail.scanIds) || [];
   if (ids.indexOf(lastScanId) >= 0 && !viewingOlder) {
-    showResultWait("The logbook is busy. The RESULT will be in the sheet within a minute.");
+    const why = (event.detail && event.detail.reason) || "";
+    showResultWait("No instant RESULT" + (why ? " (" + why + ")" : "") + ". The RESULT will be in the sheet within a minute.");
   }
+  showVersionInfo();
 });
 
 function logbookResultsExpected() {
@@ -2355,7 +2359,10 @@ function showRecent(scanId) {
   showItemCard(entry.card || (entry.result ? { result: entry.result } : null), entry.itemCode);
 
   if (!entry.result) {
-    showResultWait(entry.status === "saved" ? "No RESULT on the phone for this scan — see the logbook." : "Not saved yet.");
+    const why = safeGet("qrScannerInstantV1") || "";
+    showResultWait(entry.status === "saved"
+      ? "No RESULT on the phone for this scan. " + (why && why.indexOf("On:") !== 0 ? "Instant results — " + why + " " : "") + "See the logbook."
+      : "Not saved yet.");
   }
 
   $("lastScan").scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -3813,7 +3820,8 @@ function showVersionInfo() {
     "<strong>Scanner:</strong> " + escapeHtml(SCANNER_VERSION) +
     " · <strong>Server:</strong> " + escapeHtml(server) + "<br>" +
     "<strong>This phone:</strong> " + escapeHtml(phone) +
-    " · <strong>Barcode reader:</strong> 2.3.8";
+    " · <strong>Barcode reader:</strong> 2.3.8<br>" +
+    "<strong>Instant results:</strong> " + escapeHtml(safeGet("qrScannerInstantV1") || "not tried yet (scan once)");
 
 }
 
@@ -3848,7 +3856,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.10.16-1"></script>
+<script src="scanner-sync.js?v=2026.10.16-2"></script>
 
 <script>
   loadScannerNavigationDestination();
