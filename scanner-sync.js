@@ -1659,6 +1659,31 @@ async function processScannerSyncQueue() {
 
       });
 
+      /*
+       * Ask the logbook for the RESULT at once (not awaited:
+       * the next scans keep saving meanwhile).
+       */
+      if (savedNow.length && scannerSyncBatchSupported) {
+
+        requestLogbookResults(
+          first.destination,
+          first.sessionKey,
+          savedNow
+            .map(function(item) {
+              const result = perScan[item.scanId] || {};
+              return {
+                scanId: item.scanId,
+                itemCode: item.itemCode,
+                row: Number(result.row || 0)
+              };
+            })
+            .filter(function(entry) {
+              return entry.row > 0;
+            })
+        );
+
+      }
+
       if (savedNow.length) {
 
         setScannerSyncMessage(
@@ -1755,6 +1780,119 @@ async function processScannerSyncQueue() {
     refreshScannerSyncStatus();
 
   }
+
+}
+
+
+/************************************************************
+ * ==========================================================
+ * LOGBOOK RESULTS
+ * ==========================================================
+ *
+ * After a save, asks the server for the logbook's RESULT of
+ * each saved row and fires scansync:result per scan:
+ *   { scanId, itemCode, result }
+ * Server or logbook not set up → stops asking for an hour;
+ * the RESULT then appears in the sheet within a minute.
+ ************************************************************/
+
+let logbookResultsOffUntil = 0;
+
+function requestLogbookResults(
+  destination,
+  sessionKey,
+  entries,
+  attempt
+) {
+
+  if (!entries || !entries.length) return;
+
+  if (Date.now() < logbookResultsOffUntil) return;
+
+  const params = new URLSearchParams();
+
+  params.set('action', 'logbookResults');
+
+  if (sessionKey) {
+    params.set('sessionKey', sessionKey);
+  }
+
+  params.set('deviceId', getScannerDeviceId());
+  params.set('spreadsheetUrl', destination.spreadsheetUrl);
+  params.set('sheetName', destination.sheetName);
+
+  params.set(
+    'rows',
+    JSON.stringify(entries.map(function(entry) {
+      return [entry.row, entry.itemCode];
+    }))
+  );
+
+  scannerSyncJsonp(params)
+    .then(function(response) {
+
+      if (!response.configured) {
+        logbookResultsOffUntil = Date.now() + 3600000;
+        return;
+      }
+
+      const byRow = {};
+
+      (response.results || []).forEach(function(result, index) {
+        if (result) byRow[index] = result;
+      });
+
+      const waiting = [];
+
+      entries.forEach(function(entry, index) {
+
+        const found = byRow[index];
+
+        if (found && found.result) {
+
+          emitScannerSyncEvent('result', {
+            scanId: entry.scanId,
+            itemCode: entry.itemCode,
+            result: String(found.result)
+          });
+
+        }
+
+        else {
+
+          waiting.push(entry);
+
+        }
+
+      });
+
+      /* The logbook was busy: ask once more shortly. */
+      if (waiting.length && !attempt) {
+        setTimeout(function() {
+          requestLogbookResults(destination, sessionKey, waiting, 1);
+        }, 4000);
+      }
+
+    })
+    .catch(function(error) {
+
+      const message =
+        String(error && error.message ? error.message : error);
+
+      console.warn('LOGBOOK RESULTS:', message);
+
+      /* Older server without this action → stop asking. */
+      if (/unknown get action/i.test(message)) {
+        logbookResultsOffUntil = Date.now() + 3600000;
+      }
+
+      else if (!attempt) {
+        setTimeout(function() {
+          requestLogbookResults(destination, sessionKey, entries, 1);
+        }, 4000);
+      }
+
+    });
 
 }
 

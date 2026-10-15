@@ -62,7 +62,7 @@ const CONFIG = {
    * Server version — shown on the scanner's settings panel.
    */
   VERSION:
-    '3.3.0',
+    '3.4.0',
 
 
   /*
@@ -567,6 +567,40 @@ if (
 
       return responseForRequest(
         result,
+        callback
+      );
+
+    }
+
+
+    /******************************************************
+     * LOGBOOK RESULTS — asked by the phone right after a
+     * save, so staff see the RESULT in seconds instead of
+     * waiting for the logbook's every-minute run.
+     ******************************************************/
+
+    if (
+      action === 'logbookresults'
+    ) {
+
+      resolveSession(params.sessionKey, params.deviceId);
+
+      let rows;
+
+      try {
+        rows = JSON.parse(String(params.rows || '[]'));
+      }
+
+      catch (parseError) {
+        rows = [];
+      }
+
+      return responseForRequest(
+        fetchLogbookResults(
+          params.spreadsheetUrl,
+          params.sheetName,
+          Array.isArray(rows) ? rows.slice(0, 200) : []
+        ),
         callback
       );
 
@@ -4130,6 +4164,99 @@ function columnNumberToLetter(
  * ERROR MESSAGE
  * ==========================================================
  ************************************************************/
+
+/************************************************************
+ * ==========================================================
+ * LOGBOOK RESULTS (instant)
+ * ==========================================================
+ *
+ * Rows written by this server never fire the logbook's
+ * onEdit (Google does not run onEdit for script writes), so
+ * the logbook would only see them on its next timed run.
+ * This asks the logbook to check them NOW and returns its
+ * RESULT for each row.
+ *
+ * Owner setup (Project Settings > Script properties):
+ *   LOGBOOK_RESULTS_URL  the logbook's Web app URL
+ *   LOGBOOK_RESULTS_KEY  the key the logbook menu shows
+ * Not set → nothing happens; the logbook works as before.
+ ************************************************************/
+
+function fetchLogbookResults(
+  spreadsheetUrl,
+  sheetName,
+  rows
+) {
+
+  const props =
+    PropertiesService.getScriptProperties();
+
+  const url =
+    String(props.getProperty('LOGBOOK_RESULTS_URL') || '').trim();
+
+  const key =
+    String(props.getProperty('LOGBOOK_RESULTS_KEY') || '').trim();
+
+  if (!url || !key) {
+    return { success: true, configured: false, results: [] };
+  }
+
+  const response =
+    UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        key: key,
+        spreadsheetId: spreadsheetUrl ? extractSpreadsheetId(spreadsheetUrl) : '',
+        sheet: String(sheetName || ''),
+        rows: rows
+      }),
+      muteHttpExceptions: true,
+      followRedirects: true
+    });
+
+  let body;
+
+  try {
+    body = JSON.parse(response.getContentText());
+  }
+
+  catch (parseError) {
+    throw new Error(
+      'Logbook did not answer (HTTP ' + response.getResponseCode() +
+      '). Check LOGBOOK_RESULTS_URL and the logbook web app deployment.'
+    );
+  }
+
+  if (!body || !body.ok) {
+    throw new Error('Logbook: ' + (body && body.error ? body.error : 'no answer'));
+  }
+
+  return {
+    success: true,
+    configured: true,
+    busy: !!body.busy,
+    results: body.results || []
+  };
+
+}
+
+
+/*
+ * Owner: run once from the editor after setting the two
+ * script properties (allows the connection, checks it).
+ */
+function testLogbookResults() {
+
+  const result =
+    fetchLogbookResults('', '__test__', []);
+
+  console.log(JSON.stringify(result));
+
+  return result;
+
+}
+
 
 function getErrorMessage(
   error

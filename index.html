@@ -489,6 +489,37 @@ body {
 .chip.failed { background: #4a1212; color: #ff7070; }
 
 /* =========================================================
+   LOGBOOK RESULT (what the logbook says about the scan)
+   ========================================================= */
+
+.result-line {
+  margin-top: 6px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  background: #1c1f24;
+  color: #d6d9de;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.result-line b { font-weight: 900; }
+.result-line .next { display: block; margin-top: 3px; font-weight: 800; }
+
+.result-line.bad  { background: #4a1212; color: #ffb4b4; }
+.result-line.act  { background: #4a2a08; color: #ffcf8a; }
+.result-line.hold { background: #3a3305; color: #f5e27a; }
+.result-line.good { background: #063d2c; color: #8ff0c0; }
+.result-line.info { background: #0d2c44; color: #9fd2ff; }
+
+#recentList .result-line { font-size: 12px; margin-top: 4px; }
+#recentList li > div:first-child { min-width: 0; flex: 1; }
+
+/* =========================================================
    RECENT SCANS
    ========================================================= */
 
@@ -804,6 +835,7 @@ body {
     <div>
       <div class="last-scan-label">Last item</div>
       <div id="itemCode">—</div>
+      <div id="lastResult" class="result-line" hidden></div>
     </div>
     <div id="lastScanChip" class="chip">—</div>
   </section>
@@ -872,7 +904,7 @@ body {
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.10.14-7";
+const SCANNER_VERSION = "2026.10.15-1";
 
 
 /* ==========================================================
@@ -1454,6 +1486,7 @@ function handleInventoryItem(itemCode, decodedResult) {
       });
 
       showLastScan(itemCode, "saving");
+      showLastResult("");
 
       setCameraStatus("✓ " + itemCode + " CAPTURED — SAVING…", "ok");
 
@@ -1524,6 +1557,31 @@ window.addEventListener("scansync:saved", function(event) {
 });
 
 
+/*
+ * The logbook's RESULT for a saved scan (seconds after the
+ * save). Staff act on this: it says what to do next.
+ */
+window.addEventListener("scansync:result", function(event) {
+
+  const detail = event.detail || {};
+
+  const entry = recentScans.find(function(item) {
+    return item.scanId === detail.scanId;
+  });
+
+  if (entry) {
+    entry.result = detail.result;
+    saveRecentScans();
+    renderRecentScans();
+  }
+
+  if (detail.scanId === lastScanId) {
+    showLastResult(detail.result);
+  }
+
+});
+
+
 window.addEventListener("scansync:retry", function(event) {
 
   const detail = event.detail || {};
@@ -1574,6 +1632,54 @@ function showLastScan(itemCode, status) {
     ? "RETRYING…"
     : CHIP_TEXT[status];
 
+}
+
+
+/* Same color words as the logbook's RESULT column. */
+const RESULT_TONES = [
+  ["ERROR", "bad"], ["UNKNOWN", "bad"], ["PROBLEM", "bad"],
+  ["NAME NEEDED", "act"], ["REASON NEEDED", "act"], ["NEW, NO HOME", "act"], ["NO HOME", "act"],
+  ["WRONG BOX", "act"], ["CHECK", "act"], ["ELSEWHERE", "act"],
+  ["ON HOLD", "hold"], ["RTO", "hold"], ["IN ", "hold"],
+  ["FIXED & RETURNED", "good"], ["RECHECKED", "good"], ["READY", "good"], ["FOUND", "good"],
+  ["OK", "good"], ["BACK HOME", "good"], ["REHOMED", "good"],
+  ["TO REHOME", "info"], ["NEW", "info"], ["HOME SET", "info"], ["MOVED HOME", "info"]
+];
+
+function resultTone(text) {
+  const t = String(text || "").toUpperCase();
+  const hit = RESULT_TONES.find(function(pair) {
+    return t.indexOf(pair[0]) === 0;
+  });
+  return hit ? hit[1] : "";
+}
+
+/* "WORD: detail. NEXT: step [BOX]" → bold word, detail, next step on its own line. */
+function resultHtml(text) {
+  let t = String(text || "").replace(/\s*\[[^\]]*\]\s*$/, "");
+  let next = "";
+  const n = t.indexOf("NEXT:");
+  if (n >= 0) {
+    next = t.slice(n).trim();
+    t = t.slice(0, n).trim();
+  }
+  const c = t.indexOf(":");
+  const head = c > 0 ? t.slice(0, c) : t;
+  const rest = c > 0 ? t.slice(c) : "";
+  return "<b>" + escapeHtml(head) + "</b>" + escapeHtml(rest) +
+    (next ? '<span class="next">' + escapeHtml(next) + "</span>" : "");
+}
+
+function showLastResult(text) {
+  const el = $("lastResult");
+  if (!text) {
+    el.hidden = true;
+    el.innerHTML = "";
+    return;
+  }
+  el.className = "result-line " + resultTone(text);
+  el.innerHTML = resultHtml(text);
+  el.hidden = false;
 }
 
 
@@ -1696,6 +1802,9 @@ function renderRecentScans() {
       "<div>" +
         '<span class="recent-code">' + escapeHtml(entry.itemCode) + "</span>" +
         '<span class="recent-time">' + escapeHtml(time) + "</span>" +
+        (entry.result
+          ? '<div class="result-line ' + resultTone(entry.result) + '">' + resultHtml(entry.result) + "</div>"
+          : "") +
       "</div>" +
       '<span class="chip ' + escapeHtml(entry.status) + '">' +
         escapeHtml(entry.status === "failed" ? "RETRYING…" : CHIP_TEXT[entry.status] || "") +
@@ -3020,7 +3129,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.10.14-7"></script>
+<script src="scanner-sync.js?v=2026.10.15-1"></script>
 
 <script>
   loadScannerNavigationDestination();
