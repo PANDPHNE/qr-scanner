@@ -1663,8 +1663,8 @@ async function processScannerSyncQueue() {
        * Ask the logbook for the RESULT at once (not awaited:
        * the next scans keep saving meanwhile).
        */
-      /* Off: the phone only saves (fast bulk scanning). The logbook writes RESULT itself. */
-      if (false && savedNow.length && scannerSyncBatchSupported) {
+      /* Ask for the RESULT in the background (never awaited: scanning goes on). */
+      if (savedNow.length && scannerSyncBatchSupported) {
 
         requestLogbookResults(
           first.destination,
@@ -1804,122 +1804,132 @@ function setInstantStatus(text) {
   try { localStorage.setItem('qrScannerInstantV1', text); } catch (e) { /* ignore */ }
 }
 
-function requestLogbookResults(
-  destination,
-  sessionKey,
-  entries,
-  attempt
-) {
+/*
+ * One results request open at a time per phone. Scans saved while it is open wait in the
+ * queue and go together in the next request, so scanning never waits and the scanner server
+ * is never flooded. In the logbook one run serves every phone and every tab.
+ */
+let logbookResultQueue = [];
+let logbookResultBusy = false;
+const LOGBOOK_RESULT_TRIES = 3;
+
+function requestLogbookResults(destination, sessionKey, entries) {
 
   if (!entries || !entries.length) return;
 
   if (Date.now() < logbookResultsOffUntil) return;
 
+  entries.forEach(function(entry) {
+    logbookResultQueue.push({
+      destination: destination,
+      sessionKey: sessionKey,
+      entry: entry,
+      tries: 0
+    });
+  });
+
+  pumpLogbookResults();
+
+}
+
+function pumpLogbookResults() {
+
+  if (logbookResultBusy || !logbookResultQueue.length) return;
+
+  /* Everything waiting for the same tab goes in one request. */
+  const first = logbookResultQueue[0];
+  const key = first.destination.spreadsheetUrl + '|' + first.destination.sheetName;
+  const batch = logbookResultQueue.filter(function(q) {
+    return q.destination.spreadsheetUrl + '|' + q.destination.sheetName === key;
+  }).slice(0, 40);
+  logbookResultQueue = logbookResultQueue.filter(function(q) { return batch.indexOf(q) < 0; });
+
+  logbookResultBusy = true;
+
   const params = new URLSearchParams();
-
   params.set('action', 'logbookResults');
-
-  if (sessionKey) {
-    params.set('sessionKey', sessionKey);
-  }
-
+  if (first.sessionKey) params.set('sessionKey', first.sessionKey);
   params.set('deviceId', getScannerDeviceId());
-  params.set('spreadsheetUrl', destination.spreadsheetUrl);
-  params.set('sheetName', destination.sheetName);
+  params.set('spreadsheetUrl', first.destination.spreadsheetUrl);
+  params.set('sheetName', first.destination.sheetName);
+  params.set('rows', JSON.stringify(batch.map(function(q) {
+    return [q.entry.row, q.entry.itemCode];
+  })));
 
-  params.set(
-    'rows',
-    JSON.stringify(entries.map(function(entry) {
-      return [entry.row, entry.itemCode];
-    }))
-  );
+  function finish(retry, late, reason) {
+    logbookResultBusy = false;
+    retry.forEach(function(q) { q.tries++; });
+    const again = retry.filter(function(q) { return q.tries < LOGBOOK_RESULT_TRIES; });
+    const gaveUp = retry.filter(function(q) { return q.tries >= LOGBOOK_RESULT_TRIES; }).concat(late || []);
+    if (gaveUp.length) {
+      emitScannerSyncEvent('resultlate', {
+        scanIds: gaveUp.map(function(q) { return q.entry.scanId; }),
+        reason: reason || ''
+      });
+    }
+    if (again.length) {
+      /* Not done yet (another run was writing): ask again shortly, with any new scans. */
+      setTimeout(function() {
+        logbookResultQueue = again.concat(logbookResultQueue);
+        pumpLogbookResults();
+      }, 2500);
+    }
+    pumpLogbookResults();
+  }
 
   scannerSyncJsonp(params)
     .then(function(response) {
 
       if (!response.configured) {
         logbookResultsOffUntil = Date.now() + 300000;
+        logbookResultQueue = [];
         const why = 'Off: the scanner server has no LOGBOOK_RESULTS_URL / LOGBOOK_RESULTS_KEY yet.';
         setInstantStatus(why);
         emitScannerSyncEvent('resultoff', { reason: why });
+        logbookResultBusy = false;
         return;
       }
 
       setInstantStatus('On: RESULTs come back from the logbook.');
 
-      const byRow = {};
-
-      (response.results || []).forEach(function(result, index) {
-        if (result) byRow[index] = result;
-      });
-
       const waiting = [];
 
-      entries.forEach(function(entry, index) {
-
-        const found = byRow[index];
-
+      batch.forEach(function(q, index) {
+        const found = (response.results || [])[index];
         if (found && found.result) {
-
           emitScannerSyncEvent('result', {
-            scanId: entry.scanId,
-            itemCode: entry.itemCode,
+            scanId: q.entry.scanId,
+            itemCode: q.entry.itemCode,
             result: String(found.result),
             card: found   // word, detail, next, item, last
           });
-
         }
-
         else {
-
-          waiting.push(entry);
-
+          waiting.push(q);
         }
-
       });
 
-      /* The logbook was busy: ask once more shortly. */
-      if (waiting.length && !attempt) {
-        setTimeout(function() {
-          requestLogbookResults(destination, sessionKey, waiting, 1);
-        }, 4000);
-      }
-
-      else if (waiting.length) {
-        emitScannerSyncEvent('resultlate', {
-          scanIds: waiting.map(function(entry) { return entry.scanId; })
-        });
-      }
+      finish(waiting);
 
     })
     .catch(function(error) {
 
-      const message =
-        String(error && error.message ? error.message : error);
-
+      const message = String(error && error.message ? error.message : error);
       console.warn('LOGBOOK RESULTS:', message);
 
       /* Older server without this action → stop asking. */
       if (/unknown get action/i.test(message)) {
         logbookResultsOffUntil = Date.now() + 300000;
+        logbookResultQueue = [];
         const why = 'Off: the scanner server is older than 3.4.0 (paste the new server code and publish a new version).';
         setInstantStatus(why);
         emitScannerSyncEvent('resultoff', { reason: why });
+        logbookResultBusy = false;
+        return;
       }
 
-      else if (!attempt) {
-        setTimeout(function() {
-          requestLogbookResults(destination, sessionKey, entries, 1);
-        }, 4000);
-      }
-
-      else {
-        setInstantStatus('Problem: ' + message);
-        emitScannerSyncEvent('resultlate', {
-          scanIds: entries.map(function(entry) { return entry.scanId; }),
-          reason: message
-        });
-      }
+      setInstantStatus('Problem: ' + message);
+      finish(batch, [], message);
 
     });
 

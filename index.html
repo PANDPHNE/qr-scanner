@@ -1341,7 +1341,7 @@ li.failed .r-dot { background: var(--bad); }  li.failed .r-word { color: var(--b
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.10.16-3";
+const SCANNER_VERSION = "2026.10.16-4";
 
 
 /* ==========================================================
@@ -1985,6 +1985,9 @@ window.addEventListener("scansync:saved", function(event) {
 
   if (detail.scanId === lastScanId) {
     showLastScan(detail.itemCode, "saved");
+    if (!viewingOlder && logbookResultsExpected()) {
+      showResultWait("Checking the logbook…", true);
+    }
   }
 
   /* Don't overwrite the status while the next item is being read. */
@@ -2051,7 +2054,7 @@ window.addEventListener("scansync:resultlate", function(event) {
 });
 
 function logbookResultsExpected() {
-  return false; // the phone only saves; the logbook writes RESULT
+  return typeof logbookResultsOffUntil === "undefined" || Date.now() >= logbookResultsOffUntil;
 }
 
 
@@ -2353,7 +2356,7 @@ function showRecent(scanId) {
 
   if (!entry.result) {
     showResultWait(entry.status === "saved"
-      ? "Saved. The RESULT is in the logbook."
+      ? "Saved. No RESULT on the phone for this scan yet: see the logbook."
       : "Not saved yet.");
   }
 
@@ -3812,7 +3815,8 @@ function showVersionInfo() {
     "<strong>Scanner:</strong> " + escapeHtml(SCANNER_VERSION) +
     " · <strong>Server:</strong> " + escapeHtml(server) + "<br>" +
     "<strong>This phone:</strong> " + escapeHtml(phone) +
-    " · <strong>Barcode reader:</strong> 2.3.8";
+    " · <strong>Barcode reader:</strong> 2.3.8<br>" +
+    "<strong>Instant results:</strong> " + escapeHtml(safeGet("qrScannerInstantV1") || "not tried yet (scan once)");
 
 }
 
@@ -3847,7 +3851,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.10.16-3"></script>
+<script src="scanner-sync.js?v=2026.10.16-4"></script>
 
 <script>
   loadScannerNavigationDestination();
