@@ -9,229 +9,132 @@
   content="width=device-width, initial-scale=1.0"
 >
 
-<title>QR Code Scanner - Setup</title>
+<title>Scanner setup</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#0C241B">
 
 <style>
 
-* {
-  box-sizing: border-box;
+/* THEME · DEEP GREEN — same tokens as the scanner screen */
+:root {
+  --bg: #0C241B;
+  --surf: #12321F;
+  --surf2: #173D29;
+  --line: #21503A;
+  --ink: #F3ECE3;
+  --soft: #A9BBAF;
+  --faint: #6F8A7B;
+  --accent: #6BF04A;
+  --accent-ink: #0C241B;
+  --ok-bg: #174A2C;  --ok: #8DF27A;
+  --bad-bg: #4C1E17; --bad: #FFA593;
+  --info: #9FD2FF;
 }
+
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
   min-height: 100vh;
-  padding: 24px 16px 40px;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  background: #080b0a;
-  color: #ffffff;
+  padding: calc(20px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));
+  font-family: Onest, Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
 }
 
-.container {
-  width: 100%;
-  max-width: 520px;
-  margin: 0 auto;
-}
+.container { width: 100%; max-width: 520px; margin: 0 auto; }
 
-.header {
-  text-align: center;
-  margin-bottom: 28px;
-}
-
-.header h1 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-}
-
-.header p {
-  margin: 8px 0 0;
-  color: #9ca3af;
-  font-size: 14px;
-}
+.header { margin: 4px 2px 20px; }
+.header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0; }
+.header p { margin: 6px 0 0; color: var(--soft); font-size: 14px; line-height: 1.45; }
 
 .card {
-  background: #111615;
-  border: 1px solid #252c2a;
-  border-radius: 20px;
-  padding: 20px;
+  background: var(--surf);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 20px 18px;
   margin-bottom: 16px;
-
-  box-shadow:
-    0 10px 30px rgba(0,0,0,.25);
 }
 
-.section-title {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 18px;
-}
+.section-title { font-size: 17px; font-weight: 800; margin-bottom: 18px; }
 
-.field {
-  margin-bottom: 18px;
-}
+.field { margin-bottom: 18px; }
 
 label {
   display: block;
   margin-bottom: 7px;
-
   font-size: 13px;
   font-weight: 600;
-
-  color: #cbd5d1;
+  color: var(--soft);
 }
 
 input[type="url"],
 select {
   width: 100%;
   min-height: 50px;
-
-  border: 1px solid #343c39;
+  border: 1px solid var(--line);
   border-radius: 12px;
-
-  background: #090c0b;
-  color: #ffffff;
-
+  background: var(--bg);
+  color: var(--ink);
   padding: 0 14px;
-
+  font-family: inherit;
   font-size: 15px;
   outline: none;
 }
 
+input[type="url"]::placeholder { color: var(--faint); }
+
 input[type="url"]:focus,
 select:focus {
-  border-color: #00d084;
-
-  box-shadow:
-    0 0 0 2px rgba(0,208,132,.12);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(107,240,74,.15);
 }
 
 button {
   width: 100%;
-  min-height: 52px;
-
+  min-height: 54px;
   border: 0;
   border-radius: 14px;
-
+  font-family: inherit;
   font-size: 16px;
-  font-weight: 700;
-
+  font-weight: 800;
   cursor: pointer;
 }
 
-button:disabled {
-  opacity: .55;
-  cursor: not-allowed;
-}
+button:focus-visible { outline: 3px solid var(--info); outline-offset: 2px; }
+button:disabled { opacity: .55; cursor: not-allowed; }
 
-.primary {
-  background: #00c981;
-  color: #06100c;
-}
+.primary { background: var(--accent); color: var(--accent-ink); }
+.secondary { background: var(--surf2); color: var(--ink); border: 1px solid var(--line); }
 
-.secondary {
-  background: #202825;
-  color: #ffffff;
-}
+.checkbox-row { display: flex; align-items: center; gap: 12px; padding: 4px 0 18px; }
+.checkbox-row input[type="checkbox"] { width: 20px; height: 20px; min-width: 20px; accent-color: var(--accent); }
+.checkbox-row label { margin: 0; font-size: 15px; font-weight: 500; color: var(--ink); }
 
-.checkbox-row {
-  display: flex;
-  align-items: center;
+.small-note { margin-top: 7px; color: var(--faint); font-size: 12px; line-height: 1.5; }
 
-  gap: 12px;
+#nameRuleNote { color: var(--soft); }
+#nameRuleNote strong { color: var(--ink); }
 
-  padding: 4px 0 18px;
-}
+.hidden { display: none !important; }
 
-.checkbox-row input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
+.status { display: none; margin-top: 18px; padding: 14px 16px; border-radius: 14px; }
+.status.success { display: block; background: var(--ok-bg); border: 1px solid var(--line); color: var(--ok); }
+.status.error { display: block; background: var(--bad-bg); border: 1px solid #6B2A20; color: var(--bad); }
 
-  accent-color: #00d084;
-}
+.status-title { font-weight: 800; margin-bottom: 6px; }
 
-.checkbox-row label {
-  margin: 0;
+.destination-details { font-size: 13px; line-height: 1.7; color: var(--ink); opacity: .85; }
+.destination-details strong { color: var(--ink); }
 
-  font-size: 15px;
-  color: #ffffff;
-}
+#startScanning { display: none; margin-top: 16px; }
+#loadSheets[data-sheet-loaded="true"] { background: var(--surf2); color: var(--ink); border: 1px solid var(--line); }
+#changeDestination { display: none; margin-top: 10px; }
 
-.small-note {
-  margin-top: 7px;
-
-  color: #7d8985;
-
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.hidden {
-  display: none !important;
-}
-
-.status {
-  display: none;
-
-  margin-top: 18px;
-  padding: 16px;
-
-  border-radius: 14px;
-}
-
-.status.success {
-  display: block;
-
-  background:
-    rgba(0,208,132,.10);
-
-  border:
-    1px solid rgba(0,208,132,.35);
-
-  color: #5ff0b1;
-}
-
-.status.error {
-  display: block;
-
-  background:
-    rgba(255,70,70,.10);
-
-  border:
-    1px solid rgba(255,70,70,.35);
-
-  color: #ff8f8f;
-}
-
-.status-title {
-  font-weight: 700;
-  margin-bottom: 7px;
-}
-
-.destination-details {
-  font-size: 13px;
-  line-height: 1.7;
-  color: #d1d5db;
-}
-
-#startScanning {
-  display: none;
-  margin-top: 16px;
-}
-
-#changeDestination {
-  display: none;
-  margin-top: 10px;
-}
-
-.loading {
-  opacity: .7;
-}
+.loading { opacity: .7; }
 
 </style>
 
@@ -244,22 +147,16 @@ button:disabled {
 
   <div class="header">
 
-    <h1>
-      QR CODE SCANNER
-    </h1>
+    <h1>Scanner setup</h1>
 
-    <p>
-      Destination Setup
-    </p>
+    <p>Choose the logbook tab this phone scans into.</p>
 
   </div>
 
 
   <div class="card">
 
-    <div class="section-title">
-      Scan Destination
-    </div>
+    <div class="section-title">Where scans go</div>
 
 
     <!-- GOOGLE SHEET -->
@@ -269,9 +166,7 @@ button:disabled {
       class="field"
     >
 
-      <label for="spreadsheetUrl">
-        Google Sheet Link
-      </label>
+      <label for="spreadsheetUrl">Google Sheet link</label>
 
       <input
         id="spreadsheetUrl"
@@ -292,7 +187,7 @@ button:disabled {
       id="loadSheets"
       class="primary"
     >
-      LOAD SHEETS
+      Load tabs
     </button>
 
 
@@ -304,14 +199,12 @@ button:disabled {
       style="margin-top:18px;"
     >
 
-      <label for="sheetName">
-        Sheet Tab
-      </label>
+      <label for="sheetName">Tab</label>
 
       <select id="sheetName">
 
         <option value="">
-          Select sheet tab
+          Choose a tab
         </option>
 
       </select>
@@ -331,14 +224,12 @@ button:disabled {
 
       <div class="field">
 
-        <label for="itemCodeColumn">
-          Item Code Column
-        </label>
+        <label for="itemCodeColumn">Item code column</label>
 
         <select id="itemCodeColumn">
 
           <option value="">
-            Select Item Code column
+            Choose a column
           </option>
 
         </select>
@@ -368,14 +259,12 @@ button:disabled {
         class="field"
       >
 
-        <label for="timestampColumn">
-          Timestamp Column
-        </label>
+        <label for="timestampColumn">Timestamp column</label>
 
         <select id="timestampColumn">
 
           <option value="">
-            Select Timestamp column
+            Choose a column
           </option>
 
         </select>
@@ -392,9 +281,9 @@ button:disabled {
       </div>
 
       <div id="nameField" class="field hidden">
-        <label for="nameColumn">Scanner Name Column</label>
+        <label for="nameColumn">Staff name column</label>
         <select id="nameColumn">
-          <option value="">Select Scanner Name column</option>
+          <option value="">Choose a column</option>
         </select>
       </div>
 
@@ -407,7 +296,7 @@ button:disabled {
         id="saveDestination"
         class="primary"
       >
-        SAVE DESTINATION
+        Save
       </button>
 
     </div>
@@ -433,23 +322,23 @@ button:disabled {
     </div>
 
 
-    <!-- START SCANNING -->
+    <!-- Start scanning -->
 
     <button
       id="startScanning"
       class="primary"
     >
-      START SCANNING
+      Start scanning
     </button>
 
 
-    <!-- CHANGE DESTINATION -->
+    <!-- Change tab -->
 
     <button
       id="changeDestination"
       class="secondary"
     >
-      CHANGE DESTINATION
+      Change tab
     </button>
 
   </div>
@@ -842,7 +731,7 @@ function loadExistingDestination() {
 
 
     statusTitle.textContent =
-      '🟢 Destination Ready';
+      'Ready to scan';
 
 
     let html =
@@ -851,13 +740,13 @@ function loadExistingDestination() {
       'Saved Google Sheet' +
       '</strong><br>' +
 
-      'Sheet: <strong>' +
+      'Tab: <strong>' +
       escapeHtml(
         destination.sheetName
       ) +
       '</strong><br>' +
 
-      'Item Code: <strong>Column ' +
+      'Item code: <strong>Column ' +
       escapeHtml(
         columnNumberToLetter(
           destination.itemCodeColumn
@@ -892,12 +781,12 @@ function loadExistingDestination() {
 
     html +=
       destination.nameRule === 'REQUIRED'
-        ? '<br>Scanner Name: <strong>REQUIRED by the owner' + (destination.nameLetter ? ' (column ' + escapeHtml(destination.nameLetter) + ')' : '') + '</strong>'
+        ? '<br>Staff name: <strong>REQUIRED by the owner' + (destination.nameLetter ? ' (column ' + escapeHtml(destination.nameLetter) + ')' : '') + '</strong>'
       : destination.nameRule === 'NOT ALLOWED'
-        ? '<br>Scanner Name: <strong>NOT ALLOWED by the owner</strong>'
+        ? '<br>Staff name: <strong>NOT ALLOWED by the owner</strong>'
       : destination.nameEnabled && destination.nameColumn
-        ? '<br>Scanner Name: <strong>Column ' + escapeHtml(columnNumberToLetter(destination.nameColumn)) + '</strong>'
-        : '<br>Scanner Name: <strong>OFF</strong>';
+        ? '<br>Staff name: <strong>Column ' + escapeHtml(columnNumberToLetter(destination.nameColumn)) + '</strong>'
+        : '<br>Staff name: <strong>OFF</strong>';
 
 
     statusDetails.innerHTML =
@@ -926,7 +815,7 @@ function loadExistingDestination() {
 
 /************************************************************
  * ==========================================================
- * CHANGE DESTINATION
+ * Change tab
  * ==========================================================
  *
  * IMPORTANT:
@@ -1003,11 +892,11 @@ changeDestinationButton.addEventListener(
      *
      * Therefore this button becomes:
      *
-     * CHANGE SHEET LINK
+     * Change sheet link
      */
 
     loadSheetsButton.textContent =
-      'CHANGE SHEET LINK';
+      'Change sheet link';
 
     loadSheetsButton.dataset.sheetLoaded =
       'true';
@@ -1064,7 +953,7 @@ changeDestinationButton.addEventListener(
 
 
       sheetName.innerHTML =
-        '<option value="">Select sheet tab</option>';
+        '<option value="">Choose a tab</option>';
 
 
       if (
@@ -1249,11 +1138,11 @@ changeDestinationButton.addEventListener(
 
 
       statusTitle.textContent =
-        'EDIT DESTINATION';
+        'Edit where scans go';
 
 
       statusDetails.textContent =
-        'Your current destination is loaded. Change only the settings you need, then select SAVE DESTINATION.';
+        'Your current destination is loaded. Change only the settings you need, then select Save.';
 
     }
 
@@ -1277,7 +1166,7 @@ changeDestinationButton.addEventListener(
 
 /************************************************************
  * ==========================================================
- * LOAD SHEETS / CHANGE SHEET LINK
+ * Load tabs / Change sheet link
  * ==========================================================
  */
 
@@ -1288,7 +1177,7 @@ loadSheetsButton.addEventListener(
 
     /*
      * If the spreadsheet is already loaded,
-     * this button means CHANGE SHEET LINK.
+     * this button means Change sheet link.
      *
      * IMPORTANT:
      *
@@ -1306,19 +1195,19 @@ loadSheetsButton.addEventListener(
 
 
       sheetName.innerHTML =
-        '<option value="">Select sheet tab</option>';
+        '<option value="">Choose a tab</option>';
 
 
       itemCodeColumn.innerHTML =
-        '<option value="">Select Item Code column</option>';
+        '<option value="">Choose a column</option>';
 
 
       timestampColumn.innerHTML =
-        '<option value="">Select Timestamp column</option>';
+        '<option value="">Choose a column</option>';
 
 
       nameColumn.innerHTML =
-        '<option value="">Select Scanner Name column</option>';
+        '<option value="">Choose a column</option>';
 
 
       sheetField
@@ -1336,7 +1225,7 @@ loadSheetsButton.addEventListener(
 
 
       loadSheetsButton.textContent =
-        'LOAD SHEETS';
+        'Load tabs';
 
       loadSheetsButton.dataset.sheetLoaded =
         'false';
@@ -1389,7 +1278,7 @@ loadSheetsButton.addEventListener(
 
     setButtonLoading(
       loadSheetsButton,
-      'LOADING SHEETS...'
+      'Loading tabs…'
     );
 
 
@@ -1434,7 +1323,7 @@ loadSheetsButton.addEventListener(
 
 
       sheetName.innerHTML =
-        '<option value="">Select sheet tab</option>';
+        '<option value="">Choose a tab</option>';
 
 
       if (
@@ -1475,11 +1364,11 @@ loadSheetsButton.addEventListener(
       /*
        * The Sheet Link successfully loaded.
        *
-       * The button now means CHANGE SHEET LINK.
+       * The button now means Change sheet link.
        */
 
       loadSheetsButton.textContent =
-        'CHANGE SHEET LINK';
+        'Change sheet link';
 
       loadSheetsButton.dataset.sheetLoaded =
         'true';
@@ -1520,7 +1409,7 @@ loadSheetsButton.addEventListener(
 
         resetButton(
           loadSheetsButton,
-          'LOAD SHEETS'
+          'Load tabs'
         );
 
       }
@@ -1687,13 +1576,13 @@ function populateColumns(
 ) {
 
   itemCodeColumn.innerHTML =
-    '<option value="">Select Item Code column</option>';
+    '<option value="">Choose a column</option>';
 
   timestampColumn.innerHTML =
-    '<option value="">Select Timestamp column</option>';
+    '<option value="">Choose a column</option>';
 
   nameColumn.innerHTML =
-    '<option value="">Select Scanner Name column</option>';
+    '<option value="">Choose a column</option>';
 
 
   if (
@@ -1967,7 +1856,7 @@ saveDestinationButton.addEventListener(
 
     setButtonLoading(
       saveDestinationButton,
-      'VERIFYING...'
+      'Checking…'
     );
 
 
@@ -2142,7 +2031,7 @@ saveDestinationButton.addEventListener(
 
       resetButton(
         saveDestinationButton,
-        'SAVE DESTINATION'
+        'Save'
       );
 
     }
@@ -2153,7 +2042,7 @@ saveDestinationButton.addEventListener(
 
 /************************************************************
  * ==========================================================
- * START SCANNING
+ * Start scanning
  * ==========================================================
  *
  * Keep the existing scanner handoff.
@@ -2213,7 +2102,7 @@ function showSuccess(
 
 
   statusTitle.textContent =
-    '🟢 Destination Ready';
+    'Ready to scan';
 
 
   let html =
@@ -2224,13 +2113,13 @@ function showSuccess(
     ) +
     '</strong><br>' +
 
-    'Sheet: <strong>' +
+    'Tab: <strong>' +
     escapeHtml(
       response.sheetName
     ) +
     '</strong><br>' +
 
-    'Item Code: <strong>' +
+    'Item code: <strong>' +
     escapeHtml(
       response.itemCode.letter
     ) +
@@ -2267,7 +2156,7 @@ function showSuccess(
 
     html +=
 
-      '<br>Scanner Name: <strong>' +
+      '<br>Staff name: <strong>' +
       escapeHtml(
         response.scannerName.letter
       ) +
@@ -2278,7 +2167,7 @@ function showSuccess(
   else {
 
     html +=
-      '<br>Scanner Name: <strong>OFF</strong>';
+      '<br>Staff name: <strong>OFF</strong>';
 
   }
 
@@ -2315,7 +2204,7 @@ function showError(
 
 
   statusTitle.textContent =
-    '⚠️ Destination Not Ready';
+    'Not ready yet';
 
 
   statusDetails.textContent =
