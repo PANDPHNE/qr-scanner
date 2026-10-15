@@ -1832,6 +1832,52 @@ function requestLogbookResults(destination, sessionKey, entries) {
 
 }
 
+/*
+ * TO SORT / ALERTS: after RESULTs come back, this phone asks the logbook to redraw them
+ * (at most every 15 seconds, one request at a time). It has its own lane, so RESULTs never
+ * wait behind it, and it runs in the logbook's web app (no daily trigger time used).
+ */
+let logbookListsBusy = false;
+let logbookListsWanted = null;
+let logbookListsAt = 0;
+let logbookListsTimer = null;
+
+function wantLogbookLists(destination, sessionKey) {
+  logbookListsWanted = { destination: destination, sessionKey: sessionKey };
+  scheduleLogbookLists();
+}
+
+function scheduleLogbookLists() {
+  if (!logbookListsWanted || logbookListsTimer) return;
+  const wait = Math.max(1500, 15000 - (Date.now() - logbookListsAt));
+  logbookListsTimer = setTimeout(function() {
+    logbookListsTimer = null;
+    sendLogbookLists();
+  }, wait);
+}
+
+function sendLogbookLists() {
+  if (!logbookListsWanted) return;
+  if (logbookListsBusy) { scheduleLogbookLists(); return; }
+  const want = logbookListsWanted;
+  logbookListsWanted = null;
+  logbookListsBusy = true;
+  logbookListsAt = Date.now();
+  const params = new URLSearchParams();
+  params.set('action', 'logbookResults');
+  if (want.sessionKey) params.set('sessionKey', want.sessionKey);
+  params.set('deviceId', getScannerDeviceId());
+  params.set('spreadsheetUrl', want.destination.spreadsheetUrl);
+  params.set('sheetName', '__lists__');
+  params.set('rows', '[]');
+  scannerSyncJsonp(params)
+    .catch(function(error) { console.warn('TO SORT refresh:', error && error.message ? error.message : error); })
+    .then(function() {
+      logbookListsBusy = false;
+      scheduleLogbookLists(); // scans that came back meanwhile
+    });
+}
+
 function pumpLogbookResults() {
 
   if (logbookResultBusy || !logbookResultQueue.length) return;
@@ -1893,10 +1939,12 @@ function pumpLogbookResults() {
       setInstantStatus('On: RESULTs come back from the logbook.');
 
       const waiting = [];
+      let gotOne = false;
 
       batch.forEach(function(q, index) {
         const found = (response.results || [])[index];
         if (found && found.result) {
+          gotOne = true;
           emitScannerSyncEvent('result', {
             scanId: q.entry.scanId,
             itemCode: q.entry.itemCode,
@@ -1908,6 +1956,8 @@ function pumpLogbookResults() {
           waiting.push(q);
         }
       });
+
+      if (gotOne) wantLogbookLists(first.destination, first.sessionKey);
 
       finish(waiting);
 
