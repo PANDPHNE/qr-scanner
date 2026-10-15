@@ -1833,6 +1833,7 @@ function requestLogbookResults(
 
       if (!response.configured) {
         logbookResultsOffUntil = Date.now() + 3600000;
+        emitScannerSyncEvent('resultoff', {});
         return;
       }
 
@@ -1853,7 +1854,8 @@ function requestLogbookResults(
           emitScannerSyncEvent('result', {
             scanId: entry.scanId,
             itemCode: entry.itemCode,
-            result: String(found.result)
+            result: String(found.result),
+            card: found   // word, detail, next, item, last
           });
 
         }
@@ -1873,6 +1875,12 @@ function requestLogbookResults(
         }, 4000);
       }
 
+      else if (waiting.length) {
+        emitScannerSyncEvent('resultlate', {
+          scanIds: waiting.map(function(entry) { return entry.scanId; })
+        });
+      }
+
     })
     .catch(function(error) {
 
@@ -1884,12 +1892,19 @@ function requestLogbookResults(
       /* Older server without this action → stop asking. */
       if (/unknown get action/i.test(message)) {
         logbookResultsOffUntil = Date.now() + 3600000;
+        emitScannerSyncEvent('resultoff', {});
       }
 
       else if (!attempt) {
         setTimeout(function() {
           requestLogbookResults(destination, sessionKey, entries, 1);
         }, 4000);
+      }
+
+      else {
+        emitScannerSyncEvent('resultlate', {
+          scanIds: entries.map(function(entry) { return entry.scanId; })
+        });
       }
 
     });

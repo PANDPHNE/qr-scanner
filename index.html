@@ -437,10 +437,6 @@ body {
    ========================================================= */
 
 .last-scan {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   margin: 10px 10px 0;
   padding: 14px 16px;
   border-radius: 16px;
@@ -489,33 +485,137 @@ body {
 .chip.failed { background: #4a1212; color: #ff7070; }
 
 /* =========================================================
-   LOGBOOK RESULT (what the logbook says about the scan)
+   ITEM CARD — what the logbook says about the scanned item
+   Order = what staff need first: which phone, verdict,
+   what to do, then the facts.
    ========================================================= */
 
-.result-line {
-  margin-top: 6px;
-  padding: 7px 10px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.3;
-  background: #1c1f24;
-  color: #d6d9de;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.ls-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.result-line b { font-weight: 900; }
+.ls-top > div:first-child { min-width: 0; }
 
-.result-line.bad  { background: #4a1212; color: #ffb4b4; }
-.result-line.act  { background: #4a2a08; color: #ffcf8a; }
-.result-line.hold { background: #3a3305; color: #f5e27a; }
-.result-line.good { background: #063d2c; color: #8ff0c0; }
-.result-line.info { background: #0d2c44; color: #9fd2ff; }
+.ic-name {
+  margin-top: 4px;
+  color: #e7e9ec;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-/* Recent scans: only a small word, only when something needs doing. */
+.ic-name.none { color: #6b7079; font-weight: 700; }
+
+.item-card { margin-top: 12px; }
+
+.ic-verdict {
+  border-radius: 12px 12px 0 0;
+  padding: 10px 12px 8px;
+  background: #1c1f24;
+  color: #d6d9de;
+}
+
+.ic-word {
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: .5px;
+  line-height: 1.1;
+}
+
+.ic-detail {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: .9;
+}
+
+.ic-do {
+  border-radius: 0 0 12px 12px;
+  padding: 9px 12px 11px;
+  background: #0f1114;
+  border: 2px solid #1c1f24;
+  border-top: none;
+}
+
+.ic-do-label, .ic-k {
+  color: #858991;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.ic-do-text {
+  margin-top: 2px;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.25;
+  color: #ffffff;
+}
+
+.ic-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+.ic-facts .wide { grid-column: 1 / -1; }
+
+.ic-v {
+  margin-top: 1px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #e7e9ec;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.ic-v.diff { color: #ffcf8a; }
+
+.ic-wait {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: #1c1f24;
+  color: #969aa2;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* Tones = the logbook's RESULT colors */
+.ic-verdict.good { background: #063d2c; color: #8ff0c0; }
+.ic-verdict.info { background: #0d2c44; color: #9fd2ff; }
+.ic-verdict.act  { background: #4a2a08; color: #ffcf8a; }
+.ic-verdict.hold { background: #3a3305; color: #f5e27a; }
+.ic-verdict.bad  { background: #4a1212; color: #ffb4b4; }
+.ic-do.good { border-color: #063d2c; }
+.ic-do.info { border-color: #0d2c44; }
+.ic-do.act  { border-color: #4a2a08; }
+.ic-do.hold { border-color: #3a3305; }
+.ic-do.bad  { border-color: #4a1212; }
+
+/* Recent scans: name + one word; tap a row to see its card again */
+#recentList li { cursor: pointer; }
+#recentList li > div:first-child { min-width: 0; flex: 1; }
+.recent-name {
+  display: block;
+  margin-top: 2px;
+  color: #969aa2;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .result-tag {
   display: inline-block;
   margin-left: 8px;
@@ -527,9 +627,11 @@ body {
   background: #25282d;
   color: #d6d9de;
 }
-.result-tag.bad  { background: #4a1212; color: #ffb4b4; }
+.result-tag.good { background: #063d2c; color: #8ff0c0; }
+.result-tag.info { background: #0d2c44; color: #9fd2ff; }
 .result-tag.act  { background: #4a2a08; color: #ffcf8a; }
 .result-tag.hold { background: #3a3305; color: #f5e27a; }
+.result-tag.bad  { background: #4a1212; color: #ffb4b4; }
 
 /* =========================================================
    RECENT SCANS
@@ -720,6 +822,11 @@ body {
    LANDSCAPE / SMALL
    ========================================================= */
 
+/* After a scan (camera paused): small camera, room for the item card. */
+body.reading #reader video { max-height: 15vh !important; }
+body.reading .camera-card { min-height: 0; }
+body.reading .scan-overlay { width: 60%; }
+
 @media (max-width: 380px) {
   #itemCode { font-size: 34px; }
   #scanButton { min-height: 84px; font-size: 23px; }
@@ -844,12 +951,31 @@ body {
 
   <!-- LAST SCAN -->
   <section id="lastScan" class="last-scan">
-    <div>
-      <div class="last-scan-label">Last item</div>
-      <div id="itemCode">—</div>
-      <div id="lastResult" class="result-line" hidden></div>
+    <div class="ls-top">
+      <div>
+        <div id="lastLabel" class="last-scan-label">Last item</div>
+        <div id="itemCode">—</div>
+        <div id="icName" class="ic-name" hidden></div>
+      </div>
+      <div id="lastScanChip" class="chip">—</div>
     </div>
-    <div id="lastScanChip" class="chip">—</div>
+    <div id="icWait" class="ic-wait" hidden></div>
+    <div id="itemCard" class="item-card" hidden>
+      <div id="icVerdict" class="ic-verdict">
+        <span id="icWord" class="ic-word"></span>
+        <span id="icDetail" class="ic-detail"></span>
+      </div>
+      <div id="icDo" class="ic-do">
+        <div class="ic-do-label">Do this</div>
+        <div id="icDoText" class="ic-do-text"></div>
+      </div>
+      <div class="ic-facts">
+        <div><div class="ic-k">Home box</div><div id="icHome" class="ic-v"></div></div>
+        <div><div class="ic-k">Now in</div><div id="icNow" class="ic-v"></div></div>
+        <div class="wide"><div class="ic-k">Before this scan</div><div id="icLast" class="ic-v"></div></div>
+        <div class="wide" id="icSheetBRow"><div class="ic-k">Sheet B</div><div id="icSheetB" class="ic-v"></div></div>
+      </div>
+    </div>
   </section>
 
   <!-- RECENT SCANS -->
@@ -916,7 +1042,7 @@ body {
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.10.15-2";
+const SCANNER_VERSION = "2026.10.15-3";
 
 
 /* ==========================================================
@@ -1052,6 +1178,12 @@ function setUiState(state) {
 
   button.classList.remove("off", "scanning");
   card.classList.remove("state-scanning", "state-ready");
+
+  /* Reading time: the camera shrinks so the item card fits on screen. */
+  document.body.classList.toggle("reading", state === "ready");
+  if (state === "scanning") {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   if (state === "off") {
 
@@ -1498,7 +1630,8 @@ function handleInventoryItem(itemCode, decodedResult) {
       });
 
       showLastScan(itemCode, "saving");
-      showLastResult("");
+      showItemCard(null);
+      showResultWait("");
 
       setCameraStatus("✓ " + itemCode + " CAPTURED — SAVING…", "ok");
 
@@ -1557,6 +1690,9 @@ window.addEventListener("scansync:saved", function(event) {
 
   if (detail.scanId === lastScanId) {
     showLastScan(detail.itemCode, "saved");
+    if (!viewingOlder && logbookResultsExpected()) {
+      showResultWait("Checking the logbook…");
+    }
   }
 
   /* Don't overwrite the status while the next item is being read. */
@@ -1583,13 +1719,18 @@ window.addEventListener("scansync:result", function(event) {
 
   if (entry) {
     entry.result = detail.result;
+    entry.card = detail.card || null;
     saveRecentScans();
     renderRecentScans();
   }
 
-  if (detail.scanId === lastScanId) {
+  if (detail.scanId === lastScanId && !viewingOlder) {
 
-    showLastResult(detail.result);
+    showItemCard(detail.card || { result: detail.result }, detail.itemCode);
+
+    if (document.body.classList.contains("reading")) {
+      $("lastScan").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
 
     if (needsAction(detail.result)) {
       playWarningSound();
@@ -1599,6 +1740,23 @@ window.addEventListener("scansync:result", function(event) {
   }
 
 });
+
+
+/* Instant results are not set up (or old server): no waiting line. */
+window.addEventListener("scansync:resultoff", function() {
+  showResultWait("");
+});
+
+window.addEventListener("scansync:resultlate", function(event) {
+  const ids = (event.detail && event.detail.scanIds) || [];
+  if (ids.indexOf(lastScanId) >= 0 && !viewingOlder) {
+    showResultWait("The logbook is busy — the RESULT will be in the sheet within a minute.");
+  }
+});
+
+function logbookResultsExpected() {
+  return typeof logbookResultsOffUntil === "undefined" || Date.now() >= logbookResultsOffUntil;
+}
 
 
 window.addEventListener("scansync:retry", function(event) {
@@ -1638,6 +1796,13 @@ const CHIP_TEXT = {
 
 
 function showLastScan(itemCode, status) {
+
+  if (status === "saving") {
+    viewingOlder = false;
+    $("lastLabel").textContent = "Last item";
+  }
+
+  if (viewingOlder) return;   // a tapped older scan stays until the next scan
 
   $("itemCode").textContent = itemCode;
 
@@ -1711,18 +1876,113 @@ function resultStep(text) {
   return t.length > 70 ? t.slice(0, 68) + "…" : t;
 }
 
-function showLastResult(text) {
-  const el = $("lastResult");
-  if (!text || !needsAction(text)) {
-    el.hidden = true;
-    el.innerHTML = "";
+/* Short readable dates come from the logbook; this only tidies empty parts. */
+function joinParts(parts) {
+  return parts.filter(function(p) { return p && String(p).trim(); }).join(" · ");
+}
+
+function firstUpper(t) {
+  t = String(t || "");
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+let viewingOlder = false;   // true while a tapped recent scan is shown
+
+/*
+ * Fill the item card. card = the logbook's answer for one
+ * scan: { result, word, detail, next, item, last }.
+ * null → hide (a new scan started).
+ */
+function showItemCard(card, itemCode) {
+
+  const box = $("itemCard");
+  const name = $("icName");
+
+  if (!card || !card.result) {
+    box.hidden = true;
+    name.hidden = true;
     return;
   }
-  const step = resultStep(text);
-  el.className = "result-line " + actionTone(text);
-  el.innerHTML = "<b>" + escapeHtml(resultWord(text)) + "</b>" +
-    (step ? " → " + escapeHtml(step) : "");
-  el.hidden = false;
+
+  const tone = resultTone(card.result) || (needsAction(card.result) ? "act" : "good");
+  const word = card.word || resultWord(card.result);
+  const item = card.item || {};
+  const last = card.last || null;
+
+  /* Which phone: the name staff check against the unit in their hand. */
+  name.hidden = false;
+  name.className = "ic-name" + (item.name ? "" : " none");
+  name.textContent = item.name || "No name in Sheet B";
+
+  $("icVerdict").className = "ic-verdict " + tone;
+  $("icWord").textContent = word;
+  $("icDetail").textContent = card.detail || "";
+  $("icDetail").hidden = !card.detail;
+
+  $("icDo").className = "ic-do " + tone;
+  $("icDoText").textContent = firstUpper(
+    card.next ||
+    (card.item ? "" : resultStep(card.result)) ||
+    (tone === "good" ? "Nothing to do — keep it here." : "Check the RESULT in the logbook."));
+
+  $("icHome").textContent = item.home || (card.item ? "No home yet" : "—");
+  $("icNow").textContent = item.now || "—";
+  $("icNow").className = "ic-v" + (item.home && item.now && item.home !== item.now ? " diff" : "");
+
+  $("icLast").textContent = !last
+    ? "—"
+    : last.first
+      ? "First time scanned — new code"
+      : joinParts([
+          last.where ? "In " + last.where : "",
+          last.status && last.status !== "AVAILABLE" ? last.status : "",
+          last.when,
+          last.by ? "by " + last.by : ""
+        ]) || "—";
+
+  const sheetB = joinParts([item.sheetB, item.issue]);
+  $("icSheetBRow").hidden = !sheetB;
+  $("icSheetB").textContent = sheetB;
+
+  box.hidden = false;
+  $("icWait").hidden = true;
+
+}
+
+
+/* "Checking the logbook…" while the answer is on its way. */
+function showResultWait(text) {
+  const el = $("icWait");
+  el.textContent = text || "";
+  el.hidden = !text;
+}
+
+
+/* Tap a recent scan → see its card again. */
+function showRecent(scanId) {
+
+  const entry = recentScans.find(function(item) {
+    return item.scanId === scanId;
+  });
+
+  if (!entry) return;
+
+  viewingOlder = scanId !== lastScanId;
+
+  $("lastLabel").textContent = viewingOlder
+    ? "Scan at " + new Date(entry.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "Last item";
+
+  $("itemCode").textContent = entry.itemCode;
+  showResultWait("");
+  showItemCard(entry.card || (entry.result ? { result: entry.result } : null), entry.itemCode);
+
+  if (!entry.result) {
+    showResultWait(entry.status === "saved" ? "No RESULT on the phone for this scan — see the logbook." : "Not saved yet.");
+  }
+
+  $("lastScan").scrollIntoView({ behavior: "smooth", block: "nearest" });
+
 }
 
 
@@ -1845,13 +2105,20 @@ function renderRecentScans() {
       "<div>" +
         '<span class="recent-code">' + escapeHtml(entry.itemCode) + "</span>" +
         '<span class="recent-time">' + escapeHtml(time) + "</span>" +
-        (entry.result && needsAction(entry.result)
-          ? '<span class="result-tag ' + actionTone(entry.result) + '">' + escapeHtml(resultWord(entry.result)) + "</span>"
+        (entry.result
+          ? '<span class="result-tag ' + (resultTone(entry.result) || actionTone(entry.result)) + '">' + escapeHtml((entry.card && entry.card.word) || resultWord(entry.result)) + "</span>"
+          : "") +
+        (entry.card && entry.card.item && entry.card.item.name
+          ? '<span class="recent-name">' + escapeHtml(entry.card.item.name) + "</span>"
           : "") +
       "</div>" +
       '<span class="chip ' + escapeHtml(entry.status) + '">' +
         escapeHtml(entry.status === "failed" ? "RETRYING…" : CHIP_TEXT[entry.status] || "") +
       "</span>";
+
+    li.addEventListener("click", function() {
+      showRecent(entry.scanId);
+    });
 
     list.appendChild(li);
 
@@ -3199,7 +3466,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.10.15-2"></script>
+<script src="scanner-sync.js?v=2026.10.15-3"></script>
 
 <script>
   loadScannerNavigationDestination();
