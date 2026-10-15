@@ -1050,6 +1050,11 @@ body.reading.has-card .status { display: none; }
 
 .ic-facts { margin: 0; padding: 10px 16px 12px; border: none; color: var(--soft); font-size: 13px; line-height: 1.5; }
 .ic-facts p { margin: 0; }
+
+/* What is still left in TO SORT, so staff know when they are done. */
+.ic-sort { margin: 0 12px 10px; padding: 10px 14px; border-radius: 12px; background: var(--act-bg); color: var(--act); font-size: 14px; font-weight: 700; }
+.ic-sort.done { background: var(--ok-bg); color: var(--ok); }
+.ic-sort span { color: var(--ink); opacity: .7; font-weight: 500; }
 .ic-facts b { color: var(--ink); font-weight: 600; }
 
 /* ---------- recent scans ---------- */
@@ -1268,6 +1273,7 @@ li.failed .r-dot { background: var(--bad); }  li.failed .r-word { color: var(--b
         <p>Before this scan: <b id="icLast"></b></p>
         <p id="icSheetBRow">Sheet B: <b id="icSheetB"></b></p>
       </div>
+      <div id="icSort" class="ic-sort" hidden></div>
     </div>
   </section>
 
@@ -1335,7 +1341,7 @@ li.failed .r-dot { background: var(--bad); }  li.failed .r-word { color: var(--b
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.10.15-6";
+const SCANNER_VERSION = "2026.10.16-1";
 
 
 /* ==========================================================
@@ -2281,10 +2287,36 @@ function showItemCard(card, itemCode) {
   $("icSheetBRow").hidden = !sheetB;
   $("icSheetB").textContent = sheetB;
 
+  showSortLeft(card.sortLeft);
+
   box.hidden = false;
   $("icWait").hidden = true;
   document.body.classList.add("has-card");
 
+}
+
+
+/* "Nothing left to sort for DISPLAY 18 · 61 in all": staff see at once when they are done. */
+function showSortLeft(left) {
+  const el = $("icSort");
+  if (!left || typeof left.all !== "number") {
+    el.hidden = true;
+    return;
+  }
+  const all = left.all === 1 ? "1 to sort in all" : left.all + " to sort in all";
+  let main, done;
+  if (left.box) {
+    done = left.here === 0;
+    main = done
+      ? "✓ Nothing left to sort for " + left.box
+      : (left.here === 1 ? "1 item" : left.here + " items") + " still to bring back to " + left.box;
+  } else {
+    done = left.all === 0;
+    main = done ? "✓ Nothing left to sort" : all;
+  }
+  el.className = "ic-sort" + (done ? " done" : "");
+  el.innerHTML = escapeHtml(main) + (left.box ? " <span>· " + escapeHtml(all) + "</span>" : "");
+  el.hidden = false;
 }
 
 
@@ -3816,7 +3848,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.10.15-6"></script>
+<script src="scanner-sync.js?v=2026.10.16-1"></script>
 
 <script>
   loadScannerNavigationDestination();
