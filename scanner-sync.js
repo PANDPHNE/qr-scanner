@@ -1663,7 +1663,8 @@ async function processScannerSyncQueue() {
        * Ask the logbook for the RESULT at once (not awaited:
        * the next scans keep saving meanwhile).
        */
-      if (savedNow.length && scannerSyncBatchSupported) {
+      /* Off: the phone only saves (fast bulk scanning). The logbook writes RESULT itself. */
+      if (false && savedNow.length && scannerSyncBatchSupported) {
 
         requestLogbookResults(
           first.destination,
