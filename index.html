@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#08090b">
+<meta name="theme-color" content="#0C241B">
 <title>Inventory Scanner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -907,6 +907,230 @@ body.reading .scan-overlay { width: 60%; }
   #scanButton { min-height: 70px; }
   body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 }
+/* =========================================================
+   THEME · DEEP GREEN
+   One dark forest-green surface family, cream text, and one
+   neon accent reserved for the main action. Result colors
+   match the logbook's RESULT column.
+   ========================================================= */
+
+:root {
+  --bg: #0C241B;
+  --surf: #12321F;
+  --surf2: #173D29;
+  --line: #21503A;
+  --ink: #F3ECE3;
+  --soft: #A9BBAF;
+  --faint: #6F8A7B;
+  --accent: #6BF04A;
+  --accent-ink: #0C241B;
+  --ok-bg: #174A2C;   --ok: #8DF27A;
+  --act-bg: #4A3416;  --act: #FFC98A;
+  --hold-bg: #47401A; --hold: #F2DE77;
+  --info-bg: #16384E; --info: #9FD2FF;
+  --bad-bg: #4C1E17;  --bad: #FFA593;
+}
+
+html, body, #authGate { background: var(--bg); color: var(--ink); }
+body { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+
+/* save bar at the very top (made by scanner-sync.js) */
+#scannerSyncStatusBar {
+  background: #0A1F17 !important;
+  color: var(--soft) !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  border-bottom: 1px solid var(--line) !important;
+  box-shadow: none !important;
+}
+
+#updateBanner {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+/* header: back, tab, who */
+.topbar { padding: 10px 16px 0; background: transparent; border: none; }
+.back-button { color: var(--soft); font-size: 14px; font-weight: 600; padding: 8px 0; }
+.destination { font-size: 17px; font-weight: 800; color: var(--ink); }
+.timestamp-icon { color: var(--soft); }
+.staff-chip {
+  padding: 2px 16px 10px;
+  background: transparent;
+  border: none;
+  color: var(--soft);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* camera */
+.camera-card {
+  margin: 4px 16px 0;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+}
+.camera-card.state-scanning { border-color: var(--accent); }
+.camera-card.state-ready    { border-color: var(--line); }
+.camera-placeholder { color: var(--faint); font-weight: 600; font-size: 14px; }
+.camera-hint span { font-size: 13px; font-weight: 700; letter-spacing: 0; background: rgba(0,0,0,.6); }
+.scan-frame { border-width: 3px; border-radius: 12px; }
+.scan-overlay.detected .scan-frame { border-color: var(--accent); box-shadow: 0 0 0 9999px rgba(0,0,0,.08), 0 0 24px rgba(107,240,74,.7); }
+
+/* status line: quiet; hidden while a scan's card is on screen */
+.status {
+  margin: 10px 16px 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: var(--soft);
+}
+.status.scanning { color: var(--accent); }
+.status.ok { color: var(--ok); }
+.status.error { color: var(--bad); background: transparent; }
+body.reading.has-card .status { display: none; }
+
+/* ---------- the scanned item ---------- */
+#lastScan.last-scan {
+  scroll-margin-top: 56px;
+  margin: 14px 16px 0;
+  padding: 0 0 4px;
+  background: var(--surf);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+#lastScan.saving, #lastScan.saved, #lastScan.failed { border-color: var(--line); }
+
+.ls-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 14px 16px 12px; }
+.ls-top > div:first-child { min-width: 0; }
+#lastScan .last-scan-label { color: var(--soft); font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+#lastScan .last-scan-label:empty { display: none; }
+#lastScan #itemCode { margin-top: 0; color: var(--ink); font-size: 30px; font-weight: 800; letter-spacing: .3px; line-height: 1.05; }
+.ic-name { margin-top: 6px; }
+.ic-model { display: block; font-size: 15px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#lastScan .ic-spec { display: block; margin: 2px 0 0; padding: 0; border-radius: 0; background: transparent; font-size: 13px; font-weight: 500; color: var(--soft); }
+.ic-name.none .ic-model { color: var(--soft); font-weight: 500; }
+
+#lastScan .chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; font-size: 12px; font-weight: 700; letter-spacing: 0; }
+#lastScan .chip.saving { background: var(--hold-bg); color: var(--hold); }
+#lastScan .chip.saved  { background: var(--ok-bg); color: var(--ok); }
+#lastScan .chip.failed { background: var(--bad-bg); color: var(--bad); }
+
+.ic-wait { margin: 0 12px 10px; padding: 12px 14px; border: none; border-radius: 12px; background: var(--surf2); color: var(--soft); font-size: 14px; font-weight: 600; }
+.ic-wait.busy::after { background: linear-gradient(90deg, transparent, var(--accent), transparent) 0 0 / 40% 100% no-repeat, var(--line); }
+
+.ic-verdict { margin: 0 12px; padding: 12px 14px 13px; border: none; border-radius: 12px; background: var(--surf2); color: var(--soft); }
+.ic-verdict.good { background: var(--ok-bg);   color: var(--ok); }
+.ic-verdict.act  { background: var(--act-bg);  color: var(--act); }
+.ic-verdict.hold { background: var(--hold-bg); color: var(--hold); }
+.ic-verdict.info { background: var(--info-bg); color: var(--info); }
+.ic-verdict.bad  { background: var(--bad-bg);  color: var(--bad); }
+.ic-wordrow { display: flex; align-items: center; gap: 8px; }
+.ic-icon { width: 16px; height: 16px; flex: none; }
+.ic-word { display: inline; font-size: 15px; font-weight: 800; line-height: 1.2; }
+.ic-do { margin-top: 6px; padding: 0; background: transparent; }
+.ic-do-text { margin: 0; color: var(--ink); font-size: 18px; font-weight: 700; line-height: 1.3; }
+.ic-detail { display: block; margin-top: 5px; color: var(--ink); opacity: .72; font-size: 13px; font-weight: 500; line-height: 1.4; }
+.ic-detail:empty { display: none; }
+
+.ic-route { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 12px 16px 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.ic-route > div { padding: 9px 12px; }
+.ic-route > div + div { border-left: 1px solid var(--line); }
+.ic-route .ic-k, .ic-place .ic-k { color: var(--soft); font-size: 12px; font-weight: 500; }
+.ic-route .ic-v, .ic-place .ic-v { margin-top: 1px; color: var(--ink); font-size: 15px; font-weight: 700; }
+.ic-place:last-child { text-align: left; }
+#lastScan .ic-route.diff .ic-place:last-child .ic-v { color: var(--act); }
+
+.ic-facts { margin: 0; padding: 10px 16px 12px; border: none; color: var(--soft); font-size: 13px; line-height: 1.5; }
+.ic-facts p { margin: 0; }
+.ic-facts b { color: var(--ink); font-weight: 600; }
+
+/* ---------- recent scans ---------- */
+.recent { margin: 18px 16px 0; background: transparent; border-radius: 0; }
+.recent-header { padding: 0 2px 6px; color: var(--soft); font-size: 13px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+.recent-header button { color: var(--soft); font-size: 13px; font-weight: 600; padding: 4px 0; }
+#recentList li {
+  display: grid;
+  grid-template-columns: 10px auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 2px;
+  border-top: 1px solid var(--line);
+  border-left: none;
+  cursor: pointer;
+}
+#recentList li:active { background: var(--surf); }
+.r-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.r-code { font-size: 14px; font-weight: 700; color: var(--ink); }
+.r-model { min-width: 0; font-size: 13px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-word { font-size: 12px; font-weight: 700; color: var(--soft); text-align: right; }
+li.good .r-dot { background: var(--ok); }    li.good .r-word { color: var(--ok); }
+li.act .r-dot  { background: var(--act); }   li.act .r-word  { color: var(--act); }
+li.hold .r-dot { background: var(--hold); }  li.hold .r-word { color: var(--hold); }
+li.info .r-dot { background: var(--info); }  li.info .r-word { color: var(--info); }
+li.bad .r-dot  { background: var(--bad); }   li.bad .r-word  { color: var(--bad); }
+li.saving .r-dot { background: var(--hold); } li.saving .r-word { color: var(--hold); }
+li.failed .r-dot { background: var(--bad); }  li.failed .r-word { color: var(--bad); }
+.recent-empty { padding: 10px 2px; color: var(--faint); font-size: 13px; border-top: 1px solid var(--line); }
+
+/* ---------- settings ---------- */
+.settings { margin: 18px 16px 0; background: var(--surf); border: 1px solid var(--line); border-radius: 14px; color: var(--soft); }
+.settings summary { font-size: 13px; font-weight: 600; }
+#cameraSelect { background: var(--bg); border-color: var(--line); color: var(--ink); }
+.small-button { background: var(--surf2); color: var(--ink); font-weight: 600; }
+#cameraDiagnostics, .versions { color: var(--faint); }
+
+/* ---------- main action ---------- */
+.scan-bar { padding: 10px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 72%, rgba(12,36,27,0)); }
+#scanButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 58px;
+  border-radius: 16px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0;
+  box-shadow: none;
+}
+#scanButton svg { width: 22px; height: 22px; flex: none; }
+#scanButton small { display: none; }
+#scanButton.off { background: var(--accent); box-shadow: none; }
+#scanButton.scanning { background: var(--surf2); color: var(--accent); box-shadow: none; }
+#scanButton:focus-visible, .auth-button:focus-visible, .keypad button:focus-visible { outline: 3px solid var(--info); outline-offset: 2px; }
+
+/* ---------- sign-in / PIN ---------- */
+.auth-title { font-weight: 800; }
+.auth-sub, .auth-hint, .confirm-gmail { color: var(--soft); }
+.auth-who { background: var(--surf); color: var(--accent); font-weight: 700; }
+#codeInput { background: var(--surf); border-color: var(--line); color: var(--ink); }
+#codeInput:focus { border-color: var(--accent); }
+.auth-button { background: var(--accent); color: var(--accent-ink); font-size: 18px; font-weight: 800; min-height: 56px; }
+.auth-button.secondary { background: var(--surf2); color: var(--ink); }
+.confirm-name { color: var(--accent); font-weight: 800; }
+.auth-error { background: var(--bad-bg); color: var(--bad); }
+.pin-dots span { border-color: var(--faint); }
+.pin-dots span.filled { background: var(--accent); border-color: var(--accent); }
+.keypad button { background: var(--surf); color: var(--ink); font-weight: 700; }
+.keypad button:active { background: var(--surf2); }
+.keypad .key-muted { background: transparent; color: var(--soft); }
+.link-button { color: var(--soft); }
+
+@media (max-width: 380px) {
+  #lastScan #itemCode { font-size: 27px; }
+  #scanButton { min-height: 56px; font-size: 17px; }
+}
+
 </style>
 </head>
 
@@ -985,12 +1209,12 @@ body.reading .scan-overlay { width: 60%; }
 
   <!-- NEW VERSION AVAILABLE -->
   <button type="button" id="updateBanner" onclick="refreshToLatestVersion()" hidden>
-    ⟳ NEW SCANNER VERSION — TAP TO UPDATE
+    New scanner version. Tap to update.
   </button>
 
   <!-- TOP BAR -->
   <nav class="topbar">
-    <button type="button" class="back-button" onclick="goBackToSetup()">← SETUP</button>
+    <button type="button" class="back-button" onclick="goBackToSetup()">‹ Setup</button>
     <div id="scannerCurrentDestination" class="destination">Loading…</div>
   </nav>
 
@@ -1017,13 +1241,13 @@ body.reading .scan-overlay { width: 60%; }
   </section>
 
   <!-- STATUS -->
-  <div id="cameraStatus" class="status">PRESS START CAMERA</div>
+  <div id="cameraStatus" class="status">Press Start camera to begin.</div>
 
   <!-- LAST SCAN -->
-  <section id="lastScan" class="last-scan" aria-live="polite">
+  <section id="lastScan" class="last-scan" aria-live="polite" hidden>
     <div class="ls-top">
       <div>
-        <div id="lastLabel" class="last-scan-label">Last item</div>
+        <div id="lastLabel" class="last-scan-label"></div>
         <div id="itemCode">—</div>
         <div id="icName" class="ic-name" hidden></div>
       </div>
@@ -1032,21 +1256,17 @@ body.reading .scan-overlay { width: 60%; }
     <div id="icWait" class="ic-wait" hidden></div>
     <div id="itemCard" class="item-card" hidden>
       <div id="icVerdict" class="ic-verdict">
-        <span id="icWord" class="ic-word"></span>
-        <span id="icDetail" class="ic-detail"></span>
-      </div>
-      <div id="icDo" class="ic-do">
-        <div class="ic-do-label">Do this</div>
-        <div id="icDoText" class="ic-do-text"></div>
+        <div class="ic-wordrow"><svg id="icIcon" class="ic-icon" viewBox="0 0 16 16" aria-hidden="true"></svg><span id="icWord" class="ic-word"></span></div>
+        <div id="icDo" class="ic-do"><div id="icDoText" class="ic-do-text"></div></div>
+        <div id="icDetail" class="ic-detail"></div>
       </div>
       <div id="icRoute" class="ic-route">
         <div class="ic-place"><div class="ic-k">Home box</div><div id="icHome" class="ic-v"></div></div>
-        <svg class="ic-arrow" viewBox="0 0 30 14" aria-hidden="true"><path d="M1 7h26M21 2l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <div class="ic-place"><div class="ic-k">Now in</div><div id="icNow" class="ic-v"></div></div>
       </div>
       <div class="ic-facts">
-        <div class="ic-fact"><div class="ic-k">Before this scan</div><div id="icLast" class="ic-v"></div></div>
-        <div class="ic-fact" id="icSheetBRow"><div class="ic-k">Sheet B</div><div id="icSheetB" class="ic-v"></div></div>
+        <p>Before this scan: <b id="icLast"></b></p>
+        <p id="icSheetBRow">Sheet B: <b id="icSheetB"></b></p>
       </div>
     </div>
   </section>
@@ -1055,7 +1275,7 @@ body.reading .scan-overlay { width: 60%; }
   <section class="recent">
     <div class="recent-header">
       <span>Recent scans</span>
-      <button type="button" onclick="clearRecentList()">Clear list</button>
+      <button type="button" onclick="clearRecentList()">Clear</button>
     </div>
     <ul id="recentList"></ul>
     <div id="recentEmpty" class="recent-empty">Nothing scanned yet.</div>
@@ -1063,7 +1283,7 @@ body.reading .scan-overlay { width: 60%; }
 
   <!-- CAMERA SETTINGS -->
   <details id="settingsPanel" class="settings">
-    <summary>⚙ Camera settings</summary>
+    <summary>Camera and sign-in settings</summary>
     <div class="settings-body">
 
       <select id="cameraSelect">
@@ -1115,7 +1335,7 @@ body.reading .scan-overlay { width: 60%; }
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.10.15-4";
+const SCANNER_VERSION = "2026.10.15-5";
 
 
 /* ==========================================================
@@ -1261,7 +1481,7 @@ function setUiState(state) {
   if (state === "off") {
 
     button.classList.add("off");
-    button.innerHTML = "START CAMERA";
+    button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M7 12h10"/></svg>Start camera';
     hint.hidden = true;
     overlay.hidden = true;
     $("cameraPlaceholder").hidden = false;
@@ -1271,7 +1491,7 @@ function setUiState(state) {
   else if (state === "starting") {
 
     button.classList.add("scanning");
-    button.innerHTML = "STARTING CAMERA…";
+    button.innerHTML = "Starting camera…";
     hint.hidden = true;
 
   }
@@ -1279,7 +1499,7 @@ function setUiState(state) {
   else if (state === "scanning") {
 
     button.classList.add("scanning");
-    button.innerHTML = "SCANNING…<small>hold the barcode inside the frame</small>";
+    button.innerHTML = "Scanning… hold the barcode in the frame";
     card.classList.add("state-scanning");
     hint.hidden = true;
     overlay.hidden = false;
@@ -1290,7 +1510,7 @@ function setUiState(state) {
 
   else if (state === "ready") {
 
-    button.innerHTML = "SCAN NEXT<small>or tap the camera</small>";
+    button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M7 12h10"/></svg>Scan next';
     card.classList.add("state-ready");
     hintText.textContent = "Tap to scan next";
     hint.hidden = false;
@@ -1314,7 +1534,7 @@ async function startCamera() {
   try {
 
     setUiState("starting");
-    setCameraStatus("REQUESTING CAMERA…", "");
+    setCameraStatus("Asking for the camera…", "");
 
     availableCameras = await Html5Qrcode.getCameras();
 
@@ -1346,7 +1566,7 @@ async function startCamera() {
     scannerRunning = false;
     html5QrCode = null;
 
-    setCameraStatus("CAMERA ERROR — " + readableCameraError(error), "error");
+    setCameraStatus("Camera error: " + readableCameraError(error), "error");
     setUiState("off");
 
   }
@@ -1459,7 +1679,7 @@ async function startSelectedCamera(cameraId) {
 
   resetVerification();
 
-  setCameraStatus("STARTING CAMERA…", "");
+  setCameraStatus("Starting camera…", "");
 
   await html5QrCode.start(
     cameraId,
@@ -1482,7 +1702,7 @@ async function startSelectedCamera(cameraId) {
   $("stopButton").disabled = false;
 
   setUiState("scanning");
-  setCameraStatus("SCANNING — HOLD BARCODE IN FRAME", "scanning");
+  setCameraStatus("Scanning. Hold the barcode in the frame.", "scanning");
 
   inspectCamera();
 
@@ -1497,7 +1717,7 @@ async function switchCamera(cameraId) {
     return;
   }
 
-  setCameraStatus("SWITCHING CAMERA…", "");
+  setCameraStatus("Switching camera…", "");
 
   if (html5QrCode && scannerRunning) {
 
@@ -1539,7 +1759,7 @@ function onScanSuccess(decodedText, decodedResult) {
   /* Not KA + 3/4/5 digits → ignore, keep looking. */
   if (!ITEM_CODE_PATTERN.test(value)) {
 
-    setCameraStatus("NOT AN ITEM CODE — " + value.substring(0, 20), "scanning");
+    setCameraStatus("Not an item code: " + value.substring(0, 20), "scanning");
 
     return;
 
@@ -1555,7 +1775,7 @@ function onScanSuccess(decodedText, decodedResult) {
   }
 
   setCameraStatus(
-    "READING " + value + " — " + confirmationCount + "/" + REQUIRED_SCANS,
+    "Reading " + value + " (" + confirmationCount + " of " + REQUIRED_SCANS + ")",
     "scanning"
   );
 
@@ -1619,14 +1839,14 @@ function scanAnother() {
       scannerPaused = false;
 
       setUiState("scanning");
-      setCameraStatus("SCANNING — HOLD BARCODE IN FRAME", "scanning");
+      setCameraStatus("Scanning. Hold the barcode in the frame.", "scanning");
 
     }
 
     catch (error) {
 
       console.error("RESUME ERROR:", error);
-      setCameraStatus("CAMERA PAUSED — PRESS STOP, THEN START", "error");
+      setCameraStatus("Camera paused. Press Stop, then Start.", "error");
 
     }
 
@@ -1676,7 +1896,7 @@ async function stopCamera() {
   $("stopButton").disabled = true;
 
   setUiState("off");
-  setCameraStatus("CAMERA STOPPED", "");
+  setCameraStatus("Camera stopped", "");
 
 }
 
@@ -1706,7 +1926,7 @@ function handleInventoryItem(itemCode, decodedResult) {
       showItemCard(null);
       showResultWait("");
 
-      setCameraStatus("✓ " + itemCode + " CAPTURED — SAVING…", "ok");
+      setCameraStatus("✓ " + itemCode + " captured, saving…", "ok");
 
       return;
 
@@ -1734,7 +1954,7 @@ function showNotQueuedError(itemCode, reason) {
   showLastScan(itemCode, "failed");
 
   setCameraStatus(
-    "✗ " + itemCode + " NOT SAVED — " + (reason || "scan it again"),
+    "✗ " + itemCode + " not saved: " + (reason || "scan it again"),
     "error"
   );
 
@@ -1770,7 +1990,7 @@ window.addEventListener("scansync:saved", function(event) {
 
   /* Don't overwrite the status while the next item is being read. */
   if (detail.scanId === lastScanId && scannerPaused) {
-    setCameraStatus("✓ " + detail.itemCode + " SAVED — TAP SCAN NEXT", "ok");
+    setCameraStatus("✓ " + detail.itemCode + " saved. Tap Scan next.", "ok");
   }
 
   playSuccessSound();
@@ -1846,7 +2066,7 @@ window.addEventListener("scansync:retry", function(event) {
   if (Number(detail.retries) === 1) {
 
     setCameraStatus(
-      "⚠ " + detail.itemCode + " NOT SAVED YET — RETRYING, KEEP SCANNING",
+      "⚠ " + detail.itemCode + " not saved yet. Retrying, keep scanning.",
       "error"
     );
 
@@ -1862,9 +2082,9 @@ window.addEventListener("scansync:retry", function(event) {
    ========================================================== */
 
 const CHIP_TEXT = {
-  saving: "SAVING…",
-  saved: "✓ SAVED",
-  failed: "✗ NOT SAVED"
+  saving: "Saving…",
+  saved: "✓ Saved",
+  failed: "Not saved"
 };
 
 
@@ -1872,10 +2092,12 @@ function showLastScan(itemCode, status) {
 
   if (status === "saving") {
     viewingOlder = false;
-    $("lastLabel").textContent = "Last item";
+    $("lastLabel").textContent = "";
   }
 
   if (viewingOlder) return;   // a tapped older scan stays until the next scan
+
+  $("lastScan").hidden = false;
 
   $("itemCode").textContent = itemCode;
 
@@ -1886,7 +2108,7 @@ function showLastScan(itemCode, status) {
   const chip = $("lastScanChip");
   chip.className = "chip " + status;
   chip.textContent = status === "failed" && lastScanId
-    ? "RETRYING…"
+    ? "Retrying…"
     : CHIP_TEXT[status];
 
 }
@@ -1949,17 +2171,31 @@ function resultStep(text) {
   return t.length > 70 ? t.slice(0, 68) + "…" : t;
 }
 
-/* "IPHONE 12 PRO · 128GB · GOLD" → model, then storage and color as small tags. */
+/* "IPHONE 12 PRO · 128GB · GOLD" → "iPhone 12 Pro" over "128GB, Gold". */
 function nameHtml(name) {
   if (!name) {
     return '<span class="ic-model">No name in Sheet B yet</span>';
   }
   const parts = String(name).split(" · ");
+  const spec = parts.slice(1).map(prettyModel).join(", ");
   return '<span class="ic-model">' + escapeHtml(prettyModel(parts[0])) + "</span>" +
-    parts.slice(1).map(function(p) {
-      return '<span class="ic-spec">' + escapeHtml(p) + "</span>";
-    }).join("");
+    (spec ? '<span class="ic-spec">' + escapeHtml(spec) + "</span>" : "");
 }
+
+/* "WRONG BOX" → "Wrong box"; box names and codes stay as written. */
+function sentenceWord(word) {
+  const w = String(word || "").toLowerCase()
+    .replace(/\b(ok|rto|sold)\b/g, function(m) { return m.toUpperCase(); });
+  return w.charAt(0).toUpperCase() + w.slice(1);
+}
+
+const TONE_ICONS = {
+  good: '<path d="M3 8.5l3 3L13 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  info: '<path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  act:  '<path d="M8 1.5l7 12.5H1z" fill="currentColor"/><path d="M8 6v3.6" stroke="#0C241B" stroke-width="1.7" stroke-linecap="round"/><circle cx="8" cy="11.8" r="1" fill="#0C241B"/>',
+  hold: '<circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.3 5.5v5M9.7 5.5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  bad:  '<circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#0C241B" stroke-width="1.8" stroke-linecap="round"/>'
+};
 
 /* "IPHONE 12 PRO MAX" → "iPhone 12 Pro Max", "SAMSUNG A52" → "Samsung A52", "SE" stays "SE". */
 function prettyModel(text) {
@@ -1974,8 +2210,8 @@ function prettyModel(text) {
 /* "In DISPLAY 18 since Oct 14, 4:30 PM, by Ma'am Rhona." */
 function beforeText(last) {
   if (!last) return "—";
-  if (last.first) return "First time scanned. This is a new code.";
-  let t = last.where ? "In " + last.where : "Location not recorded";
+  if (last.first) return "first time scanned, this is a new code.";
+  let t = last.where ? "in " + last.where : "location not recorded";
   if (last.status && last.status !== "AVAILABLE") t += " (" + last.status.toLowerCase() + ")";
   if (last.when) t += " since " + last.when;
   if (last.by) t += ", by " + last.by;
@@ -2002,6 +2238,7 @@ function showItemCard(card, itemCode) {
   if (!card || !card.result) {
     box.hidden = true;
     name.hidden = true;
+    document.body.classList.remove("has-card");
     return;
   }
 
@@ -2016,20 +2253,27 @@ function showItemCard(card, itemCode) {
   name.innerHTML = nameHtml(item.name);
 
   $("icVerdict").className = "ic-verdict " + tone;
-  $("icWord").textContent = word;
-  $("icDetail").textContent = firstUpper(card.detail || "");
-  $("icDetail").hidden = !card.detail;
+  $("icIcon").innerHTML = TONE_ICONS[tone] || TONE_ICONS.act;
+  $("icWord").textContent = sentenceWord(word);
 
-  $("icDo").className = "ic-do " + tone;
-  $("icDoText").textContent = firstUpper(
-    card.next ||
+  /* The action: first part big; an "or …" alternative goes in the small line. */
+  let action = card.next ||
     (card.item ? "" : resultStep(card.result)) ||
-    (tone === "good" ? "Nothing to do. Keep it here." : "Check the RESULT in the logbook."));
+    (tone === "good" ? "Nothing to do. Keep it here." : "Check the RESULT in the logbook.");
+  let alt = "";
+  const orAt = action.indexOf(", or ");
+  if (orAt > 0) {
+    alt = "Or " + action.slice(orAt + 5);
+    action = action.slice(0, orAt);
+  }
+  $("icDoText").textContent = firstUpper(action);
+  $("icDetail").textContent = [firstUpper(card.detail || ""), alt]
+    .filter(Boolean).map(function(t) { return t.replace(/\.?$/, "."); }).join(" ");
 
   $("icHome").textContent = item.home || (card.item ? "No home yet" : "—");
   $("icNow").textContent = item.now || "—";
   $("icRoute").className = "ic-route" + (item.home && item.now && item.home !== item.now ? " diff" : "");
-  $("icRoute").hidden = !card.item;
+  $("icRoute").hidden = !card.item || (!item.home && !item.now);
 
   $("icLast").textContent = beforeText(last);
 
@@ -2039,6 +2283,7 @@ function showItemCard(card, itemCode) {
 
   box.hidden = false;
   $("icWait").hidden = true;
+  document.body.classList.add("has-card");
 
 }
 
@@ -2070,9 +2315,10 @@ function showRecent(scanId) {
 
   $("lastLabel").textContent = viewingOlder
     ? "Scan at " + new Date(entry.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    : "Last item";
+    : "";
 
   $("itemCode").textContent = entry.itemCode;
+  $("lastScan").hidden = false;
   showResultWait("");
   showItemCard(entry.card || (entry.result ? { result: entry.result } : null), entry.itemCode);
 
@@ -2200,24 +2446,25 @@ function renderRecentScans() {
       second: "2-digit"
     });
 
-    li.innerHTML =
-      "<div>" +
-        '<span class="recent-code">' + escapeHtml(entry.itemCode) + "</span>" +
-        '<span class="recent-time">' + escapeHtml(time) + "</span>" +
-        (entry.card && entry.card.item && entry.card.item.name
-          ? '<span class="recent-name">' + escapeHtml(prettyModel(String(entry.card.item.name).split(" · ")[0])) + "</span>"
-          : "") +
-        (entry.result
-          ? '<span class="result-tag ' + recentTone(entry) + '">' + escapeHtml((entry.card && entry.card.word) || resultWord(entry.result)) + "</span>"
-          : "") +
-      "</div>" +
-      '<span class="chip ' + escapeHtml(entry.status) + '">' +
-        escapeHtml(entry.status === "failed" ? "RETRYING…" : CHIP_TEXT[entry.status] || "") +
-      "</span>";
+    const model = entry.card && entry.card.item && entry.card.item.name
+      ? prettyModel(String(entry.card.item.name).split(" · ")[0])
+      : time;
 
-    if (entry.result) {
-      li.className = recentTone(entry);
-    }
+    /* Right side: the logbook's word once known, else the save state. */
+    const word = entry.status === "failed" ? "Retrying…"
+      : entry.status === "saving" ? "Saving…"
+      : entry.result ? sentenceWord((entry.card && entry.card.word) || resultWord(entry.result))
+      : "Saved";
+
+    li.className = entry.status === "saved"
+      ? (entry.result ? recentTone(entry) : "")
+      : entry.status;
+
+    li.innerHTML =
+      '<span class="r-dot"></span>' +
+      '<span class="r-code">' + escapeHtml(entry.itemCode) + "</span>" +
+      '<span class="r-model">' + escapeHtml(model) + "</span>" +
+      '<span class="r-word">' + escapeHtml(word) + "</span>";
 
     li.addEventListener("click", function() {
       showRecent(entry.scanId);
@@ -3569,7 +3816,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.10.15-4"></script>
+<script src="scanner-sync.js?v=2026.10.15-5"></script>
 
 <script>
   loadScannerNavigationDestination();
