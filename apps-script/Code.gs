@@ -62,7 +62,7 @@ const CONFIG = {
    * Server version — shown on the scanner's settings panel.
    */
   VERSION:
-    '3.4.0',
+    '3.5.0',
 
 
   /*
@@ -984,9 +984,7 @@ function getColumnsResponse(
 
 
   const sheet =
-    spreadsheet.getSheetByName(
-      sheetName
-    );
+    findTabByName(spreadsheet, sheetName);
 
 
   if (!sheet) {
@@ -1292,9 +1290,7 @@ function verifyDestinationResponse(
    ******************************************************/
 
   const sheet =
-    spreadsheet.getSheetByName(
-      sheetName
-    );
+    findTabByName(spreadsheet, sheetName);
 
 
   if (!sheet) {
@@ -1722,9 +1718,7 @@ function saveScanResponse(
    ******************************************************/
 
   const sheet =
-    spreadsheet.getSheetByName(
-      body.sheetName
-    );
+    findTabByName(spreadsheet, body.sheetName);
 
 
   if (!sheet) {
@@ -2253,7 +2247,7 @@ function saveScansCore(
     SpreadsheetApp.openById(spreadsheetId);
 
   const sheet =
-    spreadsheet.getSheetByName(sheetName);
+    findTabByName(spreadsheet, sheetName);
 
   if (!sheet) {
     throw new Error('Sheet tab "' + sheetName + '" was not found.');
@@ -2401,7 +2395,7 @@ function saveScansCore(
         if (plan.column && plan.column !== plan.byColumn) {
           if (own.indexOf(plan.column) >= 0) {
             throw new Error('Scanner Name column ' + columnNumberToLetter(plan.column) +
-              ' is the Item Code or Timestamp column. Fix it in the BOXES tab (column I).');
+              ' is the Item Code or Timestamp column. Fix it in the BOXES tab (SCANNER NAME COLUMN).');
           }
           if (plan.column > sheet.getMaxColumns()) {
             throw new Error('Scanner Name column ' + columnNumberToLetter(plan.column) + ' does not exist.');
@@ -3616,6 +3610,44 @@ function getSessionsSheet() {
  *   column   = where the staff NAME goes (0 = nowhere)
  *   byColumn = the BY column that always gets "Name, gmail" (0 when NOT ALLOWED)
  */
+/*
+ * The tab a phone saves to. Boxes can be renamed in the logbook's BOXES tab: the logbook keeps
+ * the old names in its hidden _BOXREG tab, so a phone still set to an old name keeps working.
+ */
+function findTabByName(spreadsheet, name) {
+  const want = String(name || '').trim();
+  if (!want) return null;
+  const direct = spreadsheet.getSheetByName(want);
+  if (direct) return direct;
+  const up = want.toUpperCase();
+  const sheets = spreadsheet.getSheets();
+  for (let i = 0; i < sheets.length; i++) {
+    if (String(sheets[i].getName()).trim().toUpperCase() === up) return sheets[i];
+  }
+  const reg = spreadsheet.getSheetByName('_BOXREG');
+  if (reg && reg.getLastRow() >= 2) {
+    const rows = reg.getRange(2, 1, reg.getLastRow() - 1, 6).getDisplayValues();
+    for (let i = 0; i < rows.length; i++) {
+      const old = String(rows[i][5] || '').toUpperCase().split(',').map(function(x) { return x.trim(); });
+      if (old.indexOf(up) >= 0) {
+        const now = String(rows[i][1] || '').trim().toUpperCase();
+        for (let j = 0; j < sheets.length; j++) {
+          if (String(sheets[j].getName()).trim().toUpperCase() === now) return sheets[j];
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/* BOXES columns are found by their header (the logbook added a BOX ID column in front). */
+function boxesColumn(headers, startsWith) {
+  for (let i = 0; i < headers.length; i++) {
+    if (String(headers[i]).trim().toUpperCase().indexOf(startsWith) === 0) return i;
+  }
+  return -1;
+}
+
 function scannerNamePlan(spreadsheet, sheet, phoneNameColumn) {
 
   const byColumn = findByColumn(sheet);
@@ -3623,18 +3655,24 @@ function scannerNamePlan(spreadsheet, sheet, phoneNameColumn) {
 
   const boxes = spreadsheet.getSheetByName('BOXES');
 
-  if (boxes && boxes.getLastRow() >= 2 && boxes.getLastColumn() >= 8 &&
-      String(boxes.getRange(1, 8).getDisplayValues()[0][0]).trim().toUpperCase().indexOf('SCANNER NAME') === 0) {
+  if (boxes && boxes.getLastRow() >= 2 && boxes.getLastColumn() >= 8) {
 
-    const name = String(sheet.getName()).trim().toUpperCase();
-    const rows = boxes.getRange(2, 1, boxes.getLastRow() - 1, 9).getDisplayValues();
+    const width = boxes.getLastColumn();
+    const head = boxes.getRange(1, 1, 1, width).getDisplayValues()[0];
+    const cName = boxesColumn(head, 'BOX / LOCATION NAME');
+    const cRule = boxesColumn(head, 'SCANNER NAME (');
+    const cCol = boxesColumn(head, 'SCANNER NAME COLUMN');
 
-    for (let i = 0; i < rows.length; i++) {
-      if (String(rows[i][0]).trim().toUpperCase() !== name) continue;
-      rule = String(rows[i][7] || '').trim().toUpperCase();
-      ruleColumn = columnLetterToNumber(rows[i][8]);
-      fromOwner = rule !== '';
-      break;
+    if (cName >= 0 && cRule >= 0) {
+      const name = String(sheet.getName()).trim().toUpperCase();
+      const rows = boxes.getRange(2, 1, boxes.getLastRow() - 1, width).getDisplayValues();
+      for (let i = 0; i < rows.length; i++) {
+        if (String(rows[i][cName]).trim().toUpperCase() !== name) continue;
+        rule = String(rows[i][cRule] || '').trim().toUpperCase();
+        ruleColumn = cCol >= 0 ? columnLetterToNumber(rows[i][cCol]) : 0;
+        fromOwner = rule !== '';
+        break;
+      }
     }
 
   }
