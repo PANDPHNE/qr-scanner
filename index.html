@@ -1341,7 +1341,7 @@ li.failed .r-dot { background: var(--bad); }  li.failed .r-word { color: var(--b
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.10.16-5";
+const SCANNER_VERSION = "2026.10.20-1";
 
 
 /* ==========================================================
@@ -2042,6 +2042,14 @@ window.addEventListener("scansync:resultoff", function(event) {
   const why = (event.detail && event.detail.reason) || "";
   showResultWait(why && !viewingOlder ? "No instant RESULT. " + why + " The RESULT will be in the sheet within a minute." : "");
   showVersionInfo();
+});
+
+/* OUT box while the inventory manager is sorting: the code is saved, the RESULT comes after. */
+window.addEventListener("scansync:resultwait", function(event) {
+  const detail = event.detail || {};
+  if (detail.scanId === lastScanId && !viewingOlder) {
+    showResultWait("Saved ✓ — the RESULT comes after the current sorting (a few minutes at most).");
+  }
 });
 
 window.addEventListener("scansync:resultlate", function(event) {
@@ -3851,7 +3859,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.10.16-5"></script>
+<script src="scanner-sync.js?v=2026.10.20-1"></script>
 
 <script>
   loadScannerNavigationDestination();

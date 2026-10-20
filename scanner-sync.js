@@ -1842,14 +1842,15 @@ let logbookListsWanted = null;
 let logbookListsAt = 0;
 let logbookListsTimer = null;
 
-function wantLogbookLists(destination, sessionKey) {
-  logbookListsWanted = { destination: destination, sessionKey: sessionKey };
+function wantLogbookLists(destination, sessionKey, now) {
+  logbookListsWanted = { destination: destination, sessionKey: sessionKey, now: !!now };
   scheduleLogbookLists();
 }
 
 function scheduleLogbookLists() {
   if (!logbookListsWanted || logbookListsTimer) return;
-  const wait = Math.max(1500, 15000 - (Date.now() - logbookListsAt));
+  /* The inventory manager's scans redraw TO SORT right away (2nd priority); others every 15 s. */
+  const wait = logbookListsWanted.now ? 1500 : Math.max(1500, 15000 - (Date.now() - logbookListsAt));
   logbookListsTimer = setTimeout(function() {
     logbookListsTimer = null;
     sendLogbookLists();
@@ -1940,9 +1941,23 @@ function pumpLogbookResults() {
 
       const waiting = [];
       let gotOne = false;
+      let priority = false;
 
       batch.forEach(function(q, index) {
         const found = (response.results || [])[index];
+        if (found && found.priority) priority = true;
+        if (found && !found.result && found.deferred) {
+          /* OUT box while the inventory manager is sorting: saved; ask again in a minute. */
+          q.deferrals = (q.deferrals || 0) + 1;
+          emitScannerSyncEvent('resultwait', { scanId: q.entry.scanId, itemCode: q.entry.itemCode });
+          if (q.deferrals <= 6) {
+            setTimeout(function() {
+              logbookResultQueue.push(q);
+              pumpLogbookResults();
+            }, 60000);
+          }
+          return;
+        }
         if (found && found.result) {
           gotOne = true;
           emitScannerSyncEvent('result', {
@@ -1957,7 +1972,7 @@ function pumpLogbookResults() {
         }
       });
 
-      if (gotOne) wantLogbookLists(first.destination, first.sessionKey);
+      if (gotOne) wantLogbookLists(first.destination, first.sessionKey, priority);
 
       finish(waiting);
 
