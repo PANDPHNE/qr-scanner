@@ -62,7 +62,7 @@ const CONFIG = {
    * Server version — shown on the scanner's settings panel.
    */
   VERSION:
-    '3.5.0',
+    '3.6.0',
 
 
   /*
@@ -559,7 +559,8 @@ if (
               return {
                 scanId: entry && entry[0],
                 itemCode: entry && entry[1],
-                scannedAt: entry && entry[2]
+                scannedAt: entry && entry[2],
+                note: entry && entry[3]
               };
             }
           )
@@ -567,6 +568,25 @@ if (
 
       return responseForRequest(
         result,
+        callback
+      );
+
+    }
+
+
+    /******************************************************
+     * NOTE LIST (3.6.0) — the choices of the tab's NOTE
+     * dropdown (e.g. partner names in CUSTOMER BORROWED).
+     * The phone shows them as a picker that sticks for
+     * every scan (batch friendly). Empty list = no picker.
+     ******************************************************/
+
+    if (
+      action === 'notelist'
+    ) {
+
+      return responseForRequest(
+        { success: true, list: noteListFor(params.spreadsheetUrl, params.sheetName) },
         callback
       );
 
@@ -1990,7 +2010,8 @@ function saveQueuedScanResponse(
         {
           scanId: data.scanId,
           itemCode: data.itemCode,
-          scannedAt: data.scannedAt
+          scannedAt: data.scannedAt,
+          note: data.note
         }
       ]
     );
@@ -2231,6 +2252,10 @@ function saveScansCore(
     result.timestamp =
       chooseScanTimestamp(raw && raw.scannedAt);
 
+    /* 3.6.0: optional NOTE picked on the phone (partner name). */
+    result.note =
+      String(raw && raw.note || '').replace(/[\r\n\t]+/g, ' ').trim().substring(0, 80);
+
     toCheck.push(result);
 
   });
@@ -2404,6 +2429,21 @@ function saveScansCore(
             .setValues(toWrite.map(function() { return [staff.name]; }));
         }
 
+      }
+
+
+      /**************************************************
+       * NOTE (3.6.0) — only into a column whose header is
+       * NOTE, and only when the phone sent one. Written
+       * before the item codes like the name.
+       **************************************************/
+
+      if (toWrite.some(function(r) { return r.note; })) {
+        const noteCol = noteColumnOf(sheet);
+        if (noteCol && noteCol !== itemCodeColumn && (!timestampEnabled || noteCol !== timestampColumn)) {
+          sheet.getRange(firstRow, noteCol, count, 1)
+            .setValues(toWrite.map(function(r) { return [r.note || '']; }));
+        }
       }
 
 
@@ -4625,4 +4665,47 @@ function testGetColumns() {
 
   return response;
 
+}
+
+/************************************************************
+ * NOTE LIST (3.6.0)
+ ************************************************************/
+
+/** The column whose row-1 header starts with NOTE (logbook box tabs: D), or 0. */
+function noteColumnOf(sheet) {
+  const lastCol = Math.min(sheet.getLastColumn(), 10);
+  if (lastCol < 1) return 0;
+  const head = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+  for (let i = 0; i < head.length; i++) {
+    if (/^NOTE\b/i.test(String(head[i]).trim())) return i + 1;
+  }
+  return 0;
+}
+
+/** The dropdown choices of the NOTE column (row 2), cached 10 minutes. */
+function noteListFor(spreadsheetUrl, sheetName) {
+  const id = extractSpreadsheetId(String(spreadsheetUrl || ''));
+  const name = String(sheetName || '').trim();
+  if (!id || !name) return [];
+  const cache = CacheService.getScriptCache();
+  const key = 'notelist:' + id + ':' + name;
+  const hit = cache.get(key);
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  let list = [];
+  try {
+    const sheet = findTabByName(SpreadsheetApp.openById(id), name);
+    const col = sheet ? noteColumnOf(sheet) : 0;
+    if (col) {
+      const dv = sheet.getRange(2, col).getDataValidation();
+      if (dv) {
+        const type = String(dv.getCriteriaType());
+        const vals = dv.getCriteriaValues();
+        if (type === 'VALUE_IN_LIST') list = (vals[0] || []).map(String);
+        else if (type === 'VALUE_IN_RANGE' && vals[0]) list = vals[0].getDisplayValues().map(function(r) { return String(r[0]); });
+      }
+    }
+  } catch (e) { console.error('Note list: ' + e); }
+  list = list.map(function(x) { return x.trim(); }).filter(function(x, i, a) { return x && a.indexOf(x) === i; }).slice(0, 200);
+  try { cache.put(key, JSON.stringify(list), 600); } catch (e) {}
+  return list;
 }

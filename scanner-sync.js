@@ -1319,6 +1319,10 @@ function queueVerifiedScan(
     queuedAt:
       new Date().toISOString(),
 
+    /* NOTE picked on the phone (e.g. partner in CUSTOMER BORROWED), kept with THIS scan. */
+    note:
+      (typeof window.scannerNote === 'function' ? String(window.scannerNote() || '') : '').substring(0, 80),
+
     sessionKey:
       session ? session.sessionKey : '',
 
@@ -2188,7 +2192,7 @@ function uploadScannerSyncBatch(
   params.set(
     'items',
     JSON.stringify(items.map(function(item) {
-      return [item.scanId, item.itemCode, item.queuedAt];
+      return item.note ? [item.scanId, item.itemCode, item.queuedAt, item.note] : [item.scanId, item.itemCode, item.queuedAt];
     }))
   );
 
@@ -2215,6 +2219,7 @@ function uploadScannerSyncItem(
   params.set('scanId', item.scanId);
   params.set('itemCode', item.itemCode);
   params.set('scannedAt', item.queuedAt);
+  if (item.note) params.set('note', item.note);
 
   addScannerSyncDestinationParams(params, item.destination);
 

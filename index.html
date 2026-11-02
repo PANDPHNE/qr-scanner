@@ -822,6 +822,11 @@ body {
 
 .small-button:disabled { opacity: .45; }
 
+.note-pick { margin: 8px 12px; padding: 10px 12px; border-radius: 12px; background: #fff7d6; border: 2px solid #e0a800; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.note-pick label { font-weight: 800; font-size: 13px; color: #6b4e00; width: 100%; }
+.note-pick select { flex: 1; min-width: 0; font-size: 18px; font-weight: 700; padding: 10px; border-radius: 10px; border: 2px solid #6b4e00; background: #fff; }
+.note-pick.need { background: #ffe1e1; border-color: #c62828; }
+.note-pick-hint { font-size: 11px; color: #6b4e00; width: 100%; }
 #cameraDiagnostics {
   margin-top: 10px;
   color: #777b83;
@@ -1223,6 +1228,13 @@ li.failed .r-dot { background: var(--bad); }  li.failed .r-word { color: var(--b
     <div id="scannerCurrentDestination" class="destination">Loading…</div>
   </nav>
 
+  <!-- NOTE PICKER (CUSTOMER BORROWED …): picked once, used for every scan until changed -->
+  <div id="notePickBar" class="note-pick" hidden>
+    <label for="notePick">PARTNER BORROWING</label>
+    <select id="notePick" onchange="saveNotePick()"></select>
+    <span id="notePickHint" class="note-pick-hint">Every scan is saved with this name. Change it when another partner borrows.</span>
+  </div>
+
   <!-- WHO IS SCANNING -->
   <button type="button" id="staffChip" class="staff-chip" onclick="openSettingsPanel()" hidden></button>
 
@@ -1341,7 +1353,7 @@ li.failed .r-dot { background: var(--bad); }  li.failed .r-word { color: var(--b
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.11.02-1";
+const SCANNER_VERSION = "2026.11.02-2";
 
 
 /* ==========================================================
@@ -1907,7 +1919,62 @@ async function stopCamera() {
    HAND OFF TO THE SAVE QUEUE
    ========================================================== */
 
+/* ==========================================================
+   NOTE PICKER — the tab's NOTE dropdown (partner names in
+   CUSTOMER BORROWED). Picked once, sticks for every scan
+   (batch friendly); scanning waits until a name is picked.
+   ========================================================== */
+
+let notePickList = [];
+let notePickSheet = "";
+
+function notePickKey() { return "notePick:" + notePickSheet; }
+
+window.scannerNote = function() {
+  const bar = $("notePickBar");
+  return bar && !bar.hidden ? String($("notePick").value || "") : "";
+};
+
+window.scannerNoteRequired = function() {
+  return notePickList.length > 0;
+};
+
+function saveNotePick() {
+  try { localStorage.setItem(notePickKey(), $("notePick").value || ""); } catch (e) {}
+  $("notePickBar").classList.toggle("need", !$("notePick").value);
+}
+
+function loadNotePicker(destination) {
+  const bar = $("notePickBar");
+  if (!bar || !destination || !destination.sheetName || typeof scannerSyncJsonp !== "function") return;
+  if (notePickSheet === destination.sheetName && notePickList.length) return;
+  notePickSheet = destination.sheetName;
+  const params = new URLSearchParams();
+  params.set("action", "notelist");
+  params.set("spreadsheetUrl", destination.spreadsheetUrl || "");
+  params.set("sheetName", destination.sheetName);
+  scannerSyncJsonp(params).then(function(res) {
+    notePickList = (res && Array.isArray(res.list)) ? res.list : [];
+    if (!notePickList.length) { bar.hidden = true; return; }
+    let saved = "";
+    try { saved = localStorage.getItem(notePickKey()) || ""; } catch (e) {}
+    const sel = $("notePick");
+    sel.innerHTML = '<option value="">— pick the partner —</option>' +
+      notePickList.map(function(n) { return '<option' + (n === saved ? ' selected' : '') + '>' + escapeHtml(n) + '</option>'; }).join("");
+    bar.hidden = false;
+    bar.classList.toggle("need", !sel.value);
+  }).catch(function() { bar.hidden = true; notePickList = []; });
+}
+
 function handleInventoryItem(itemCode, decodedResult) {
+
+  if (window.scannerNoteRequired() && !window.scannerNote()) {
+    $("notePickBar").classList.add("need");
+    try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); } catch (e) {}
+    if (typeof setScannerSyncMessage === "function") setScannerSyncMessage("⚠ Pick the partner first, then scan again", "error");
+    try { setCameraStatus("NOT SAVED: pick the PARTNER BORROWING above, then tap Scan next.", ""); } catch (e) {}
+    return;
+  }
 
   try {
 
@@ -2950,6 +3017,8 @@ function loadScannerNavigationDestination() {
 
     element.innerHTML = html;
 
+    loadNotePicker(destination);
+
   }
 
   catch (error) {
@@ -3861,7 +3930,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.11.02-1"></script>
+<script src="scanner-sync.js?v=2026.11.02-2"></script>
 
 <script>
   loadScannerNavigationDestination();
