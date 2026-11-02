@@ -1270,7 +1270,7 @@ li.failed .r-dot { background: var(--bad); }  li.failed .r-word { color: var(--b
         <div class="ic-place"><div class="ic-k">Now in</div><div id="icNow" class="ic-v"></div></div>
       </div>
       <div class="ic-facts">
-        <p>Before this scan: <b id="icLast"></b></p>
+        <p id="icLastRow">Before this scan: <b id="icLast"></b></p>
         <p id="icSheetBRow">Sheet B: <b id="icSheetB"></b></p>
       </div>
       <div id="icSort" class="ic-sort" hidden></div>
@@ -1341,7 +1341,7 @@ li.failed .r-dot { background: var(--bad); }  li.failed .r-word { color: var(--b
  * version.json, and in the scanner-sync.js ?v= link below.
  * Phones running an older copy then show "TAP TO UPDATE".
  */
-const SCANNER_VERSION = "2026.10.20-1";
+const SCANNER_VERSION = "2026.11.02-1";
 
 
 /* ==========================================================
@@ -2261,8 +2261,9 @@ function showItemCard(card, itemCode) {
   const item = card.item || {};
   const last = card.last || null;
 
-  /* Which phone: the name staff check against the unit in their hand. */
-  name.hidden = false;
+  /* Which phone: the name staff check against the unit in their hand.
+     Since Nov 2 the logbook sends only the RESULT (lighter): no name row then. */
+  name.hidden = !card.item;
   name.className = "ic-name" + (item.name ? "" : " none");
   name.innerHTML = nameHtml(item.name);
 
@@ -2290,6 +2291,7 @@ function showItemCard(card, itemCode) {
   $("icRoute").hidden = !card.item || (!item.home && !item.now);
 
   $("icLast").textContent = beforeText(last);
+  $("icLastRow").hidden = !last;
 
   const sheetB = [item.sheetB, firstUpper(item.issue)].filter(Boolean).join(". ");
   $("icSheetBRow").hidden = !sheetB;
@@ -3859,7 +3861,7 @@ function goBackToSetup() {
 
 </script>
 
-<script src="scanner-sync.js?v=2026.10.20-1"></script>
+<script src="scanner-sync.js?v=2026.11.02-1"></script>
 
 <script>
   loadScannerNavigationDestination();
