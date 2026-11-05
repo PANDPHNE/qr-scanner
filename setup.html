@@ -554,12 +554,14 @@ function jsonp(url) {
 
             reject(
               new Error(
-                'The Apps Script backend did not respond.'
+                'The logbook is busy and did not answer in time. Please try again in a minute (your setup was not changed).'
               )
             );
 
           },
-          15000
+          // Nov 5 (scanner 3.7.0): the server keeps the tab list and columns for 30 minutes, so most answers come in
+          // about a second. The first one can take longer when the logbook is busy: wait up to 60 s, not 15 s.
+          60000
         );
 
 

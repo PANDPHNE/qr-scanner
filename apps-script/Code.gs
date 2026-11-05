@@ -62,7 +62,7 @@ const CONFIG = {
    * Server version — shown on the scanner's settings panel.
    */
   VERSION:
-    '3.6.0',
+    '3.7.0',
 
 
   /*
@@ -907,62 +907,61 @@ function jsonpResponse(
  * ==========================================================
  ************************************************************/
 
-function getSheetsResponse(
-  spreadsheetUrl
-) {
-
-  const spreadsheetId =
-    extractSpreadsheetId(
-      spreadsheetUrl
-    );
-
-
-  const spreadsheet =
-    SpreadsheetApp.openById(
-      spreadsheetId
-    );
-
-
-  const sheets =
-    spreadsheet
-      .getSheets()
-      .map(
-
-        function(sheet) {
-
-          return {
-
-            name:
-              sheet.getName(),
-
-            gid:
-              sheet.getSheetId(),
-
-            index:
-              sheet.getIndex()
-
-          };
-
-        }
-
-      );
-
-
-  return jsonResponse({
-
+function getSheetsResponse(spreadsheetUrl) {
+  const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
+  // 3.7.0: the tab list is kept 10 minutes, so choosing a destination does not open the big logbook every time
+  const hit = destCacheGet_('sh:' + spreadsheetId);
+  if (hit) { hit.cached = true; return jsonResponse(hit); }
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  const out = {
     success: true,
+    spreadsheetId: spreadsheetId,
+    spreadsheetName: spreadsheet.getName(),
+    sheets: spreadsheet.getSheets().map(function(sheet) {
+      return { name: sheet.getName(), gid: sheet.getSheetId(), index: sheet.getIndex() };
+    })
+  };
+  destCachePut_('sh:' + spreadsheetId, out, 600);
+  return jsonResponse(out);
+}
 
-    spreadsheetId:
-      spreadsheetId,
-
-    spreadsheetName:
-      spreadsheet.getName(),
-
-    sheets:
-      sheets
-
-  });
-
+/************************************************************
+ * 3.7.0 FAST DESTINATION (Nov 5): what the setup page needs about a tab (its headers and the scanner-name rule) is
+ * read ONCE and kept 30 minutes. Choosing a tab, loading its columns and saving the setup then answer in about a
+ * second, instead of opening the big logbook three times (20-150 s each when the logbook is busy).
+ * Nothing here writes anything. Saving scans does NOT use this copy (it always writes into the live tab).
+ ************************************************************/
+function destCacheGet_(key) {
+  try { const v = CacheService.getScriptCache().get(key); return v ? JSON.parse(v) : null; } catch (e) { return null; }
+}
+function destCachePut_(key, obj, seconds) {
+  try { const v = JSON.stringify(obj); if (v.length < 95000) CacheService.getScriptCache().put(key, v, seconds); } catch (e) {}
+}
+/** { spreadsheetId, spreadsheetName, sheetName, headers[], lastColumn, plan } for one tab, from the cache when possible. */
+function destInfo_(spreadsheetUrl, sheetName) {
+  const spreadsheetId = extractSpreadsheetId(spreadsheetUrl);
+  const key = 'co:' + spreadsheetId + ':' + String(sheetName || '').trim().toUpperCase();
+  const hit = destCacheGet_(key);
+  if (hit) { hit.cached = true; return hit; }
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  const sheet = findTabByName(spreadsheet, sheetName);
+  if (!sheet) throw new Error('Sheet tab "' + sheetName + '" was not found.');
+  const lastColumn = Math.max(sheet.getLastColumn(), 1);
+  const info = {
+    spreadsheetId: spreadsheetId,
+    spreadsheetName: spreadsheet.getName(),
+    sheetName: sheet.getName(),
+    lastColumn: lastColumn,
+    headers: sheet.getRange(CONFIG.HEADER_ROW, 1, 1, lastColumn).getDisplayValues()[0].map(function(h) { return String(h || ''); }),
+    plan: scannerNamePlan(spreadsheet, sheet, 0)
+  };
+  destCachePut_(key, info, 1800);
+  return info;
+}
+/** The scanner-name rule with the phone's own column (same result as scannerNamePlan(spreadsheet, sheet, col)). */
+function planWithPhone_(plan, phoneNameColumn) {
+  if (plan.rule !== 'STAFF CHOOSES') return plan;
+  return { rule: plan.rule, locked: plan.locked, column: Number(phoneNameColumn) || 0, byColumn: plan.byColumn, fromOwner: plan.fromOwner };
 }
 
 
@@ -991,60 +990,11 @@ function getColumnsResponse(
   }
 
 
-  const spreadsheetId =
-    extractSpreadsheetId(
-      spreadsheetUrl
-    );
-
-
-  const spreadsheet =
-    SpreadsheetApp.openById(
-      spreadsheetId
-    );
-
-
-  const sheet =
-    findTabByName(spreadsheet, sheetName);
-
-
-  if (!sheet) {
-
-    throw new Error(
-
-      'Sheet tab "' +
-      sheetName +
-      '" was not found.'
-
-    );
-
-  }
-
-
-  /*
-   * At least one column must be available.
-   */
-
-  const lastColumn =
-    Math.max(
-      sheet.getLastColumn(),
-      1
-    );
-
-
-  const headers =
-    sheet
-      .getRange(
-
-        CONFIG.HEADER_ROW,
-
-        1,
-
-        1,
-
-        lastColumn
-
-      )
-      .getDisplayValues()[0];
+  // 3.7.0: from the 30-minute copy (the logbook is opened at most once)
+  const info = destInfo_(spreadsheetUrl, sheetName);
+  const spreadsheetId = info.spreadsheetId;
+  const lastColumn = info.lastColumn;
+  const headers = info.headers;
 
 
   const columns = [];
@@ -1084,8 +1034,7 @@ function getColumnsResponse(
     spreadsheetId:
       spreadsheetId,
 
-    spreadsheetName:
-      spreadsheet.getName(),
+    spreadsheetName: info.spreadsheetName,
 
     sheetName:
       sheetName,
@@ -1093,8 +1042,8 @@ function getColumnsResponse(
     columns:
       columns,
 
-    scannerName:
-      scannerNameInfo(scannerNamePlan(spreadsheet, sheet, 0))
+    cached: !!info.cached,
+    scannerName: scannerNameInfo(info.plan)
 
   });
 
@@ -1289,52 +1238,10 @@ function verifyDestinationResponse(
    * SPREADSHEET ID
    ******************************************************/
 
-  const spreadsheetId =
-    extractSpreadsheetId(
-      spreadsheetUrl
-    );
-
-
-  /******************************************************
-   * OPEN SPREADSHEET
-   ******************************************************/
-
-  const spreadsheet =
-    SpreadsheetApp.openById(
-      spreadsheetId
-    );
-
-
-  /******************************************************
-   * FIND SHEET
-   ******************************************************/
-
-  const sheet =
-    findTabByName(spreadsheet, sheetName);
-
-
-  if (!sheet) {
-
-    throw new Error(
-
-      'Sheet tab "' +
-      sheetName +
-      '" was not found.'
-
-    );
-
-  }
-
-
-  /******************************************************
-   * AVAILABLE COLUMNS
-   ******************************************************/
-
-  const lastColumn =
-    Math.max(
-      sheet.getLastColumn(),
-      1
-    );
+  // 3.7.0: the tab's headers and rule come from the 30-minute copy (no need to open the logbook again)
+  const info = destInfo_(spreadsheetUrl, sheetName);
+  const spreadsheetId = info.spreadsheetId;
+  const lastColumn = info.lastColumn;
 
 
   if (
@@ -1392,20 +1299,7 @@ function verifyDestinationResponse(
    * HEADERS
    ******************************************************/
 
-  const headers =
-    sheet
-      .getRange(
-
-        CONFIG.HEADER_ROW,
-
-        1,
-
-        1,
-
-        lastColumn
-
-      )
-      .getDisplayValues()[0];
+  const headers = info.headers;
 
 
   /******************************************************
@@ -1460,11 +1354,9 @@ function verifyDestinationResponse(
     spreadsheetId:
       spreadsheetId,
 
-    spreadsheetName:
-      spreadsheet.getName(),
+    spreadsheetName: info.spreadsheetName,
 
-    sheetName:
-      sheet.getName(),
+    sheetName: info.sheetName,
 
     itemCode: {
 
@@ -1511,7 +1403,7 @@ function verifyDestinationResponse(
           },
 
     scannerName:
-      scannerNameInfo(scannerNamePlan(spreadsheet, sheet, nameColumn || 0))
+      scannerNameInfo(planWithPhone_(info.plan, nameColumn || 0))
 
   });
 
